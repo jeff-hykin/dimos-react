@@ -6,7 +6,7 @@ import { cssColor } from "../robot_model.ts"
 import { placeLayer, registerLayer, subscribeDecoded } from "./registry.ts"
 import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
 import { ColorSetting } from "./pose.tsx"
-import { Field, Slider, Toggle } from "../../components/controls.tsx"
+import { Field, Slider } from "../../components/controls.tsx"
 import type { Store } from "../store.ts"
 import type { FrameInfo } from "../viewer.ts"
 
@@ -15,7 +15,6 @@ export interface PathSettings {
     color: string
     width: number
     lift: number
-    onTop?: boolean
 }
 
 /** One point of a path */
@@ -68,9 +67,6 @@ export class PathLayer {
         const settings = this.settings.get()
         this.#lines.material.color.copy(cssColor(settings.color, "white"))
         this.#lines.material.linewidth = settings.width
-        this.#lines.material.depthTest = !settings.onTop
-        this.#lines.material.transparent = !!settings.onTop
-        this.#lines.object.renderOrder = settings.onTop ? 10 : 0
         this.#draw()
     }
 
@@ -128,9 +124,6 @@ export function PathSettingsEditor({ settings }: LayerSettingsProps<PathSettings
                     format={(width) => `${width}px`}
                     onChange={(width) => settings.update({ width })}
                 />
-            </Field>
-            <Field label="On top">
-                <Toggle value={!!value.onTop} onChange={(onTop) => settings.update({ onTop })} />
             </Field>
         </div>
     )

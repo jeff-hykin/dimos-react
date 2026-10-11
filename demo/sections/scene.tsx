@@ -207,6 +207,7 @@ function LiveDemo() {
     const [style, setStyle] = useState<PointStyle>("voxel")
     const [names, setNames] = useState(true)
     const [gradient, setGradient] = useState("memworld")
+    const [onTop, setOnTop] = useState(false)
     return (
         <DataSourceProvider source={source}>
             <Card title="3D view" description="Scene3D with TF streamed over a test data source, plus props-fed layers">
@@ -228,9 +229,16 @@ function LiveDemo() {
                         gradient={gradient}
                     />
                     <PointCloud topic={LIDAR_KEY} style="disc" size={0.05} colorMode="solid" color="var(--warn)" />
-                    <Path topic={PATH_KEY} width={4} />
-                    <Pose topic={ODOM_KEY} trail={true} axesSize={0} color="var(--accent-alt)" width={2} />
-                    <PoseArray poses={waypoints} frame="world" length={0.6} />
+                    <Path topic={PATH_KEY} width={4} onTop={onTop} />
+                    <Pose
+                        topic={ODOM_KEY}
+                        trail={true}
+                        axesSize={0}
+                        color="var(--accent-alt)"
+                        width={2}
+                        onTop={onTop}
+                    />
+                    <PoseArray poses={waypoints} frame="world" length={0.6} onTop={onTop} />
                     <RobotModel kind="dog" frame="base_link" />
                     <KeyboardFly speed={4} />
                     <SceneStats />
@@ -261,6 +269,9 @@ function LiveDemo() {
                     </Field>
                     <Field label="Frame names">
                         <Toggle value={names} onChange={setNames} />
+                    </Field>
+                    <Field label="Lines on top" hint="trail, path, waypoints over the cloud (any layer's onTop)">
+                        <Toggle value={onTop} onChange={setOnTop} />
                     </Field>
                     <Field label="Gradient" style={{ minWidth: 260 }}>
                         <GradientPicker value={gradient} onChange={setGradient} />

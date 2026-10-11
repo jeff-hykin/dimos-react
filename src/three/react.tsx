@@ -22,7 +22,7 @@ import { cssColor, disposeTree, robotModel } from "./robot_model.ts"
 import { Store, useStore } from "./store.ts"
 import { IconButton, Select } from "../components/controls.tsx"
 import "./layers/index.ts"
-import { defaultSettings, layerTypeById, RobotPose } from "./layers/registry.ts"
+import { defaultSettings, followOnTop, layerTypeById, RobotPose } from "./layers/registry.ts"
 import { CLOUD_DEFAULTS, CloudLayer } from "./layers/pointcloud.tsx"
 import { POSE_DEFAULTS, PoseLayer } from "./layers/pose.tsx"
 import { PathLayer } from "./layers/path.tsx"
@@ -673,7 +673,7 @@ export interface LayerProps {
  * One layer of a registered type (layers/registry.js) in the scene: from a topic, or from `data` (types that take
  * props data: pointcloud, pose, path, posearray, labeled-points `[{ label, position, frame, color }]`, boxes3d
  * `[{ center, size, yaw, frame, label, color, fill }]`). `settings` override the type's defaults (live: a change restyles,
- * it doesn't re-create).
+ * it doesn't re-create); every type also takes `onTop` (LayerCommonSettings: drawn over everything else).
  */
 export function Layer({ type, topic, settings, data, onStatus, onPose }: LayerProps) {
     const scene = useScene()
@@ -706,6 +706,12 @@ export function Layer({ type, topic, settings, data, onStatus, onPose }: LayerPr
             )
             // registry layers place their root by its matrix
             created.root.matrixAutoUpdate = false
+            const offTop = followOnTop(mounted.viewer!, created.root, store)
+            const dispose = created.dispose.bind(created)
+            created.dispose = () => {
+                offTop()
+                dispose()
+            }
             return created
         },
         [layerType, topicObject?.key, store],
@@ -734,6 +740,7 @@ export function TopicLayers({ manager }: { manager: LayerManager }) {
                 type: LayerType
                 offFrame: (() => void) | null
                 offReset: (() => void) | null
+                offTop: () => void
             }
         >(),
     )
@@ -767,7 +774,8 @@ export function TopicLayers({ manager }: { manager: LayerManager }) {
                 viewer.scene.add(instance.root)
                 const offFrame = instance.update ? viewer.onFrame((frame) => instance.update?.(frame)) : null
                 const offReset = instance.reset ? viewer.onReset(() => instance.reset?.()) : null
-                instances.current.set(key, { instance, type: entry.type, offFrame, offReset })
+                const offTop = followOnTop(viewer, instance.root, entry.settings)
+                instances.current.set(key, { instance, type: entry.type, offFrame, offReset, offTop })
             } catch (error) {
                 manager.setStatus(key, {
                     problem: `failed to start: ${error instanceof Error ? error.message : error}`,
@@ -781,6 +789,7 @@ export function TopicLayers({ manager }: { manager: LayerManager }) {
             instances.current.delete(key)
             running.offFrame?.()
             running.offReset?.()
+            running.offTop()
             running.instance.root.removeFromParent()
             running.instance.dispose()
             manager.clearStatus(key)
@@ -792,6 +801,7 @@ export function TopicLayers({ manager }: { manager: LayerManager }) {
             for (const [key, running] of instances.current) {
                 running.offFrame?.()
                 running.offReset?.()
+                running.offTop()
                 running.instance.root.removeFromParent()
                 running.instance.dispose()
                 manager.clearStatus(key)
@@ -814,9 +824,10 @@ export function TfFrames({
     maxNames = 16,
     named = [],
     maxFrames = 512,
+    onTop = false,
     onStatus,
 }: TfFramesProps) {
-    const settings = { axesSize, names, links, maxNames, named, maxFrames }
+    const settings = { axesSize, names, links, maxNames, named, maxFrames, onTop }
     return <Layer type={tfType} settings={settings} onStatus={onStatus} />
 }
 export interface TfFramesProps {
@@ -826,6 +837,8 @@ export interface TfFramesProps {
     maxNames?: number
     named?: string[]
     maxFrames?: number
+    /** drawn over the clouds instead of depth-tested among them (default off; live) */
+    onTop?: boolean
     onStatus?: (status: LayerStatus) => void
 }
 
@@ -867,6 +880,8 @@ export interface PointCloudProps {
     color?: string
     opacity?: number
     cubeShade?: string
+    /** drawn over other clouds instead of depth-tested among them (default off; live) */
+    onTop?: boolean
     onStatus?: (status: LayerStatus) => void
 }
 
@@ -897,6 +912,7 @@ export function PointCloud({
     color,
     opacity,
     cubeShade,
+    onTop = false,
     onStatus,
 }: PointCloudProps) {
     const look: Record<string, unknown> = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
@@ -919,7 +935,7 @@ export function PointCloud({
     if (color !== undefined) {
         look.solid = `#${cssColor(color, "white").getHexString()}`
     }
-    const settings = { look, mode, windowSeconds, maxPoints, maxHz, quality, frame }
+    const settings = { look, mode, windowSeconds, maxPoints, maxHz, quality, frame, onTop }
     const data = useMemo(
         () => (points ? { positions: points, intensity, frame } : undefined),
         [points, intensity, frame],
@@ -943,6 +959,7 @@ export interface PathProps {
     color?: string
     width?: number
     lift?: number
+    /** drawn over the clouds instead of depth-tested among them (default off; live) */
     onTop?: boolean
     onStatus?: (status: LayerStatus) => void
 }
@@ -983,6 +1000,7 @@ export interface PoseProps {
     jumpMeters?: number
     color?: string
     width?: number
+    /** axes, trail and route drawn over the clouds instead of depth-tested among them (default off; live) */
     onTop?: boolean
     route?: boolean
     onPose?: (matrix: THREE.Matrix4) => void
@@ -1005,7 +1023,7 @@ export function Pose({
     jumpMeters = 2.5,
     color = "var(--primary)",
     width = 4,
-    onTop = true,
+    onTop = false,
     route = true,
     onPose,
     onStatus,
@@ -1039,6 +1057,8 @@ export interface PoseArrayProps {
     color?: string
     length?: number
     width?: number
+    /** drawn over the clouds instead of depth-tested among them (default off; live) */
+    onTop?: boolean
     onStatus?: (status: LayerStatus) => void
 }
 
@@ -1050,11 +1070,18 @@ export function PoseArray({
     color = "var(--accent-alt)",
     length = 0.4,
     width = 2,
+    onTop = false,
     onStatus,
 }: PoseArrayProps) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
     return (
-        <Layer type={poseArrayType} topic={topic} settings={{ color, length, width }} data={data} onStatus={onStatus} />
+        <Layer
+            type={poseArrayType}
+            topic={topic}
+            settings={{ color, length, width, onTop }}
+            data={data}
+            onStatus={onStatus}
+        />
     )
 }
 

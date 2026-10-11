@@ -3,6 +3,7 @@
 // orbit, two fingers pan + pinch zoom), a smoothed follow camera, a 2D label overlay, and a render loop that only
 // draws when something changed. It keeps fps / frame time / latency numbers in `stats`.
 import * as THREE from "three"
+import { ON_TOP_CHANNEL, OnTopPass } from "./on_top.ts"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js"
 import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js"
@@ -124,6 +125,7 @@ export class Viewer {
     #resizeObserver: ResizeObserver
     #disposed = false
     #resetListeners: Set<() => void> = new Set()
+    #onTop = new OnTopPass()
     #slowSeconds = 0
 
     /**
@@ -175,10 +177,14 @@ export class Viewer {
         this.controls.addEventListener("change", () => this.requestRender())
         this.controls.addEventListener("start", () => this.#panGate.start())
 
-        this.scene.add(new THREE.HemisphereLight(0xdde8ff, 0x202830, 1.6))
+        const sky = new THREE.HemisphereLight(0xdde8ff, 0x202830, 1.6)
         const sun = new THREE.DirectionalLight(0xffffff, 1.2)
         sun.position.set(5, 3, 10)
-        this.scene.add(sun)
+        for (const light of [sky, sun]) {
+            // lights only reach the passes whose channel they're on
+            light.layers.enable(ON_TOP_CHANNEL)
+            this.scene.add(light)
+        }
         this.setTheme()
 
         this.#resizeObserver = new ResizeObserver(() => this.#resize())
@@ -272,8 +278,22 @@ export class Viewer {
         for (const listener of this.#listeners) {
             listener(info)
         }
-        this.renderer.render(this.scene, this.camera)
+        this.#render()
         return this.renderer.domElement.toDataURL(type)
+    }
+
+    /**
+     * Draws `object` (and everything under it, children added later too) over the rest of the scene: in a second pass
+     * after the depth buffer is cleared, so clouds and voxels never hide it (it still depth-tests against itself and
+     * other on-top objects). Off (the default for every object): drawn in the scene, hidden by whatever is in front.
+     */
+    setOnTop(object: THREE.Object3D, on: boolean) {
+        this.#onTop.set(object, on)
+        this.requestRender()
+    }
+
+    #render() {
+        this.#onTop.render(this.renderer, this.scene, this.camera)
     }
 
     /** Draw on the next frame. */
@@ -326,6 +346,8 @@ export class Viewer {
             -((clientY - rect.top) / rect.height) * 2 + 1,
         )
         const raycaster = new THREE.Raycaster()
+        // on-top objects are pickable too
+        raycaster.layers.enable(ON_TOP_CHANNEL)
         raycaster.setFromCamera(ndc, this.camera)
         const { origin, direction } = raycaster.ray
         const PICK_PX = 6
@@ -619,8 +641,12 @@ export class Viewer {
         }
         if (this.#dirty && !this.paused) {
             this.#dirty = false
-            this.renderer.render(this.scene, this.camera)
+            this.#render()
+            // CSS2D labels show only on the camera's channels: on-top layers' names too
+            const mask = this.camera.layers.mask
+            this.camera.layers.enable(ON_TOP_CHANNEL)
             this.labels.render(this.scene, this.camera)
+            this.camera.layers.mask = mask
             if (now - this.#lastDeclutter > 150) {
                 this.#lastDeclutter = now
                 this.#declutter()

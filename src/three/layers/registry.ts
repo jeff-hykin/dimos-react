@@ -77,6 +77,25 @@ export interface OverlayType {
     draw: (context: CanvasRenderingContext2D, message: any, image: { width: number; height: number }) => void
 }
 
+/**
+ * Settings every layer type takes, beside its own. `onTop`: drawn over everything else (Viewer.setOnTop), instead of
+ * depth-tested among the clouds (the default); the Layers panel shows it as each layer's "Draw on top".
+ */
+export interface LayerCommonSettings {
+    onTop?: boolean
+}
+
+/** Keeps `root` on top while `settings.onTop` says so; the returned function stops (and puts it back in the scene). */
+export function followOnTop(viewer: Viewer, root: THREE.Object3D, settings: Store<LayerCommonSettings>): () => void {
+    const apply = () => viewer.setOnTop(root, !!settings.get().onTop)
+    apply()
+    const off = settings.subscribe(apply)
+    return () => {
+        off()
+        viewer.setOnTop(root, false)
+    }
+}
+
 const layerTypes: LayerType[] = []
 
 /** Registers a layer type (replacing one with the same id). */

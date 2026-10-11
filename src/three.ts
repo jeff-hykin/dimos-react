@@ -38,6 +38,7 @@ export {
     allLayerTypes,
     allOverlayTypes,
     defaultSettings,
+    followOnTop,
     layerTypeById,
     layerTypeFor,
     overlayTypeFor,
@@ -79,6 +80,8 @@ export {
 export { GradientPicker } from "./three/gradient_picker.tsx"
 export { Viewer } from "./three/viewer.ts"
 export type { FrameInfo, PickResult, RenderStats, ViewerOptions } from "./three/viewer.ts"
+export { ON_TOP_CHANNEL } from "./three/on_top.ts"
+export type { LayerCommonSettings } from "./three/layers/registry.ts"
 export { STALE_MS, TfTree, WORLD_NAMES } from "./three/tf.ts"
 export type { TfProblems, TfSnapshot, TfSnapshotEdge } from "./three/tf.ts"
 export { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./three/follow.ts"

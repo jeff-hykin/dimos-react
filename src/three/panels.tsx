@@ -18,6 +18,8 @@ import { Badge, Field, Select, Toggle } from "../components/controls.tsx"
 import { Icon } from "../components/icon.tsx"
 import { Alert, EmptyState } from "../components/feedback.tsx"
 import type { LayerEntry } from "./layers/manager.ts"
+import type { LayerCommonSettings } from "./layers/registry.ts"
+import type { Store } from "./store.ts"
 import type { TfTree, TfSnapshot } from "./tf.ts"
 import type { TfIssue } from "./tf_check.ts"
 
@@ -39,6 +41,18 @@ export function useLayerManager({
     const manager = useMemo(() => new LayerManager({ source, persist, storagePrefix }), [source, storagePrefix])
     useEffect(() => manager.watch({ filter, intervalMs }), [manager, filter, intervalMs])
     return manager
+}
+
+/** Every layer's "Draw on top" (LayerCommonSettings.onTop): applied in place, the layer keeps running. */
+function OnTopSetting({ settings }: { settings: Store<LayerCommonSettings> }) {
+    const { onTop } = useStore(settings)
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Draw on top" hint="over the clouds; off: what's in front hides it">
+                <Toggle value={!!onTop} onChange={(on) => settings.update({ onTop: on })} />
+            </Field>
+        </div>
+    )
 }
 
 function LayerRow({ manager, entry }: { manager: LayerManager; entry: LayerEntry }) {
@@ -65,17 +79,14 @@ function LayerRow({ manager, entry }: { manager: LayerManager; entry: LayerEntry
                     type="button"
                     className="dr-layer-name"
                     onClick={() => setOpen(!open)}
-                    disabled={!Settings}
                     title={entry.topic.key}
-                    aria-expanded={Settings ? open : undefined}
+                    aria-expanded={open}
                 >
                     <span className="dr-layer-topic">{entry.topic.name}</span>
                     <span className="dr-layer-type">{entry.topic.type.split(".")[1]}</span>
-                    {Settings ? (
-                        <span className={cx("dr-layer-chevron", open && "dr-layer-chevron--open")}>
-                            <Icon name="chevron-right" size={14} />
-                        </span>
-                    ) : null}
+                    <span className={cx("dr-layer-chevron", open && "dr-layer-chevron--open")}>
+                        <Icon name="chevron-right" size={14} />
+                    </span>
                 </button>
             </div>
             {entry.enabled && (status.problem || status.info) ? (
@@ -83,9 +94,10 @@ function LayerRow({ manager, entry }: { manager: LayerManager; entry: LayerEntry
                     {status.problem ?? status.info}
                 </div>
             ) : null}
-            {open && Settings ? (
+            {open ? (
                 <div className="dr-layer-settings">
-                    <Settings settings={entry.settings} topic={entry.topic} />
+                    <OnTopSetting settings={entry.settings} />
+                    {Settings ? <Settings settings={entry.settings} topic={entry.topic} /> : null}
                 </div>
             ) : null}
         </div>

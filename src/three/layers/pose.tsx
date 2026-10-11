@@ -26,7 +26,6 @@ export interface PoseSettings {
     color: string
     width: number
     axesSize: number
-    onTop: boolean
     route: boolean
 }
 
@@ -48,7 +47,6 @@ export const POSE_DEFAULTS: PoseSettings = {
     color: "var(--primary)",
     width: 4,
     axesSize: 0.6,
-    onTop: true,
     route: true,
 }
 
@@ -182,16 +180,9 @@ export class PoseLayer {
         this.#trail.material.color.copy(color)
         this.#trail.material.linewidth = settings.width
         this.#trail.object.visible = settings.trail
-        this.#trail.material.depthTest = settings.onTop === false
-        // three draws every transparent object after every opaque one: on top of blended (glow) clouds needs the
-        // trail in the transparent list too, where renderOrder puts it last
-        this.#trail.material.transparent = settings.onTop !== false
-        this.#trail.object.renderOrder = settings.onTop === false ? 0 : 10
         this.#ghost.material.color.copy(color)
         this.#ghost.material.linewidth = Math.max(1, settings.width - 1.5)
         this.#ghost.object.visible = settings.route !== false
-        this.#ghost.material.depthTest = settings.onTop === false
-        this.#ghost.object.renderOrder = settings.onTop === false ? 0 : 9
         if (!settings.trail) {
             this.#clearTrail()
         }
@@ -372,9 +363,6 @@ export function PoseSettingsEditor({ settings }: LayerSettingsProps<PoseSettings
                     ]}
                     onChange={(trailLength) => settings.update({ trailLength })}
                 />
-            </Field>
-            <Field label="On top">
-                <Toggle value={value.onTop !== false} onChange={(onTop) => settings.update({ onTop })} />
             </Field>
             <Field label="Color">
                 <ColorSetting value={value.color} onChange={(color) => settings.update({ color })} />

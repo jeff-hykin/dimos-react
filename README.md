@@ -234,10 +234,14 @@ children are laid over the canvas (use `className="dr-scene-overlay"` and positi
 `maxPoints`, look: `style` voxel|disc|square|splat, `size` (m), `colorMode` height|intensity|range| solid, `gradient`
 (memworld, turbo, viridis, magma, plasma, ice, sunset, grayscale) or a repeating palette (aurora, ember, rose: one
 up-and-back cycle every `period` meters, so floors read apart), `axis`, `rangeMin/Max`, `color`, `opacity`. `Path` —
-`topic` | `poses` (+ `frame`), `color`, `width` (px), `lift`, `onTop`. `Pose` — `topic` (Odometry / PoseStamped /
+`topic` | `poses` (+ `frame`), `color`, `width` (px), `lift`. `Pose` — `topic` (Odometry / PoseStamped /
 PoseWithCovarianceStamped) | `pose` (+ `frame`), `axesSize`, `trail`, `trailLength`, `jumpMeters`,
 `onPose(matrixInFixedFrame)`. Colors accept any CSS color or a theme token (`"var(--primary)"`); axes use the theme's
-`--axis-x/y/z`. Every layer takes `onStatus({ info, problem, frame })` (e.g. "no TF path from lidar to world").
+`--axis-x/y/z`. Every layer takes `onStatus({ info, problem, frame })` (e.g. "no TF path from lidar to world") and
+`onTop` (default off): drawn over everything else, so walls and voxels in front never hide it, instead of sitting in
+the scene depth-tested. It switches live (no re-created layer, no resubscribe): the layer's objects move to a second
+render pass drawn after the depth buffer is cleared (`viewer.setOnTop(object, on)`, three.js layer channel
+`ON_TOP_CHANNEL`; on-top objects still hide each other). A `<Layer>` takes it in `settings` like any type's own.
 
 Viewer options (Scene3D props, read once): `near`, `far`, `fov` (a small model like a URDF wants `near: 0.001`),
 `gridSize` (m) / `gridDivisions`, `freeOrbit` (orbit below the ground too). `<KeyboardFly speed lookSpeed />`
@@ -276,7 +280,8 @@ function Marker({ frame, color = "var(--warn)" }: { frame: string; color?: strin
 `renderer`, `fixedFrame`, `requestRender()`, `noteData(timestampMs)`, `onFrame(fn)`, `pick(clientX, clientY)`,
 `frame(target, distance)`, `frameAll()`, `topDown(target, extent)`, `dataBounds()`, `pauseFollow()` / `resumeFollow()`,
 `followPaused` and `stats` (stores: `{ fps, frameMs, latencyP50, latencyP95, drawCalls, points }`), `setTheme()`,
-`setGrid(visible)`, `capture(type?)`, `paused` (a hidden view draws nothing until unpaused), `dispose()`. Point
+`setGrid(visible)`, `setOnTop(object, on)` (draw an object of your own over the scene; a raycaster of your own
+needs `raycaster.layers.enable(ON_TOP_CHANNEL)` to hit it), `capture(type?)`, `paused` (a hidden view draws nothing until unpaused), `dispose()`. Point
 materials of your own: `makePointMaterial(viewer.pixelsPerMeter)`, `applyLook(material, look, range)`,
 `setClipBox(material, min, max)` (draw only inside a box). `TfTree` (pure, no DOM):
 `set(parent, child, xyz, quat, isStatic)`, `setMessage(tfMessage)`, `lookup(frame, fixed)` → `Matrix4 | null`,
@@ -287,7 +292,7 @@ materials of your own: `makePointMaterial(viewer.pixelsPerMeter)`, `applyLook(ma
 
 The Controller's layer list, generic: a `LayerManager` watches the data source's topics and makes an entry per topic
 some **layer type** draws; `<TopicLayers>` (in the scene) runs the switched-on ones, `<LayersPanel>` (anywhere) switches
-them and edits each one's settings. Built-in types: `pointcloud` (PointCloud2, with this viewer's bandwidth preset),
+them and edits each one's settings (every row's settings start with "Draw on top", the common `onTop`). Built-in types: `pointcloud` (PointCloud2, with this viewer's bandwidth preset),
 `pose` (Odometry / PoseStamped / PoseWithCovarianceStamped + trail, and the whole route when the source knows it),
 `path`, `posearray`, `graph` (LineSegments3D), `marker` (Marker / MarkerArray: every RViz type but meshes), `boxes3d`
 (Detection3DArray / BoundingBox3DArray), `labeled-points` (EntityMarkers / PointStamped), `occupancy` (OccupancyGrid:

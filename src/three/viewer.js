@@ -46,6 +46,8 @@ export class Viewer {
     fixedFrame = "world"
     /** where the camera follows (a point in the fixed frame); the React layer sets it each frame from followFrame */
     followTarget = null
+    /** a hidden view (display: none, a collapsed pane) draws nothing; what changed meanwhile is drawn once unpaused */
+    paused = false
     /** following stopped because the user panned away; `resumeFollow()` ends it */
     followPaused = new Store({ paused: false })
 
@@ -508,7 +510,7 @@ export class Viewer {
                 console.error("[dimos-react] scene frame listener threw", error)
             }
         }
-        if (this.#dirty) {
+        if (this.#dirty && !this.paused) {
             this.#dirty = false
             this.renderer.render(this.scene, this.camera)
             this.labels.render(this.scene, this.camera)

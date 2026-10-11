@@ -5,6 +5,7 @@
 // or solid) happens on the GPU, so restyling costs nothing.
 import * as THREE from "three"
 import { gradientTexture } from "./gradients.js"
+import { DEFAULT_PERIOD, isPalette } from "../colormaps.js"
 
 /** What glow splats fade into: the page behind the canvas (Viewer.setTheme keeps it on --scene-bg). */
 export const splatBackground = new THREE.Color().setRGB(0, 0, 0, THREE.NoColorSpace)
@@ -33,7 +34,7 @@ export const CUBE_SHADES = {
 
 /**
  * @typedef {{ style?: "voxel" | "splat" | "disc" | "square", size?: number, colorMode?: "height" | "intensity" | "range" | "solid",
- *   gradient?: string, axis?: 0 | 1 | 2, rangeMin?: number | null, rangeMax?: number | null, solid?: string,
+ *   gradient?: string, period?: number, axis?: 0 | 1 | 2, rangeMin?: number | null, rangeMax?: number | null, solid?: string,
  *   opacity?: number, cubeShade?: keyof typeof CUBE_SHADES }} PointLook
  */
 
@@ -62,12 +63,15 @@ uniform int uStyle;
 uniform int uColorMode;
 uniform int uAxis;
 uniform vec2 uRange;
+uniform float uPeriod;
 uniform vec3 uSolid;
 uniform vec3 uSensor;
 uniform float uNow;
 uniform float uWindow;
 uniform sampler2D uGradient;
 uniform float uKeep;
+uniform vec3 uClipMin;
+uniform vec3 uClipMax;
 attribute float aTime;
 attribute float aIntensity;
 varying vec3 vColor;
@@ -85,13 +89,20 @@ void main() {
     }
 #endif
     vec3 world = (modelMatrix * vec4(position, 1.0)).xyz;
+    // the clip box (setClipBox): outside it, nothing is drawn
+    if (any(lessThan(world, uClipMin)) || any(greaterThan(world, uClipMax))) {
+        gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+        gl_PointSize = 0.0;
+        return;
+    }
     vec3 center = uStyle == 2 ? (floor(world / uSize) + 0.5) * uSize : world;
 #ifdef USE_INTENSITY
     float value = aIntensity;
 #else
     float value = uColorMode == 2 ? distance(world, uSensor) : center[uAxis];
 #endif
-    float t = clamp((value - uRange.x) / max(1e-6, uRange.y - uRange.x), 0.0, 1.0);
+    // a repeating palette cycles every uPeriod meters (its texture wraps, so the repeat has no seam); a ramp spans uRange
+    float t = uPeriod > 0.0 ? fract(value / uPeriod) : clamp((value - uRange.x) / max(1e-6, uRange.y - uRange.x), 0.0, 1.0);
     vColor = uColorMode == 3 ? uSolid : texture2D(uGradient, vec2(t, 0.5)).rgb;
     vec4 mv = viewMatrix * vec4(center, 1.0);
     float depth = max(1e-3, -mv.z);
@@ -216,6 +227,7 @@ export function makePointMaterial(pixelsPerMeter) {
             uColorMode: { value: 0 },
             uAxis: { value: 2 },
             uRange: { value: new THREE.Vector2(0, 2) },
+            uPeriod: { value: 0 },
             uSolid: { value: new THREE.Color().setRGB(1, 1, 1, THREE.NoColorSpace) },
             uSensor: { value: new THREE.Vector3() },
             uNow: { value: 0 },
@@ -227,6 +239,8 @@ export function makePointMaterial(pixelsPerMeter) {
             uFog: { value: new THREE.Vector2(10, 40) },
             uBackground: { value: splatBackground },
             uCubeShade: { value: 0 },
+            uClipMin: { value: new THREE.Vector3(-1e9, -1e9, -1e9) },
+            uClipMax: { value: new THREE.Vector3(1e9, 1e9, 1e9) },
         },
         defines: {},
     })
@@ -279,10 +293,27 @@ export function applyLook(material, partial, range) {
     uniforms.uSolid.value.setStyle(look.solid, THREE.NoColorSpace)
     uniforms.uOpacity.value = look.opacity
     uniforms.uGradient.value = gradientTexture(look.gradient)
+    uniforms.uPeriod.value = look.colorMode === "height" && isPalette(look.gradient)
+        ? Math.max(0.05, look.period ?? DEFAULT_PERIOD)
+        : 0
     const splat = look.style === "splat"
     material.transparent = splat || look.opacity < 1
     material.depthWrite = !splat && look.opacity >= 1
     material.blending = splat ? THREE.CustomBlending : THREE.NormalBlending
     material.blendSrc = THREE.OneFactor
     material.blendDst = THREE.OneMinusSrcAlphaFactor
+}
+
+/**
+ * Draws only the points inside an axis-aligned box of the scene (world) frame; `null` bounds (or no call) = no limit
+ * on that side. `min` / `max` are [x, y, z] with nulls allowed.
+ * @param {THREE.ShaderMaterial} material
+ * @param {(number | null)[] | null} [min]
+ * @param {(number | null)[] | null} [max]
+ */
+export function setClipBox(material, min = null, max = null) {
+    const big = 1e9
+    const at = (bounds, index, fallback) => bounds?.[index] ?? fallback
+    material.uniforms.uClipMin.value.set(at(min, 0, -big), at(min, 1, -big), at(min, 2, -big))
+    material.uniforms.uClipMax.value.set(at(max, 0, big), at(max, 1, big), at(max, 2, big))
 }

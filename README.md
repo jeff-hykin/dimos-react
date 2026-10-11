@@ -239,7 +239,8 @@ children are laid over the canvas (use `className: "dr-scene-overlay"` and posit
 
 **Layer props**: `PointCloud` — `topic` | `points` (+ `intensity`, `frame`), `mode` latest|accumulate, `windowSeconds`,
 `maxPoints`, look: `style` voxel|disc|square|splat, `size` (m), `colorMode` height|intensity|range| solid, `gradient`
-(memworld, turbo, viridis, magma, plasma, ice, sunset, grayscale), `axis`, `rangeMin/Max`, `color`, `opacity`. `Path` —
+(memworld, turbo, viridis, magma, plasma, ice, sunset, grayscale) or a repeating palette (aurora, ember, rose: one
+up-and-back cycle every `period` meters, so floors read apart), `axis`, `rangeMin/Max`, `color`, `opacity`. `Path` —
 `topic` | `poses` (+ `frame`), `color`, `width` (px), `lift`, `onTop`. `Pose` — `topic` (Odometry / PoseStamped /
 PoseWithCovarianceStamped) | `pose` (+ `frame`), `axesSize`, `trail`, `trailLength`, `jumpMeters`,
 `onPose(matrixInFixedFrame)`. Colors accept any CSS color or a theme token (`"var(--primary)"`); axes use the theme's
@@ -280,9 +281,12 @@ function Marker({ frame, color = "var(--warn)" }) {
 `renderer`, `fixedFrame`, `requestRender()`, `noteData(timestampMs)`, `onFrame(fn)`, `pick(clientX, clientY)`,
 `frame(target, distance)`, `frameAll()`, `topDown(target, extent)`, `dataBounds()`, `pauseFollow()` / `resumeFollow()`,
 `followPaused` and `stats` (stores: `{ fps, frameMs, latencyP50, latencyP95, drawCalls, points }`), `setTheme()`,
-`setGrid(visible)`, `capture(type?)`, `dispose()`. `TfTree` (pure, no DOM): `set(parent, child, xyz, quat, isStatic)`,
-`setMessage(tfMessage)`, `lookup(frame, fixed)` → `Matrix4 | null`, `defaultFixedFrame()`, `frames()`, `snapshot()`
-(with problems: double parents, several roots, cycles, stale edges), `onChange(fn)`.
+`setGrid(visible)`, `capture(type?)`, `paused` (a hidden view draws nothing until unpaused), `dispose()`. Point
+materials of your own: `makePointMaterial(viewer.pixelsPerMeter)`, `applyLook(material, look, range)`,
+`setClipBox(material, min, max)` (draw only inside a box). `TfTree` (pure, no DOM):
+`set(parent, child, xyz, quat, isStatic)`, `setMessage(tfMessage)`, `lookup(frame, fixed)` → `Matrix4 | null`,
+`defaultFixedFrame()`, `frames()`, `snapshot()` (with problems: double parents, several roots, cycles, stale edges),
+`onChange(fn)`.
 
 ## Tests
 

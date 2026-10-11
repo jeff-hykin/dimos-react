@@ -816,9 +816,10 @@ class CloudLayer {
  *   topic?: string, points?: Float32Array | number[], intensity?: Uint8Array, frame?: string,
  *   mode?: "latest" | "accumulate", windowSeconds?: number, maxPoints?: number, maxHz?: number, quality?: number,
  *   style?: "voxel" | "splat" | "disc" | "square", size?: number, colorMode?: "height" | "intensity" | "range" | "solid",
- *   gradient?: string, axis?: 0 | 1 | 2, rangeMin?: number | null, rangeMax?: number | null, color?: string,
- *   opacity?: number, cubeShade?: string, onStatus?: (status: object) => void,
- * }} props `color`: the solid color (CSS or a token like "var(--primary)"; colorMode "solid")
+ *   gradient?: string, period?: number, axis?: 0 | 1 | 2, rangeMin?: number | null, rangeMax?: number | null,
+ *   color?: string, opacity?: number, cubeShade?: string, onStatus?: (status: object) => void,
+ * }} props `color`: the solid color (CSS or a token like "var(--primary)"; colorMode "solid"); `gradient` a ramp
+ *   (RAMPS, over rangeMin..rangeMax) or a repeating palette (PALETTES, one cycle every `period` meters)
  */
 export function PointCloud({
     topic,
@@ -834,6 +835,7 @@ export function PointCloud({
     size,
     colorMode,
     gradient,
+    period,
     axis,
     rangeMin,
     rangeMax,
@@ -852,6 +854,7 @@ export function PointCloud({
             size,
             colorMode,
             gradient,
+            period,
             axis,
             rangeMin,
             rangeMax,

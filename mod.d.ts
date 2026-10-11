@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 export declare function Alert(props: Record<string, any>): ReactNode
 export declare function AppProvider(props: Record<string, any>): ReactNode
 export declare function AppShell(props: Record<string, any>): ReactNode
+export declare function AttitudeIndicator(props: Record<string, any>): ReactNode
 export declare function Badge(props: Record<string, any>): ReactNode
 export declare function BottomBar(props: Record<string, any>): ReactNode
 export declare function Breadcrumbs(props: Record<string, any>): ReactNode
@@ -102,6 +103,7 @@ export declare const applyTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const applyUrlEvent: ((...args: any[]) => any) & Record<string, any>
 export declare const bindUrlEvents: ((...args: any[]) => any) & Record<string, any>
 export declare const captureFrame: ((...args: any[]) => any) & Record<string, any>
+export declare const copyText: ((...args: any[]) => any) & Record<string, any>
 export declare const createMemoryWindow: ((...args: any[]) => any) & Record<string, any>
 export declare const createUrlStore: ((...args: any[]) => any) & Record<string, any>
 export declare const cx: ((...args: any[]) => any) & Record<string, any>

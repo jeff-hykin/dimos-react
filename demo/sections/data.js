@@ -143,6 +143,11 @@ export function DataSection() {
         ),
         h(
             Card,
+            { title: "Table (rows sorted by the backend: sortRows false)", className: "demo-wide" },
+            h(BackendSortedTable),
+        ),
+        h(
+            Card,
             { title: "Tree (TF frames)" },
             h(Tree, { nodes: FRAMES, defaultExpanded: "all", selected: frame, onSelect: setFrame }),
         ),
@@ -287,4 +292,26 @@ export function DataSection() {
             }),
         ),
     )
+}
+
+/** A table whose rows a backend sorts: the header picks the sort key, the rows keep the order they arrive in. */
+function BackendSortedTable() {
+    const [sort, setSort] = useState({ key: "hz", dir: "desc" })
+    const read = { name: (row) => row.name, hz: (row) => -row.hz, kb: (row) => -row.kb }[sort.key]
+    // stands in for the backend: sorted by the chosen key, live first
+    const rows = [...TOPICS].sort((a, b) => (read(a) < read(b) ? -1 : read(a) > read(b) ? 1 : 0))
+    return h(Table, {
+        columns: [
+            { key: "name", label: "Topic", sort: true, render: (row) => h("span", { className: "dr-mono" }, row.name) },
+            { key: "hz", label: "Rate", sort: true, align: "right", render: (row) => `${row.hz.toFixed(1)} Hz` },
+            { key: "kb", label: "Size", sort: true, align: "right", render: (row) => `${row.kb} kB` },
+        ],
+        rows,
+        rowKey: "key",
+        sortRows: false,
+        sort,
+        onSortChange: (next) => next && setSort({ key: next.key, dir: next.key === "name" ? "asc" : "desc" }),
+        compact: true,
+        maxHeight: 200,
+    })
 }

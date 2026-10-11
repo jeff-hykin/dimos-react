@@ -45,8 +45,9 @@ const compareValues = (a, b) => {
  *   rows: any[], rowKey?: string | ((row: any, index: number) => any),
  *   sort?: { key: string, dir: "asc" | "desc" } | null, onSortChange?: (sort: any) => void, defaultSort?: any,
  *   onRowClick?: (row: any, index: number) => void, selected?: any, empty?: any, sticky?: boolean, compact?: boolean,
- *   maxHeight?: string | number, className?: string, style?: object,
+ *   maxHeight?: string | number, sortRows?: boolean, className?: string, style?: object,
  * }} props
+ *   `sortRows: false`: the rows arrive already sorted (by a backend); the headers still show and change `sort`
  */
 export function Table({
     columns,
@@ -61,13 +62,14 @@ export function Table({
     sticky = true,
     compact = false,
     maxHeight,
+    sortRows = true,
     className,
     style,
     ...rest
 }) {
     const [currentSort, setSort] = useControllable(sort, defaultSort, onSortChange)
     const sorted = useMemo(() => {
-        if (!currentSort) {
+        if (!currentSort || !sortRows) {
             return rows
         }
         const column = columns.find((item) => item.key === currentSort.key)
@@ -78,7 +80,7 @@ export function Table({
         const compare = typeof column.sort === "function" ? column.sort : (a, b) => compareValues(read(a), read(b))
         const out = [...rows].sort(compare)
         return currentSort.dir === "desc" ? out.reverse() : out
-    }, [rows, columns, currentSort?.key, currentSort?.dir])
+    }, [rows, columns, currentSort?.key, currentSort?.dir, sortRows])
     const keyOf = (row, index) =>
         typeof rowKey === "function" ? rowKey(row, index) : rowKey ? row?.[rowKey] : row?.id ?? row?.key ?? index
     const onHeader = (column) => {

@@ -352,13 +352,24 @@ export function Link({ className, children, ...rest }) {
     return h("a", { className: cx("dr-link", className), ...rest }, children)
 }
 
-/** Full-page app frame: top bar, optional side, main area (fills the viewport, above Desktop's dock). */
-export function AppShell({ topBar, sidebar, bottomBar, className, children, ...rest }) {
+/**
+ * Full-page app frame: top bar, optional side, main area (fills the viewport). `insetBottom` ends the main area above
+ * Desktop's dock (without a bottomBar; a BottomBar already does).
+ */
+export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, className, children, ...rest }) {
     return h(
         "div",
-        { className: cx("dr-shell", className), ...rest },
+        { className: cx("dr-shell", insetBottom && "dr-shell--inset", className), ...rest },
         topBar,
         h("div", { className: "dr-shell-main" }, sidebar, h("main", { className: "dr-shell-content" }, children)),
         bottomBar,
     )
+}
+
+/**
+ * Another page embedded in this one (an iframe that fills its positioned parent, no border, on the page background).
+ * `title` names it for screen readers; other props go to the iframe (`src`, `allow`, `sandbox`, …).
+ */
+export function Embed({ title, className, ...rest }) {
+    return h("iframe", { title, className: cx("dr-embed", className), ...rest })
 }

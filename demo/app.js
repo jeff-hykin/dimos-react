@@ -13,6 +13,7 @@ import {
     Chip,
     Column,
     ConnectionStatus,
+    Embed,
     EmptyState,
     Field,
     FloatingPanel,
@@ -394,6 +395,18 @@ function LayoutSection() {
                 "go2 · 3 topics · 2.1 MB/s",
                 h("span", { className: "dr-spacer" }),
                 h(Text, { mono: true, small: true }, "00:42 / 04:12"),
+            ),
+        ),
+        h(
+            Card,
+            { title: "Embed (another page in this one)", padded: false },
+            h(
+                "div",
+                { style: { position: "relative", height: 90 } },
+                h(Embed, {
+                    title: "embedded page",
+                    srcDoc: "<p style='font:13px sans-serif;padding:8px'>an embedded page (iframe)</p>",
+                }),
             ),
         ),
         h(

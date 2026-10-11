@@ -1,13 +1,19 @@
 {
     "name": "dimos-react",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "React UI toolkit for dimOS Desktop apps: themed components, Desktop theme inheritance, URL state, zenoh hooks and a three.js 3D view",
     "type": "module",
     "main": "mod.js",
     "module": "mod.js",
     "exports": {
-        ".": "./mod.js",
-        "./three": "./three.js",
+        ".": {
+            "types": "./mod.d.ts",
+            "default": "./mod.js"
+        },
+        "./three": {
+            "types": "./three.d.ts",
+            "default": "./three.js"
+        },
         "./*": "./*"
     },
     "license": "MIT",
@@ -21,5 +27,6 @@
         "three": {
             "optional": true
         }
-    }
+    },
+    "types": "mod.d.ts"
 }

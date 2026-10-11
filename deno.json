@@ -14,7 +14,8 @@
         "test": "deno test -A --no-check test/",
         "demo": "deno run -A tools/serve.js",
         "sync-tokens": "deno run -A tools/sync_tokens.js",
-        "vendor": "deno run -A tools/vendor.js"
+        "vendor": "deno run -A tools/vendor.js",
+        "types": "deno run -A tools/types.js"
     },
     "fmt": {
         "indentWidth": 4,

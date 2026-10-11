@@ -117,5 +117,7 @@ export const LAYOUT_CSS = /* css */ `
 
 .dr-shell { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; background: var(--bg); color: var(--fg); }
 .dr-shell-main { flex: 1; display: flex; min-height: 0; }
+.dr-shell--inset { padding-bottom: var(--dim-inset-bottom, 0px); box-sizing: border-box; }
+.dr-embed { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .dr-shell-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; position: relative; }
 `

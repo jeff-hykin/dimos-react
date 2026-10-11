@@ -23,6 +23,8 @@ export declare function Column(props: Record<string, any>): ReactNode
 export declare function CommandPalette(props: Record<string, any>): ReactNode
 export declare function ConnectionStatus(props: Record<string, any>): ReactNode
 export declare function ContextMenu(props: Record<string, any>): ReactNode
+export declare const DEFAULT_GRADIENT: any
+export declare const DEPTH_COLORMAPS: any
 export declare const DESKTOP_THEME_URL: any
 export declare function DPad(props: Record<string, any>): ReactNode
 export declare function DataSourceProvider(props: Record<string, any>): ReactNode
@@ -36,11 +38,14 @@ export declare function Field(props: Record<string, any>): ReactNode
 export declare function FileDrop(props: Record<string, any>): ReactNode
 export declare function FloatingPanel(props: Record<string, any>): ReactNode
 export declare const Fragment: any
+export declare const GRADIENTS: any
 export declare function Heading(props: Record<string, any>): ReactNode
 export declare function Hud(props: Record<string, any>): ReactNode
 export declare const ICONS: any
+export declare const IMAGE_OVERLAY_TYPES: any
 export declare function Icon(props: Record<string, any>): ReactNode
 export declare function IconButton(props: Record<string, any>): ReactNode
+export declare function ImageView(props: Record<string, any>): ReactNode
 export declare function Joystick(props: Record<string, any>): ReactNode
 export declare function Kbd(props: Record<string, any>): ReactNode
 export declare function KeyHints(props: Record<string, any>): ReactNode
@@ -59,9 +64,11 @@ export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
 export declare function NumberInput(props: Record<string, any>): ReactNode
 export declare function Panel(props: Record<string, any>): ReactNode
+export declare function PlaybackBar(props: Record<string, any>): ReactNode
 export declare function Popover(props: Record<string, any>): ReactNode
 export declare function Progress(props: Record<string, any>): ReactNode
 export declare function ProgressRing(props: Record<string, any>): ReactNode
+export declare const RAMPS: any
 export declare function Radio(props: Record<string, any>): ReactNode
 export declare function RadioGroup(props: Record<string, any>): ReactNode
 export declare function RangeSlider(props: Record<string, any>): ReactNode
@@ -103,16 +110,19 @@ export declare const applyTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const applyUrlEvent: ((...args: any[]) => any) & Record<string, any>
 export declare const bindUrlEvents: ((...args: any[]) => any) & Record<string, any>
 export declare const captureFrame: ((...args: any[]) => any) & Record<string, any>
+export declare const colorizeDepth: ((...args: any[]) => any) & Record<string, any>
 export declare const copyText: ((...args: any[]) => any) & Record<string, any>
 export declare const createMemoryWindow: ((...args: any[]) => any) & Record<string, any>
 export declare const createUrlStore: ((...args: any[]) => any) & Record<string, any>
 export declare const cx: ((...args: any[]) => any) & Record<string, any>
 export declare const decodeLcm: ((...args: any[]) => any) & Record<string, any>
 export declare const decodeMessage: ((...args: any[]) => any) & Record<string, any>
+export declare const depthScale: ((...args: any[]) => any) & Record<string, any>
 export declare const desktopCorners: ((...args: any[]) => any) & Record<string, any>
 export declare const desktopSkin: ((...args: any[]) => any) & Record<string, any>
 export declare const dimosKey: ((...args: any[]) => any) & Record<string, any>
 export declare const dismissToast: ((...args: any[]) => any) & Record<string, any>
+export declare const drawDetections2D: ((...args: any[]) => any) & Record<string, any>
 export declare const encodeLcm: ((...args: any[]) => any) & Record<string, any>
 export declare const formatDuration: ((...args: any[]) => any) & Record<string, any>
 export declare const fuzzyScore: ((...args: any[]) => any) & Record<string, any>
@@ -126,11 +136,15 @@ export declare const lcmSchemas: any
 export declare const markdownInline: ((...args: any[]) => any) & Record<string, any>
 export declare const matchesHotkey: ((...args: any[]) => any) & Record<string, any>
 export declare const memorySource: ((...args: any[]) => any) & Record<string, any>
+export declare const normalizeFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const normalizeOptions: ((...args: any[]) => any) & Record<string, any>
 export declare const onDesktop: ((...args: any[]) => any) & Record<string, any>
 export declare const parseKey: ((...args: any[]) => any) & Record<string, any>
 export declare const parseUrlState: ((...args: any[]) => any) & Record<string, any>
 export declare const placeFloating: ((...args: any[]) => any) & Record<string, any>
+export declare const playbackClock: ((...args: any[]) => any) & Record<string, any>
+export declare const rawToImageData: ((...args: any[]) => any) & Record<string, any>
+export declare const sampleGradient: ((...args: any[]) => any) & Record<string, any>
 export declare const signalReady: ((...args: any[]) => any) & Record<string, any>
 export declare const stickValue: ((...args: any[]) => any) & Record<string, any>
 export declare const themeColors: ((...args: any[]) => any) & Record<string, any>

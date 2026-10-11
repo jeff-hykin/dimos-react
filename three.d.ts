@@ -55,6 +55,7 @@ export declare const poseOf: ((...args: any[]) => any) & Record<string, any>
 export declare const pushBox: ((...args: any[]) => any) & Record<string, any>
 export declare const robotModel: ((...args: any[]) => any) & Record<string, any>
 export declare const sampleGradient: ((...args: any[]) => any) & Record<string, any>
+export declare const setClipBox: ((...args: any[]) => any) & Record<string, any>
 export declare const splatBackground: any
 export declare const useFixedFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const useLayer: ((...args: any[]) => any) & Record<string, any>

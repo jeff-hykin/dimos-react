@@ -28,4 +28,18 @@ export * from "./src/components/nav.js"
 export * from "./src/components/input_devices.js"
 export * from "./src/components/text.js"
 export * from "./src/components/media.js"
-export { DEFAULT_GRADIENT, GRADIENTS, RAMPS, sampleGradient } from "./src/colormaps.js"
+export {
+    cyclePhase,
+    DEFAULT_GRADIENT,
+    DEFAULT_PALETTE,
+    DEFAULT_PERIOD,
+    GRADIENTS,
+    heightColor,
+    isPalette,
+    otherPalette,
+    PALETTE_NAMES,
+    paletteAt,
+    PALETTES,
+    RAMPS,
+    sampleGradient,
+} from "./src/colormaps.js"

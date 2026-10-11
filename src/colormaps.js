@@ -34,8 +34,58 @@ function hexToRgb(hex) {
     return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
 
-/** The ramp's color at t (0..1) as 0..255 rgb. */
+// ── repeating palettes: the colors run up and back down over every `period` meters (a ping-pong: first → last over half
+// a period, then back), so a tall map shows its floors apart without one ramp stretched thin, and the repeat has no
+// hue jump. Point clouds take one as `gradient` (+ `period`); its texture wraps.
+
+/** Soft neon palettes (bright enough to glow on a dark scene); linear in sRGB between evenly spaced stops. */
+export const PALETTES = {
+    aurora: { label: "Aurora (purple → blue → cyan → green)", colors: ["#a05cf0", "#5a86f2", "#3ed4e0", "#6ee68c"] },
+    ember: { label: "Ember (gold → orange → red)", colors: ["#f2c64e", "#f08c4c", "#e8565e"] },
+    rose: { label: "Rose (pink → blush → white)", colors: ["#f264b0", "#f2a6cc", "#f6e8ee"] },
+}
+export const PALETTE_NAMES = Object.keys(PALETTES)
+export const DEFAULT_PALETTE = "aurora"
+/** meters of height one full up-and-back cycle spans */
+export const DEFAULT_PERIOD = 9
+
+/** True for a repeating palette's name (PALETTES), false for a ramp (RAMPS). */
+export function isPalette(name) {
+    return Object.hasOwn(PALETTES, name)
+}
+
+/** Where in its cycle a height is, 0 (inclusive) to 1 (exclusive); negative heights wrap the same way. */
+export function cyclePhase(height, period = DEFAULT_PERIOD) {
+    const turns = height / Math.max(1e-6, period)
+    return turns - Math.floor(turns)
+}
+
+/** A palette's color at a phase (0..1, wrapping) as 0..255 rgb: first color at 0, last at 0.5, first again at 1. */
+export function paletteAt(name, phase) {
+    const colors = (PALETTES[name] ?? PALETTES[DEFAULT_PALETTE]).colors.map(hexToRgb)
+    const wrapped = phase - Math.floor(phase)
+    const along = (1 - Math.abs(2 * wrapped - 1)) * (colors.length - 1)
+    const index = Math.min(colors.length - 2, Math.floor(along))
+    const mix = along - index
+    const [a, b] = [colors[index], colors[index + 1]]
+    return [a[0] + (b[0] - a[0]) * mix, a[1] + (b[1] - a[1]) * mix, a[2] + (b[2] - a[2]) * mix]
+}
+
+/** A palette's color for a height. */
+export function heightColor(name, height, period = DEFAULT_PERIOD) {
+    return paletteAt(name, cyclePhase(height, period))
+}
+
+/** The palette for another cloud beside one drawn in `taken`: the next one, so the two never match. */
+export function otherPalette(taken) {
+    return PALETTE_NAMES[(PALETTE_NAMES.indexOf(taken) + 1) % PALETTE_NAMES.length]
+}
+
+/** The ramp's color at t (0..1) as 0..255 rgb (a palette's: at phase t). */
 export function sampleGradient(name, t) {
+    if (isPalette(name)) {
+        return paletteAt(name, t)
+    }
     const stops = RAMPS[name] ?? RAMPS[DEFAULT_GRADIENT]
     const clamped = Math.min(1, Math.max(0, t))
     for (let index = 1; index < stops.length; index++) {

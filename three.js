@@ -44,6 +44,7 @@ export {
     focusDistance,
     makePointMaterial,
     POINT_STYLES,
+    setClipBox,
     splatBackground,
 } from "./src/three/point_material.js"
 export { FatLines, pushBox } from "./src/three/lines.js"

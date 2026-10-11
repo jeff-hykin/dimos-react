@@ -24,6 +24,8 @@ export declare function CommandPalette(props: Record<string, any>): ReactNode
 export declare function ConnectionStatus(props: Record<string, any>): ReactNode
 export declare function ContextMenu(props: Record<string, any>): ReactNode
 export declare const DEFAULT_GRADIENT: any
+export declare const DEFAULT_PALETTE: any
+export declare const DEFAULT_PERIOD: any
 export declare const DEPTH_COLORMAPS: any
 export declare const DESKTOP_THEME_URL: any
 export declare function DPad(props: Record<string, any>): ReactNode
@@ -63,6 +65,8 @@ export declare function Menu(props: Record<string, any>): ReactNode
 export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
 export declare function NumberInput(props: Record<string, any>): ReactNode
+export declare const PALETTES: any
+export declare const PALETTE_NAMES: any
 export declare function Panel(props: Record<string, any>): ReactNode
 export declare function PlaybackBar(props: Record<string, any>): ReactNode
 export declare function Popover(props: Record<string, any>): ReactNode
@@ -115,6 +119,7 @@ export declare const copyText: ((...args: any[]) => any) & Record<string, any>
 export declare const createMemoryWindow: ((...args: any[]) => any) & Record<string, any>
 export declare const createUrlStore: ((...args: any[]) => any) & Record<string, any>
 export declare const cx: ((...args: any[]) => any) & Record<string, any>
+export declare const cyclePhase: ((...args: any[]) => any) & Record<string, any>
 export declare const decodeLcm: ((...args: any[]) => any) & Record<string, any>
 export declare const decodeMessage: ((...args: any[]) => any) & Record<string, any>
 export declare const depthScale: ((...args: any[]) => any) & Record<string, any>
@@ -128,8 +133,10 @@ export declare const formatDuration: ((...args: any[]) => any) & Record<string, 
 export declare const fuzzyScore: ((...args: any[]) => any) & Record<string, any>
 export declare const h: ((...args: any[]) => any) & Record<string, any>
 export declare const headerFrameId: ((...args: any[]) => any) & Record<string, any>
+export declare const heightColor: ((...args: any[]) => any) & Record<string, any>
 export declare const installInsets: ((...args: any[]) => any) & Record<string, any>
 export declare const installThemeCss: ((...args: any[]) => any) & Record<string, any>
+export declare const isPalette: ((...args: any[]) => any) & Record<string, any>
 export declare const keyMatches: ((...args: any[]) => any) & Record<string, any>
 export declare const lcmFingerprint: ((...args: any[]) => any) & Record<string, any>
 export declare const lcmSchemas: any
@@ -139,6 +146,8 @@ export declare const memorySource: ((...args: any[]) => any) & Record<string, an
 export declare const normalizeFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const normalizeOptions: ((...args: any[]) => any) & Record<string, any>
 export declare const onDesktop: ((...args: any[]) => any) & Record<string, any>
+export declare const otherPalette: ((...args: any[]) => any) & Record<string, any>
+export declare const paletteAt: ((...args: any[]) => any) & Record<string, any>
 export declare const parseKey: ((...args: any[]) => any) & Record<string, any>
 export declare const parseUrlState: ((...args: any[]) => any) & Record<string, any>
 export declare const placeFloating: ((...args: any[]) => any) & Record<string, any>

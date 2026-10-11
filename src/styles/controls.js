@@ -319,4 +319,79 @@ export const CONTROLS_CSS = /* css */ `
 .dr-conn--warn .dr-conn-label { color: var(--warn); }
 .dr-conn-detail { color: var(--muted-fg); }
 .dr-kbd-group { display: inline-flex; gap: 3px; }
+
+/* a link styled as a button */
+a.dr-btn { text-decoration: none; }
+a.dr-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+/* floating action button (Fab) */
+.dr-fab {
+    --dr-fab-tone: var(--primary);
+    appearance: none;
+    width: var(--dr-fab-size, 52px);
+    height: var(--dr-fab-size, 52px);
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border-radius: var(--radius-round);
+    border: 2px solid var(--dr-fab-tone);
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    color: var(--fg);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dr-fab-tone) 14%, transparent), var(--shadow-md, var(--shadow));
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.dr-fab:hover:not(:disabled) { transform: scale(1.06); }
+.dr-fab:focus-visible { outline: none; box-shadow: var(--dr-focus), var(--shadow-md, var(--shadow)); }
+.dr-fab:disabled { opacity: 0.35; cursor: default; }
+.dr-fab--info { --dr-fab-tone: var(--info); }
+.dr-fab--ok { --dr-fab-tone: var(--ok); }
+.dr-fab--warn { --dr-fab-tone: var(--warn); }
+.dr-fab--danger { --dr-fab-tone: var(--danger); }
+.dr-fab--active { background: var(--dr-fab-tone); color: var(--primary-fg); }
+.dr-fab--pulse:not(:disabled) { animation: dr-fab-pulse 1.6s ease-in-out infinite; }
+.dr-fab--glow:not(:disabled) { animation: dr-fab-glow 2.4s ease-in-out infinite; }
+.dr-fab--spin:not(:disabled) { animation: dr-fab-spin 1.4s linear infinite; }
+@keyframes dr-fab-pulse {
+    50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--dr-fab-tone) 25%, transparent), var(--shadow-md, var(--shadow)); }
+}
+@keyframes dr-fab-glow {
+    50% {
+        box-shadow: 0 0 0 12px color-mix(in srgb, var(--dr-fab-tone) 28%, transparent),
+            0 0 32px 6px color-mix(in srgb, var(--dr-fab-tone) 45%, transparent), var(--shadow-md, var(--shadow));
+        transform: scale(1.05);
+    }
+}
+@keyframes dr-fab-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .dr-fab { animation: none !important; } }
+
+/* angle dial */
+.dr-dial {
+    --dr-dial-tone: var(--primary);
+    position: relative;
+    flex: none;
+    border-radius: var(--radius-round);
+    border: 2px solid var(--dr-dial-tone);
+    background: radial-gradient(circle, color-mix(in srgb, var(--dr-dial-tone) 15%, transparent), transparent 70%);
+    cursor: grab;
+    touch-action: none;
+}
+.dr-dial:active { cursor: grabbing; }
+.dr-dial:focus-visible { outline: none; box-shadow: var(--dr-focus); }
+.dr-dial--info { --dr-dial-tone: var(--info); }
+.dr-dial--ok { --dr-dial-tone: var(--ok); }
+.dr-dial--warn { --dr-dial-tone: var(--warn); }
+.dr-dial--danger { --dr-dial-tone: var(--danger); }
+.dr-dial--disabled { opacity: 0.45; cursor: default; }
+.dr-dial-hand {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44%;
+    height: 2px;
+    margin-top: -1px;
+    background: var(--dr-dial-tone);
+    transform-origin: 0 50%;
+}
 `

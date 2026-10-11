@@ -3,6 +3,7 @@
 import { createRoot } from "react-dom/client"
 import {
     Alert,
+    AngleDial,
     AppProvider,
     Badge,
     BottomBar,
@@ -13,8 +14,10 @@ import {
     Chip,
     Column,
     ConnectionStatus,
+    CopyButton,
     Embed,
     EmptyState,
+    Fab,
     Field,
     FloatingPanel,
     h,
@@ -36,6 +39,7 @@ import {
     RangeSlider,
     Row,
     SearchInput,
+    Segmented,
     Select,
     Separator,
     Skeleton,
@@ -82,6 +86,10 @@ function ControlsSection() {
     const [follow, setFollow] = useState(true)
     const [style, setStyle] = useState("voxel")
     const [chips, setChips] = useState({ lidar: true, odom: false, tf: true })
+    const [label, setLabel] = useState("charger")
+    const [yaw, setYaw] = useState(0.4)
+    const [floor, setFloor] = useState(1)
+    const [editOpen, setEditOpen] = useState(true)
     return h(
         Column,
         { gap: 16 },
@@ -118,6 +126,31 @@ function ControlsSection() {
                 ),
                 h(Kbd, { keys: ["mod", "K"] }),
                 h(Kbd, null, "W"),
+                h(
+                    Button,
+                    { size: "sm", icon: "download", href: "data:text/plain,hello", download: "hello.txt" },
+                    "A link",
+                ),
+                h(CopyButton, { text: "ABCD-1234", label: "Copy the code" }),
+            ),
+            h(
+                Row,
+                { wrap: true, gap: 14 },
+                h(Fab, { icon: "edit", label: "Edit tools", active: editOpen, onClick: () => setEditOpen(!editOpen) }),
+                h(Fab, { icon: "refresh", label: "Generate (next step)", tone: "info", attention: "pulse" }),
+                h(Fab, { icon: "layers", label: "Slicer (recommended)", tone: "warn", attention: "glow" }),
+                h(Fab, { icon: "zap", label: "Working", tone: "ok", attention: "spin", size: 40 }),
+                h(Fab, { icon: "edit", label: "Disabled", disabled: true }),
+                h(AngleDial, { value: yaw, onChange: setYaw, tone: "warn", title: "drag around to turn" }),
+                h(Text, { mono: true, small: true }, `${((yaw * 180) / Math.PI).toFixed(1)}°`),
+                h(Segmented, {
+                    vertical: true,
+                    size: "sm",
+                    value: floor,
+                    onChange: setFloor,
+                    items: [[2, "F3"], [1, "F2"], [0, "F1"]],
+                    label: "floor",
+                }),
             ),
         ),
         h(
@@ -132,6 +165,11 @@ function ControlsSection() {
                     h(TextInput, { value: text, onChange: setText }),
                 ),
                 h(Field, { label: "Search topics" }, h(SearchInput, { value: search, onChange: setSearch })),
+                h(
+                    Field,
+                    { label: "Label (commits on Enter / blur)", hint: `saved: ${label}` },
+                    h(TextInput, { value: label, onCommit: setLabel }),
+                ),
                 h(
                     Field,
                     { label: "Max points", error: count > 100 ? "too many" : null },

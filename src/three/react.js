@@ -1360,9 +1360,10 @@ export function SceneStats({ className }) {
 
 /**
  * Camera buttons over the scene: frame everything, top-down, and resume following (shown while following is paused).
- * @param {{ className?: string, children?: any }} props extra buttons go in `children`
+ * @param {{ className?: string, children?: any, onFrameAll?: () => void, onTopDown?: () => void }} props extra buttons
+ *   go in `children`; `onFrameAll` / `onTopDown` replace what those buttons do (an app's own idea of "everything")
  */
-export function SceneControls({ className, children }) {
+export function SceneControls({ className, children, onFrameAll, onTopDown }) {
     const viewer = useViewer()
     const empty = useMemo(() => new Store({ paused: false }), [])
     const { paused } = useStore(viewer?.followPaused ?? empty)
@@ -1375,8 +1376,11 @@ export function SceneControls({ className, children }) {
     return h(
         "div",
         { className: cx("dr-scene-controls", className) },
-        button("fit", "Frame everything", () => viewer?.frameAll()),
+        button("fit", "Frame everything", () => (onFrameAll ? onFrameAll() : viewer?.frameAll())),
         button("top", "Top-down", () => {
+            if (onTopDown) {
+                return onTopDown()
+            }
             const box = viewer?.dataBounds()
             const center = box ? box.getCenter(new THREE.Vector3()) : viewer.controls.target.clone()
             const extent = box ? Math.max(4, box.getSize(new THREE.Vector3()).length()) : 20

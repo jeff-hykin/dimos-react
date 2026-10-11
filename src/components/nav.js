@@ -40,11 +40,15 @@ function Portal({ children }) {
 
 // ── Tabs / Segmented ──
 
-function choiceGroup(baseClass, { items, value, onChange, variant, size, className, label, ...rest }) {
+function choiceGroup(
+    baseClass,
+    { items, value, onChange, variant, size, vertical = false, className, label, ...rest },
+) {
     const list = normalizeItems(items)
     const onKeyDown = (event) => {
         const index = list.findIndex((item) => item.value === value)
-        const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0
+        const [next, back] = vertical ? ["ArrowDown", "ArrowUp"] : ["ArrowRight", "ArrowLeft"]
+        const delta = event.key === next ? 1 : event.key === back ? -1 : 0
         if (!delta) {
             return
         }
@@ -66,10 +70,12 @@ function choiceGroup(baseClass, { items, value, onChange, variant, size, classNa
                 baseClass,
                 variant && `${baseClass}--${variant}`,
                 size === "sm" && `${baseClass}--sm`,
+                vertical && `${baseClass}--vertical`,
                 className,
             ),
             role: "tablist",
             "aria-label": label,
+            "aria-orientation": vertical ? "vertical" : undefined,
             onKeyDown,
             ...rest,
         },
@@ -88,6 +94,7 @@ function choiceGroup(baseClass, { items, value, onChange, variant, size, classNa
                     title: item.title,
                     className: cx(`${baseClass}__item`, active && `${baseClass}__item--active`),
                     onClick: () => onChange?.(item.value),
+                    ...item.props,
                 },
                 item.icon ? h(Icon, { name: item.icon, size: 15 }) : null,
                 item.label !== undefined ? h("span", null, item.label) : null,
@@ -100,9 +107,10 @@ function choiceGroup(baseClass, { items, value, onChange, variant, size, classNa
 }
 
 /**
- * Tabs: `items` as [{ value, label, icon, badge, disabled }] or [[value, label]].
+ * Tabs: `items` as [{ value, label, icon, badge, disabled, title, props }] or [[value, label]] (`props`: more
+ * attributes for that item's button, e.g. data-*). `vertical` stacks them (↑/↓ move).
  * @param {{ items: any[], value: any, onChange?: (value: any) => void, variant?: "line" | "pill", size?: "sm" | "md",
- *   className?: string, label?: string }} props
+ *   vertical?: boolean, className?: string, label?: string }} props
  */
 export function Tabs({ variant = "line", ...props }) {
     return choiceGroup("dr-tabs", { variant, ...props })

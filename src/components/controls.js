@@ -6,7 +6,8 @@ import { Icon } from "./icon.js"
 
 /**
  * @param {{ variant?: "default" | "primary" | "ghost" | "danger" | "ok" | "warn", size?: "sm" | "md" | "lg", icon?: string,
- *   iconRight?: string, pressed?: boolean, loading?: boolean, block?: boolean, type?: string } & Record<string, any>} props
+ *   iconRight?: string, pressed?: boolean, loading?: boolean, block?: boolean, type?: string, href?: string }
+ *   & Record<string, any>} props `href` makes it a link that looks like a button (`download`, `target` pass through)
  */
 export function Button({
     variant = "default",
@@ -20,12 +21,14 @@ export function Button({
     children,
     type = "button",
     disabled,
+    href,
     ...rest
 }) {
+    const link = href !== undefined
     return h(
-        "button",
+        link ? "a" : "button",
         {
-            type,
+            ...(link ? { href: disabled ? undefined : href, "aria-disabled": disabled || undefined } : { type }),
             className: cx(
                 "dr-btn",
                 variant !== "default" && `dr-btn--${variant}`,
@@ -35,7 +38,7 @@ export function Button({
             ),
             "aria-pressed": pressed === undefined ? undefined : !!pressed,
             "aria-busy": loading || undefined,
-            disabled: disabled || loading,
+            disabled: link ? undefined : disabled || loading,
             ...rest,
         },
         loading ? h("span", { className: "dr-spinner dr-spinner--inline", "aria-hidden": "true" }) : null,
@@ -77,21 +80,58 @@ export function Field({ label, hint, error, inline = false, htmlFor, className, 
     )
 }
 
-/** Single-line text. `onChange(text)`; `onEnter(text)` on Enter. */
+/**
+ * Single-line text. `onChange(text)` on every keystroke; `onEnter(text)` on Enter. Or `onCommit(text)` alone: the box
+ * keeps what's typed and reports it once, on Enter or blur, when it differs from `value` (renames, labels); Escape
+ * puts `value` back.
+ */
 export function TextInput(
-    { value, onChange, onEnter, onKeyDown, size = "md", mono = false, icon, className, invalid, ...rest },
+    {
+        value,
+        onChange,
+        onEnter,
+        onCommit,
+        onKeyDown,
+        onBlur,
+        size = "md",
+        mono = false,
+        icon,
+        className,
+        invalid,
+        ...rest
+    },
 ) {
+    const [draft, setDraft] = useState(null)
+    const committing = !!onCommit && !onChange
+    const commit = (text) => {
+        setDraft(null)
+        if (text !== (value ?? "")) {
+            onCommit?.(text)
+        }
+    }
     const input = h("input", {
         type: "text",
         className: cx("dr-input", size === "sm" && "dr-input--sm", mono && "dr-mono", icon && "dr-input--with-icon"),
-        value: value ?? "",
+        value: committing ? draft ?? value ?? "" : value ?? "",
         "aria-invalid": invalid || undefined,
-        onChange: (event) => onChange?.(event.target.value),
+        onChange: (event) => (committing ? setDraft(event.target.value) : onChange?.(event.target.value)),
         onKeyDown: (event) => {
             if (event.key === "Enter") {
                 onEnter?.(event.currentTarget.value)
+                if (committing) {
+                    commit(event.currentTarget.value)
+                }
+            } else if (event.key === "Escape" && committing && draft !== null) {
+                event.stopPropagation()
+                setDraft(null)
             }
             onKeyDown?.(event)
+        },
+        onBlur: (event) => {
+            if (committing && draft !== null) {
+                commit(event.currentTarget.value)
+            }
+            onBlur?.(event)
         },
         ...rest,
     })
@@ -521,4 +561,105 @@ export function Kbd({ keys, className, children, ...rest }) {
         )
     }
     return h("kbd", { className: cx("dr-kbd", className), ...rest }, children)
+}
+
+/**
+ * A round floating action button over a view (the main actions of a canvas app). `tone` colors its ring ("primary" |
+ * "info" | "ok" | "warn" | "danger"); `active` fills it (its panel is open); `attention` draws the eye: "pulse" (the
+ * next step), "glow" (recommended), "spin" (working). `label` is its tooltip and accessible name.
+ */
+export function Fab(
+    { icon, label, tone = "primary", active = false, attention, size = 52, className, style, ...rest },
+) {
+    return h(
+        "button",
+        {
+            type: "button",
+            className: cx(
+                "dr-fab",
+                `dr-fab--${tone}`,
+                active && "dr-fab--active",
+                attention && `dr-fab--${attention}`,
+                className,
+            ),
+            "aria-label": label,
+            "aria-pressed": active,
+            title: label,
+            style: { "--dr-fab-size": `${size}px`, ...style },
+            ...rest,
+        },
+        h(Icon, { name: icon, size: Math.round(size * 0.4) }),
+    )
+}
+
+/**
+ * An angle dial: drag around it to turn. `value` in radians, counter-clockwise positive (a map's yaw); the hand is
+ * drawn for a screen whose y points down. `onChange(radians)` wraps to -π..π; arrow keys step 1° (shift: 10°).
+ */
+export function AngleDial({ value = 0, onChange, size = 46, tone = "primary", disabled, className, style, ...rest }) {
+    const start = (event) => {
+        if (disabled) {
+            return
+        }
+        event.preventDefault()
+        const rect = event.currentTarget.getBoundingClientRect()
+        const center = [rect.left + rect.width / 2, rect.top + rect.height / 2]
+        const angleAt = (e) => Math.atan2(e.clientY - center[1], e.clientX - center[0])
+        const first = angleAt(event)
+        const from = value
+        const move = (e) => {
+            const turned = from - (angleAt(e) - first)
+            onChange?.(Math.atan2(Math.sin(turned), Math.cos(turned)))
+        }
+        const up = () => {
+            removeEventListener("pointermove", move)
+            removeEventListener("pointerup", up)
+        }
+        addEventListener("pointermove", move)
+        addEventListener("pointerup", up)
+    }
+    return h(
+        "div",
+        {
+            className: cx("dr-dial", `dr-dial--${tone}`, disabled && "dr-dial--disabled", className),
+            role: "slider",
+            "aria-valuenow": Math.round((value * 180) / Math.PI),
+            "aria-valuemin": -180,
+            "aria-valuemax": 180,
+            tabIndex: disabled ? -1 : 0,
+            onPointerDown: start,
+            onKeyDown: (event) => {
+                const step = ((event.shiftKey ? 10 : 1) * Math.PI) / 180
+                if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                    event.preventDefault()
+                    onChange?.(value + step)
+                } else if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                    event.preventDefault()
+                    onChange?.(value - step)
+                }
+            },
+            style: { width: size, height: size, ...style },
+            ...rest,
+        },
+        h("span", { className: "dr-dial-hand", style: { transform: `rotate(${(-value * 180) / Math.PI}deg)` } }),
+    )
+}
+
+/** Copies `text` to the clipboard, then says "Copied" for a moment. `label` is its tooltip; children replace "Copy". */
+export function CopyButton({ text, label = "Copy", size = "sm", children, ...rest }) {
+    const [copied, setCopied] = useState(false)
+    useEffect(() => {
+        if (!copied) {
+            return
+        }
+        const timer = setTimeout(() => setCopied(false), 1500)
+        return () => clearTimeout(timer)
+    }, [copied])
+    return h(Button, {
+        size,
+        icon: copied ? "check" : "copy",
+        title: label,
+        onClick: () => globalThis.navigator?.clipboard?.writeText(text).then(() => setCopied(true), () => {}),
+        ...rest,
+    }, copied ? "Copied" : children ?? "Copy")
 }

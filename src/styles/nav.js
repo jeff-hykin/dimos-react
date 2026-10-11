@@ -107,6 +107,8 @@ export const NAV_CSS = /* css */ `
     border-color: var(--primary);
 }
 .dr-segmented--sm .dr-segmented__item { padding: 3px 8px; font-size: 11.5px; }
+.dr-segmented--vertical, .dr-tabs--vertical { flex-direction: column; align-items: stretch; }
+.dr-segmented--vertical .dr-segmented__item { justify-content: space-between; }
 
 /* floating layers (menus, popovers) */
 .dr-popover-anchor { display: inline-flex; position: relative; }

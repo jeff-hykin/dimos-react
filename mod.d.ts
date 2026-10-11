@@ -4,6 +4,7 @@
 import type { ReactNode } from "react"
 
 export declare function Alert(props: Record<string, any>): ReactNode
+export declare function AngleDial(props: Record<string, any>): ReactNode
 export declare function AppProvider(props: Record<string, any>): ReactNode
 export declare function AppShell(props: Record<string, any>): ReactNode
 export declare function AttitudeIndicator(props: Record<string, any>): ReactNode
@@ -28,6 +29,7 @@ export declare function Column(props: Record<string, any>): ReactNode
 export declare function CommandPalette(props: Record<string, any>): ReactNode
 export declare function ConnectionStatus(props: Record<string, any>): ReactNode
 export declare function ContextMenu(props: Record<string, any>): ReactNode
+export declare function CopyButton(props: Record<string, any>): ReactNode
 export declare const DEFAULT_GRADIENT: any
 export declare const DEFAULT_PALETTE: any
 export declare const DEFAULT_PERIOD: any
@@ -41,6 +43,7 @@ export declare function Embed(props: Record<string, any>): ReactNode
 export declare function EmptyState(props: Record<string, any>): ReactNode
 export declare const ErrorBoundary: any
 export type ErrorBoundary = any
+export declare function Fab(props: Record<string, any>): ReactNode
 export declare function Field(props: Record<string, any>): ReactNode
 export declare function FileDrop(props: Record<string, any>): ReactNode
 export declare function FloatingPanel(props: Record<string, any>): ReactNode

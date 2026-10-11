@@ -1,8 +1,7 @@
 // Demo: the 3D view. A test data source plays a robot driving a loop (TF over LCM, a planned path, a lidar ring),
 // while a room-shaped point cloud and a pose array come in as props.
 import { useEffect, useMemo, useRef, useState } from "react"
-import { h } from "../../src/h.js"
-import { encode } from "../../src/lcm.js"
+import { encode } from "../../src/lcm"
 import {
     Badge,
     Button,
@@ -16,7 +15,7 @@ import {
     Slider,
     Tabs,
     Toggle,
-} from "../../mod.js"
+} from "../../mod"
 import {
     FrameHighlight,
     FramePicker,
@@ -42,7 +41,7 @@ import {
     useScene,
     useTfFrames,
     useTfIssues,
-} from "../../three.js"
+} from "../../three"
 
 const TF_KEY = "dimos/tf/tf2_msgs.TFMessage"
 const TF_STATIC_KEY = "dimos/tf_static/tf2_msgs.TFMessage"
@@ -75,7 +74,11 @@ function roomCloud() {
         if (wall === 2) add(-6, -4 + along * 8, z)
         if (wall === 3) add(6, -4 + along * 8, z)
     }
-    for (const [cx, cy, size] of [[3.5, 2, 0.8], [-3, -2.5, 1.1], [-4, 2.5, 0.6]]) {
+    for (const [cx, cy, size] of [
+        [3.5, 2, 0.8],
+        [-3, -2.5, 1.1],
+        [-4, 2.5, 0.6],
+    ]) {
         for (let index = 0; index < 2500; index++) {
             add(cx + (Math.random() - 0.5) * size, cy + (Math.random() - 0.5) * size, Math.random() * size)
         }
@@ -158,11 +161,16 @@ function useDemoRobot(source) {
 
 function FrameCount() {
     const frames = useTfFrames()
-    return h(Badge, { tone: frames.length ? "ok" : "default" }, `${frames.length} TF frames`)
+    return <Badge tone={frames.length ? "ok" : "default"}>{`${frames.length} TF frames`}</Badge>
 }
 
 export function SceneSection() {
-    return h(Column, { gap: 16 }, h(LiveDemo), h(ReplayDemo))
+    return (
+        <Column gap={16}>
+            <LiveDemo />
+            <ReplayDemo />
+        </Column>
+    )
 }
 
 function LiveDemo() {
@@ -172,7 +180,13 @@ function LiveDemo() {
     useDemoRobot(source)
     const room = useMemo(roomCloud, [])
     const waypoints = useMemo(
-        () => [[-5, -3, 0.4], [5, -3, 1.6], [5, 3, 2.8], [-5, 3, -1.6]].map(([x, y, yaw]) => ({ x, y, yaw })),
+        () =>
+            [
+                [-5, -3, 0.4],
+                [5, -3, 1.6],
+                [5, 3, 2.8],
+                [-5, 3, -1.6],
+            ].map(([x, y, yaw]) => ({ x, y, yaw })),
         [],
     )
     const [follow, setFollow] = useState(false)
@@ -180,78 +194,67 @@ function LiveDemo() {
     const [style, setStyle] = useState("voxel")
     const [names, setNames] = useState(true)
     const [gradient, setGradient] = useState("memworld")
-    return h(
-        DataSourceProvider,
-        { source },
-        h(
-            Card,
-            {
-                title: "3D view",
-                description: "Scene3D with TF streamed over a test data source, plus props-fed layers",
-            },
-            h(
-                Scene3D,
-                {
-                    tf,
-                    followFrame: follow ? followFrame : null,
-                    fixedFrame: "world",
-                    style: { height: 420 },
-                    cameraPosition: [-8, -9, 7],
-                },
-                h(TfFeed),
-                h(TfFrames, { names, axesSize: 0.3 }),
-                h(PointCloud, { points: room, frame: "world", style, size: 0.06, colorMode: "height", gradient }),
-                h(PointCloud, {
-                    topic: LIDAR_KEY,
-                    style: "disc",
-                    size: 0.05,
-                    colorMode: "solid",
-                    color: "var(--warn)",
-                }),
-                h(Path, { topic: PATH_KEY, width: 4 }),
-                h(Pose, { topic: ODOM_KEY, trail: true, axesSize: 0, color: "var(--accent-alt)", width: 2 }),
-                h(PoseArray, { poses: waypoints, frame: "world", length: 0.6 }),
-                h(RobotModel, { kind: "dog", frame: "base_link" }),
-                h(KeyboardFly, { speed: 4 }),
-                h(SceneStats),
-                h(SceneControls),
-                h(
-                    "div",
-                    { className: "dr-scene-overlay", style: { top: 10, left: 10 } },
-                    h(
-                        Row,
-                        { gap: 8 },
-                        h(Toggle, { value: follow, onChange: setFollow, label: "Follow" }),
-                        h(FrameCount),
-                        h(Badge, null, "WASD/QE fly · IJKL look"),
-                    ),
-                ),
-            ),
-            h(
-                Row,
-                { gap: 16, wrap: true, style: { marginTop: 12 } },
-                h(
-                    Field,
-                    { label: "Follow frame" },
-                    h(FramePicker, { tf, value: followFrame, onChange: setFollowFrame }),
-                ),
-                h(
-                    Field,
-                    { label: "Point style" },
-                    h(Select, {
-                        value: style,
-                        onChange: setStyle,
-                        options: [["voxel", "Cubes"], ["disc", "Spheres"], ["square", "Squares"], ["splat", "Glow"]],
-                    }),
-                ),
-                h(Field, { label: "Frame names" }, h(Toggle, { value: names, onChange: setNames })),
-                h(
-                    Field,
-                    { label: "Gradient", style: { minWidth: 260 } },
-                    h(GradientPicker, { value: gradient, onChange: setGradient }),
-                ),
-            ),
-        ),
+    return (
+        <DataSourceProvider source={source}>
+            <Card title="3D view" description="Scene3D with TF streamed over a test data source, plus props-fed layers">
+                <Scene3D
+                    tf={tf}
+                    followFrame={follow ? followFrame : null}
+                    fixedFrame="world"
+                    style={{ height: 420 }}
+                    cameraPosition={[-8, -9, 7]}
+                >
+                    <TfFeed />
+                    <TfFrames names={names} axesSize={0.3} />
+                    <PointCloud
+                        points={room}
+                        frame="world"
+                        style={style}
+                        size={0.06}
+                        colorMode="height"
+                        gradient={gradient}
+                    />
+                    <PointCloud topic={LIDAR_KEY} style="disc" size={0.05} colorMode="solid" color="var(--warn)" />
+                    <Path topic={PATH_KEY} width={4} />
+                    <Pose topic={ODOM_KEY} trail={true} axesSize={0} color="var(--accent-alt)" width={2} />
+                    <PoseArray poses={waypoints} frame="world" length={0.6} />
+                    <RobotModel kind="dog" frame="base_link" />
+                    <KeyboardFly speed={4} />
+                    <SceneStats />
+                    <SceneControls />
+                    <div className="dr-scene-overlay" style={{ top: 10, left: 10 }}>
+                        <Row gap={8}>
+                            <Toggle value={follow} onChange={setFollow} label="Follow" />
+                            <FrameCount />
+                            <Badge>WASD/QE fly · IJKL look</Badge>
+                        </Row>
+                    </div>
+                </Scene3D>
+                <Row gap={16} wrap={true} style={{ marginTop: 12 }}>
+                    <Field label="Follow frame">
+                        <FramePicker tf={tf} value={followFrame} onChange={setFollowFrame} />
+                    </Field>
+                    <Field label="Point style">
+                        <Select
+                            value={style}
+                            onChange={setStyle}
+                            options={[
+                                ["voxel", "Cubes"],
+                                ["disc", "Spheres"],
+                                ["square", "Squares"],
+                                ["splat", "Glow"],
+                            ]}
+                        />
+                    </Field>
+                    <Field label="Frame names">
+                        <Toggle value={names} onChange={setNames} />
+                    </Field>
+                    <Field label="Gradient" style={{ minWidth: 260 }}>
+                        <GradientPicker value={gradient} onChange={setGradient} />
+                    </Field>
+                </Row>
+            </Card>
+        </DataSourceProvider>
     )
 }
 
@@ -281,7 +284,8 @@ function replayFrame(seconds) {
     for (let index = 0; index < 720; index++) {
         const angle = (index / 720) * Math.PI * 2
         // what the lidar sees of the 12 × 8 m room from where the robot is
-        const dx = Math.cos(angle + yaw), dy = Math.sin(angle + yaw)
+        const dx = Math.cos(angle + yaw),
+            dy = Math.sin(angle + yaw)
         const range = Math.min(
             dx > 0 ? (6 - x) / dx : dx < 0 ? (-6 - x) / dx : 99,
             dy > 0 ? (4 - y) / dy : dy < 0 ? (-4 - y) / dy : 99,
@@ -294,21 +298,25 @@ function replayFrame(seconds) {
 
 /** A costmap of the room: free floor, lethal walls and boxes, inflated costs around them. */
 function costmap() {
-    const resolution = 0.1, width = 130, height = 90
+    const resolution = 0.1,
+        width = 130,
+        height = 90
     const data = new Int8Array(width * height)
-    const boxes = [[3.5, 2, 0.8], [-3, -2.5, 1.1], [-4, 2.5, 0.6]]
+    const boxes = [
+        [3.5, 2, 0.8],
+        [-3, -2.5, 1.1],
+        [-4, 2.5, 0.6],
+    ]
     for (let row = 0; row < height; row++) {
         for (let column = 0; column < width; column++) {
-            const px = -6.5 + column * resolution, py = -4.5 + row * resolution
+            const px = -6.5 + column * resolution,
+                py = -4.5 + row * resolution
             let distance = Math.min(6 - Math.abs(px), 4 - Math.abs(py))
             for (const [cx, cy, size] of boxes) {
                 distance = Math.min(distance, Math.max(Math.abs(px - cx), Math.abs(py - cy)) - size / 2)
             }
-            data[row * width + column] = distance <= 0
-                ? 100
-                : distance < 0.6
-                ? Math.round(99 * (1 - distance / 0.6))
-                : 0
+            data[row * width + column] =
+                distance <= 0 ? 100 : distance < 0.6 ? Math.round(99 * (1 - distance / 0.6)) : 0
         }
     }
     return {
@@ -352,15 +360,23 @@ const STATIC_TOPICS = {
                 pose: { orientation: { w: 1 } },
                 scale: { x: 0.05 },
                 color: color(1, 0.7, 0.2),
-                points: [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].map(([x, y]) => ({ x, y, z: 0.02 })),
+                points: [
+                    [-1, -1],
+                    [1, -1],
+                    [1, 1],
+                    [-1, 1],
+                    [-1, -1],
+                ].map(([x, y]) => ({ x, y, z: 0.02 })),
             },
         ],
     }),
     "dimos/detections/vision_msgs.Detection3DArray": () => ({
         header: { frame_id: "map" },
-        detections: [[3.5, 2, 0.8, "box", 0.93], [-3, -2.5, 1.1, "crate", 0.81], [-4, 2.5, 0.6, "box", 0.66]].map((
-            [x, y, size, class_id, score],
-        ) => ({
+        detections: [
+            [3.5, 2, 0.8, "box", 0.93],
+            [-3, -2.5, 1.1, "crate", 0.81],
+            [-4, 2.5, 0.6, "box", 0.66],
+        ].map(([x, y, size, class_id, score]) => ({
             bbox: {
                 center: { position: { x, y, z: size / 2 }, orientation: { w: 1 } },
                 size: { x: size, y: size, z: size },
@@ -369,8 +385,31 @@ const STATIC_TOPICS = {
         })),
     }),
     "dimos/roadmap/nav_msgs.LineSegments3D": () => {
-        const nodes = [[-5, -3], [0, -3.2], [5, -3], [5, 0], [5, 3], [0, 3.2], [-5, 3], [-5, 0], [0, 0]]
-        const edges = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0], [1, 8], [8, 5], [7, 8], [8, 3]]
+        const nodes = [
+            [-5, -3],
+            [0, -3.2],
+            [5, -3],
+            [5, 0],
+            [5, 3],
+            [0, 3.2],
+            [-5, 3],
+            [-5, 0],
+            [0, 0],
+        ]
+        const edges = [
+            [0, 1],
+            [1, 2],
+            [2, 3],
+            [3, 4],
+            [4, 5],
+            [5, 6],
+            [6, 7],
+            [7, 0],
+            [1, 8],
+            [8, 5],
+            [7, 8],
+            [8, 3],
+        ]
         const pose = ([x, y], w = 1) => ({ pose: { position: { x, y, z: 0.05 }, orientation: { w } } })
         return {
             header: { frame_id: "map" },
@@ -383,7 +422,12 @@ const STATIC_TOPICS = {
     }),
     "dimos/waypoints/geometry_msgs.PoseArray": () => ({
         header: { frame_id: "map" },
-        poses: [[-5, -3, 0.4], [5, -3, 1.6], [5, 3, 2.8], [-5, 3, -1.6]].map(([x, y, yaw]) => ({
+        poses: [
+            [-5, -3, 0.4],
+            [5, -3, 1.6],
+            [5, 3, 2.8],
+            [-5, 3, -1.6],
+        ].map(([x, y, yaw]) => ({
             position: { x, y, z: 0 },
             orientation: { z: Math.sin(yaw / 2), w: Math.cos(yaw / 2) },
         })),
@@ -402,13 +446,13 @@ function useReplay() {
                 route: (key) =>
                     key === ODOM_KEY
                         ? {
-                            frame: "odom",
-                            points: Array.from({ length: 600 }, (_, index) => {
-                                const t = (index / 600) * REPLAY_SECONDS
-                                const [x, y] = loopPose(t)
-                                return [t, x, y, 0.05]
-                            }),
-                        }
+                              frame: "odom",
+                              points: Array.from({ length: 600 }, (_, index) => {
+                                  const t = (index / 600) * REPLAY_SECONDS
+                                  const [x, y] = loopPose(t)
+                                  return [t, x, y, 0.05]
+                              }),
+                          }
                         : null,
             }),
         [],
@@ -449,7 +493,7 @@ function useReplay() {
 /** The TF footnote over the replay's view, from the scene's own tree and the drawn layers' frames. */
 function ReplayFootnote({ manager, onOpen }) {
     const issues = useTfIssues({ layers: () => manager.layerFrames() })
-    return h(TfFootnote, { issues, onOpen })
+    return <TfFootnote issues={issues} onOpen={onOpen} />
 }
 
 function SceneInfo({ onInfo }) {
@@ -460,7 +504,11 @@ function SceneInfo({ onInfo }) {
 
 function ReplayDemo() {
     const { source, state, setPlaying, seek } = useReplay()
-    return h(DataSourceProvider, { source }, h(ReplayView, { state, setPlaying, seek }))
+    return (
+        <DataSourceProvider source={source}>
+            <ReplayView state={state} setPlaying={setPlaying} seek={seek} />
+        </DataSourceProvider>
+    )
 }
 
 function ReplayView({ state, setPlaying, seek }) {
@@ -473,76 +521,73 @@ function ReplayView({ state, setPlaying, seek }) {
     const [follow, setFollow] = useState(true)
     const [info, setInfo] = useState({ fixedFrame: "", robotFound: false })
     const issues = useTfIssues({ tf, layers: () => manager.layerFrames(), fixedFrame: info.fixedFrame || "world" })
-    return h(
-        Card,
-        {
-            title: "Topic layers (a replay)",
-            description:
-                "TopicLayers draws every topic by its layer type; LayersPanel switches and tunes them; the playhead is the data clock and a seek resets trails and maps",
-        },
-        h(
-            Row,
-            { gap: 12, align: "stretch", wrap: true },
-            h(
-                Scene3D,
-                {
-                    tf,
-                    fixedFrame: fixedFrame || undefined,
-                    followFrame: "base_link",
-                    follow,
-                    onFollowChange: setFollow,
-                    style: { height: 460, flex: "2 1 420px" },
-                },
-                h(TfFeed),
-                h(TopicLayers, { manager }),
-                h(RobotModel, { kind: "dog" }),
-                h(FrameHighlight, { frame: hovered, onPlaced: setPlaced }),
-                h(SceneInfo, { onInfo: setInfo }),
-                h(ReplayFootnote, { manager, onOpen: () => setTab("tf") }),
-                h(SceneStats),
-                h(SceneControls),
-            ),
-            h(
-                Column,
-                { gap: 8, style: { flex: "1 1 260px", maxHeight: 460, overflow: "auto" } },
-                h(Tabs, {
-                    value: tab,
-                    onChange: setTab,
-                    items: [["layers", "Layers"], ["tf", "TF"], ["rendering", "Rendering"]],
-                }),
-                tab === "layers" ? h(LayersPanel, { manager }) : tab === "tf"
-                    ? h(TfPanel, {
-                        tf,
-                        fixedFrame,
-                        activeFixedFrame: info.fixedFrame,
-                        onFixedFrame: setFixedFrame,
-                        issues,
-                        robotFrame: "base_link",
-                        robotFound: info.robotFound,
-                        hovered,
-                        hoveredPlaced: placed,
-                        onHover: setHovered,
-                    })
-                    : h(RenderingSettings),
-            ),
-        ),
-        h(
-            Row,
-            { gap: 12, align: "center", style: { marginTop: 12 } },
-            h(
-                Button,
-                { size: "sm", icon: state.playing ? "pause" : "play", onClick: () => setPlaying(!state.playing) },
-                state.playing ? "Pause" : "Play",
-            ),
-            h(Slider, {
-                min: 0,
-                max: REPLAY_SECONDS,
-                step: 0.1,
-                value: state.seconds,
-                format: (seconds) => `${seconds.toFixed(1)} s`,
-                onChange: seek,
-                style: { flex: 1 },
-            }),
-        ),
+    return (
+        <Card
+            title="Topic layers (a replay)"
+            description="TopicLayers draws every topic by its layer type; LayersPanel switches and tunes them; the playhead is the data clock and a seek resets trails and maps"
+        >
+            <Row gap={12} align="stretch" wrap={true}>
+                <Scene3D
+                    tf={tf}
+                    fixedFrame={fixedFrame || undefined}
+                    followFrame="base_link"
+                    follow={follow}
+                    onFollowChange={setFollow}
+                    style={{ height: 460, flex: "2 1 420px" }}
+                >
+                    <TfFeed />
+                    <TopicLayers manager={manager} />
+                    <RobotModel kind="dog" />
+                    <FrameHighlight frame={hovered} onPlaced={setPlaced} />
+                    <SceneInfo onInfo={setInfo} />
+                    <ReplayFootnote manager={manager} onOpen={() => setTab("tf")} />
+                    <SceneStats />
+                    <SceneControls />
+                </Scene3D>
+                <Column gap={8} style={{ flex: "1 1 260px", maxHeight: 460, overflow: "auto" }}>
+                    <Tabs
+                        value={tab}
+                        onChange={setTab}
+                        items={[
+                            ["layers", "Layers"],
+                            ["tf", "TF"],
+                            ["rendering", "Rendering"],
+                        ]}
+                    />
+                    {tab === "layers" ? (
+                        <LayersPanel manager={manager} />
+                    ) : tab === "tf" ? (
+                        <TfPanel
+                            tf={tf}
+                            fixedFrame={fixedFrame}
+                            activeFixedFrame={info.fixedFrame}
+                            onFixedFrame={setFixedFrame}
+                            issues={issues}
+                            robotFrame="base_link"
+                            robotFound={info.robotFound}
+                            hovered={hovered}
+                            hoveredPlaced={placed}
+                            onHover={setHovered}
+                        />
+                    ) : (
+                        <RenderingSettings />
+                    )}
+                </Column>
+            </Row>
+            <Row gap={12} align="center" style={{ marginTop: 12 }}>
+                <Button size="sm" icon={state.playing ? "pause" : "play"} onClick={() => setPlaying(!state.playing)}>
+                    {state.playing ? "Pause" : "Play"}
+                </Button>
+                <Slider
+                    min={0}
+                    max={REPLAY_SECONDS}
+                    step={0.1}
+                    value={state.seconds}
+                    format={(seconds) => `${seconds.toFixed(1)} s`}
+                    onChange={seek}
+                    style={{ flex: 1 }}
+                />
+            </Row>
+        </Card>
     )
 }

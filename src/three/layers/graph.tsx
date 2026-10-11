@@ -2,15 +2,14 @@
 // pairs (one edge each) with the edge weight in the first pose's orientation.w. Edges are colored by weight on a log
 // scale, nodes (each distinct endpoint) drawn as points.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { FatLines } from "../lines.js"
-import { sampleGradient } from "../gradients.js"
-import { applyLook, makePointMaterial } from "../point_material.js"
-import { themeColors } from "../../theme/theme.js"
-import { cssColor } from "../robot_model.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { Field, Select, Slider, Toggle } from "../../components/controls.js"
+import { useStore } from "../store"
+import { FatLines } from "../lines"
+import { sampleGradient } from "../gradients"
+import { applyLook, makePointMaterial } from "../point_material"
+import { themeColors } from "../../theme/theme"
+import { cssColor } from "../robot_model"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { Field, Select, Slider, Toggle } from "../../components/controls"
 
 /** @typedef {{ width: number, nodes: boolean, nodeSize: number, gradient: string }} GraphSettings */
 
@@ -33,11 +32,8 @@ export class GraphLayer {
         this.root.add(this.#edges.object, this.#nodes)
         this.#unsubscribe = settings.subscribe(() => this.#restyle())
         this.#restyle()
-        this.#stop = subscribeDecoded(
-            context,
-            topic,
-            { maxHz: 5, decodeAs: "nav_msgs.Path" },
-            (path, timestamp) => this.#onGraph(path, timestamp),
+        this.#stop = subscribeDecoded(context, topic, { maxHz: 5, decodeAs: "nav_msgs.Path" }, (path, timestamp) =>
+            this.#onGraph(path, timestamp),
         )
     }
 
@@ -46,17 +42,21 @@ export class GraphLayer {
         this.#edges.material.linewidth = settings.width
         this.#nodes.visible = settings.nodes
         const solid = `#${cssColor(themeColors().fg, "white").getHexString()}`
-        applyLook(this.#nodeMaterial, {
-            style: "disc",
-            size: settings.nodeSize,
-            colorMode: "solid",
-            gradient: settings.gradient,
-            axis: 2,
-            rangeMin: 0,
-            rangeMax: 1,
-            solid,
-            opacity: 1,
-        }, [0, 1])
+        applyLook(
+            this.#nodeMaterial,
+            {
+                style: "disc",
+                size: settings.nodeSize,
+                colorMode: "solid",
+                gradient: settings.gradient,
+                axis: 2,
+                rangeMin: 0,
+                rangeMax: 1,
+                solid,
+                opacity: 1,
+            },
+            [0, 1],
+        )
         this.context.viewer.requestRender()
     }
 
@@ -69,13 +69,15 @@ export class GraphLayer {
             const weight = poses[index * 2]?.pose?.orientation?.w ?? 1
             logs.push(Math.log10(Math.max(1e-6, Math.abs(weight))))
         }
-        const low = Math.min(...logs, 0), high = Math.max(...logs, low + 1e-6)
+        const low = Math.min(...logs, 0),
+            high = Math.max(...logs, low + 1e-6)
         const gradient = this.settings.get().gradient
         this.#edges.clear()
         const nodes = new Map()
         const color = new THREE.Color()
         for (let index = 0; index < edgeCount; index++) {
-            const a = poses[index * 2].pose.position, b = poses[index * 2 + 1].pose.position
+            const a = poses[index * 2].pose.position,
+                b = poses[index * 2 + 1].pose.position
             const [r, g, bl] = sampleGradient(gradient, (logs[index] - low) / (high - low))
             color.setRGB(r / 255, g / 255, bl / 255, THREE.SRGBColorSpace)
             this.#edges.push(a.x, a.y, a.z, b.x, b.y, b.z, color)
@@ -122,47 +124,39 @@ export class GraphLayer {
 
 export function GraphSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Edge width" },
-            h(Slider, {
-                min: 1,
-                max: 8,
-                step: 0.5,
-                value: value.width,
-                format: (width) => `${width}px`,
-                onChange: (width) => settings.update({ width }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Nodes" },
-            h(Toggle, { value: value.nodes, onChange: (nodes) => settings.update({ nodes }) }),
-        ),
-        h(
-            Field,
-            { label: "Node size" },
-            h(Slider, {
-                min: 0.02,
-                max: 0.5,
-                step: 0.01,
-                value: value.nodeSize,
-                format: (size) => `${Math.round(size * 100)} cm`,
-                onChange: (nodeSize) => settings.update({ nodeSize }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Weights" },
-            h(Select, {
-                value: value.gradient,
-                options: ["viridis", "turbo", "plasma", "magma"],
-                onChange: (gradient) => settings.update({ gradient }),
-            }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Edge width">
+                <Slider
+                    min={1}
+                    max={8}
+                    step={0.5}
+                    value={value.width}
+                    format={(width) => `${width}px`}
+                    onChange={(width) => settings.update({ width })}
+                />
+            </Field>
+            <Field label="Nodes">
+                <Toggle value={value.nodes} onChange={(nodes) => settings.update({ nodes })} />
+            </Field>
+            <Field label="Node size">
+                <Slider
+                    min={0.02}
+                    max={0.5}
+                    step={0.01}
+                    value={value.nodeSize}
+                    format={(size) => `${Math.round(size * 100)} cm`}
+                    onChange={(nodeSize) => settings.update({ nodeSize })}
+                />
+            </Field>
+            <Field label="Weights">
+                <Select
+                    value={value.gradient}
+                    options={["viridis", "turbo", "plasma", "magma"]}
+                    onChange={(gradient) => settings.update({ gradient })}
+                />
+            </Field>
+        </div>
     )
 }
 

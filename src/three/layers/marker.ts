@@ -2,11 +2,11 @@
 // box and is reported). Markers are kept by (ns, id), replaced on ADD, removed on DELETE/DELETEALL or when their
 // lifetime runs out (on the data clock, so a paused replay keeps them), and each is placed by its own header's frame.
 import * as THREE from "three"
-import { disposeTree } from "../robot_model.js"
-import { FatLines } from "../lines.js"
-import { LabelPool } from "../labels.js"
-import { registerLayer, rgba, subscribeDecoded } from "./registry.js"
-import { poseMatrix } from "./pose.js"
+import { disposeTree } from "../robot_model"
+import { FatLines } from "../lines"
+import { LabelPool } from "../labels"
+import { registerLayer, rgba, subscribeDecoded } from "./registry"
+import { poseMatrix } from "./pose"
 
 export const MARKER_TYPE = {
     ARROW: 0,
@@ -39,8 +39,11 @@ function material(color) {
 function arrow(marker) {
     const group = new THREE.Group()
     const scale = marker.scale ?? {}
-    let start = new THREE.Vector3(), end = new THREE.Vector3(scale.x || 1, 0, 0)
-    let shaft = scale.y || 0.05, head = scale.z || 0.1, headLength = 0
+    let start = new THREE.Vector3(),
+        end = new THREE.Vector3(scale.x || 1, 0, 0)
+    let shaft = scale.y || 0.05,
+        head = scale.z || 0.1,
+        headLength = 0
     if ((marker.points ?? []).length >= 2) {
         // points form: start→end, scale = shaft diameter, head diameter, head length
         start = new THREE.Vector3(marker.points[0].x, marker.points[0].y, marker.points[0].z)
@@ -87,7 +90,7 @@ export class MarkerLayer {
         this.root.add(this.#labels.group)
         const isArray = topic.type === "visualization_msgs.MarkerArray"
         this.#stop = subscribeDecoded(context, topic, { maxHz: 30, reliable: isArray }, (message, timestamp) => {
-            for (const marker of isArray ? message.markers ?? [] : [message]) {
+            for (const marker of isArray ? (message.markers ?? []) : [message]) {
                 this.#apply(marker)
             }
             context.viewer.noteData(timestamp)
@@ -164,7 +167,8 @@ export class MarkerLayer {
                 })
                 const step = marker.type === MARKER_TYPE.LINE_LIST ? 2 : 1
                 for (let index = 0; index + 1 < list.length; index += step) {
-                    const a = list[index], b = list[index + 1]
+                    const a = list[index],
+                        b = list[index + 1]
                     lines.push(a.x, a.y, a.z, b.x, b.y, b.z, perPoint?.[index])
                 }
                 lines.commit()
@@ -204,7 +208,10 @@ export class MarkerLayer {
                 if (perPoint) {
                     geometry.setAttribute(
                         "color",
-                        new THREE.Float32BufferAttribute(perPoint.flatMap((color) => [color.r, color.g, color.b]), 3),
+                        new THREE.Float32BufferAttribute(
+                            perPoint.flatMap((color) => [color.r, color.g, color.b]),
+                            3,
+                        ),
                     )
                 }
                 const { color, alpha } = rgba(marker.color)
@@ -231,7 +238,10 @@ export class MarkerLayer {
                 if (perPoint) {
                     geometry.setAttribute(
                         "color",
-                        new THREE.Float32BufferAttribute(perPoint.flatMap((color) => [color.r, color.g, color.b]), 3),
+                        new THREE.Float32BufferAttribute(
+                            perPoint.flatMap((color) => [color.r, color.g, color.b]),
+                            3,
+                        ),
                     )
                 }
                 geometry.computeVertexNormals()

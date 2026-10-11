@@ -5,12 +5,12 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js"
-import { Store } from "./store.js"
-import { focusDistance, splatBackground } from "./point_material.js"
-import { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./follow.js"
-import { themeColors } from "../theme/theme.js"
-import { cssColor } from "./robot_model.js"
-import { FRAME_BUDGET_MS, splatFallback } from "./rendering.js"
+import { Store } from "./store"
+import { focusDistance, splatBackground } from "./point_material"
+import { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./follow"
+import { themeColors } from "../theme/theme"
+import { cssColor } from "./robot_model"
+import { FRAME_BUDGET_MS, splatFallback } from "./rendering"
 
 /**
  * @typedef {{ fps: number, frameMs: number, latencyP50: number | null, latencyP95: number | null,
@@ -171,8 +171,8 @@ export class Viewer {
 
     /** Re-reads the theme: grid, fog and splat background (the background itself is CSS behind the canvas). */
     setTheme() {
-        const dark = typeof document === "undefined" ||
-            getComputedStyle(document.documentElement).colorScheme.trim() !== "light"
+        const dark =
+            typeof document === "undefined" || getComputedStyle(document.documentElement).colorScheme.trim() !== "light"
         if (this.#grid) {
             this.scene.remove(this.#grid)
             this.#grid.geometry.dispose()
@@ -197,8 +197,9 @@ export class Viewer {
 
     /** Hides scene labels that overlap a more important one (frame names give way to data labels). */
     #declutter() {
-        const elements = [...this.labels.domElement.querySelectorAll(".dr-scene-label")]
-            .filter((element) => element.style.display !== "none")
+        const elements = [...this.labels.domElement.querySelectorAll(".dr-scene-label")].filter(
+            (element) => element.style.display !== "none",
+        )
         const placed = []
         const ranked = elements
             .map((element) => ({
@@ -208,8 +209,12 @@ export class Viewer {
             }))
             .sort((a, b) => Number(a.minor) - Number(b.minor))
         for (const { element, rect } of ranked) {
-            const hit = placed.some((other) =>
-                rect.left < other.right && rect.right > other.left && rect.top < other.bottom && rect.bottom > other.top
+            const hit = placed.some(
+                (other) =>
+                    rect.left < other.right &&
+                    rect.right > other.left &&
+                    rect.top < other.bottom &&
+                    rect.bottom > other.top,
             )
             element.classList.toggle("dr-covered", hit)
             if (!hit) {
@@ -364,9 +369,9 @@ export class Viewer {
         if (center) {
             let extent = 20
             if (bounds) {
-                const near = bounds.clone().intersect(
-                    new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(30, 30, 1e6)),
-                )
+                const near = bounds
+                    .clone()
+                    .intersect(new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(30, 30, 1e6)))
                 if (!near.isEmpty()) {
                     const size = near.getSize(new THREE.Vector3())
                     extent = THREE.MathUtils.clamp(Math.max(size.x, size.y), 12, 30)
@@ -432,7 +437,9 @@ export class Viewer {
      * @returns {THREE.Box3 | null}
      */
     dataBounds() {
-        const xs = [], ys = [], zs = []
+        const xs = [],
+            ys = [],
+            zs = []
         const point = new THREE.Vector3()
         this.scene.updateMatrixWorld()
         this.scene.traverseVisible((object) => {
@@ -474,14 +481,18 @@ export class Viewer {
     /** devicePixelRatio changes when the window moves between displays or the page is zoomed. */
     #watchPixelRatio() {
         const query = globalThis.matchMedia?.(`(resolution: ${globalThis.devicePixelRatio}dppx)`)
-        query?.addEventListener("change", () => {
-            if (this.#disposed) {
-                return
-            }
-            this.renderer.setPixelRatio(pixelRatio())
-            this.#resize()
-            this.#watchPixelRatio()
-        }, { once: true })
+        query?.addEventListener(
+            "change",
+            () => {
+                if (this.#disposed) {
+                    return
+                }
+                this.renderer.setPixelRatio(pixelRatio())
+                this.#resize()
+                this.#watchPixelRatio()
+            },
+            { once: true },
+        )
     }
 
     #resize() {
@@ -492,8 +503,8 @@ export class Viewer {
         this.camera.aspect = width / height
         this.camera.updateProjectionMatrix()
         this.resolution.set(width, height)
-        this.pixelsPerMeter.value = (height * this.renderer.getPixelRatio()) /
-            (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2))
+        this.pixelsPerMeter.value =
+            (height * this.renderer.getPixelRatio()) / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2))
         this.requestRender()
     }
 

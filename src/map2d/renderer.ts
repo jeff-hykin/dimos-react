@@ -3,8 +3,8 @@
 // and a scale bar. Wheel / pinch zoom and drag pan move the picture; it follows a TF frame until the viewer pans; a click
 // that didn't drag reports where it landed (onPick). Colors come from the theme tokens. Every topic's last message is
 // kept per map context, so a reopened map or a re-picked topic shows at once. Ported from dim-controller's MapPanel.
-import { decode, headerFrameId } from "../lcm.js"
-import { poseMatrix } from "../three/layers/pose.js"
+import { decode, headerFrameId } from "../lcm"
+import { poseMatrix } from "../three/layers/pose"
 import {
     fitView,
     floorPose,
@@ -23,12 +23,12 @@ import {
     wheelGesture,
     worldToScreen,
     zoomAt,
-} from "./math.js"
+} from "./math"
 /** Each topic's last data for a map context (`map.retained`, a Map): a reopened map shows it at once. */
 function retainedFor(map, key) {
     let entry = map.retained.get(key)
     if (!entry) {
-        map.retained.set(key, entry = {})
+        map.retained.set(key, (entry = {}))
     }
     return entry
 }
@@ -51,7 +51,9 @@ function token(name) {
 }
 function themePalette() {
     const background = token("--scene-bg, var(--bg)")
-    const fg = token("--fg"), muted = token("--muted-fg"), primary = token("--primary")
+    const fg = token("--fg"),
+        muted = token("--muted-fg"),
+        primary = token("--primary")
     const opaque = (color) => [color[0], color[1], color[2], 255]
     const base = opaque(background)
     const clear = [0, 0, 0, 0]
@@ -132,41 +134,42 @@ class MapSource {
         }
         this.rebuild()
         if (isGridTopic(topic)) {
-            this.#stop.push(connection.subscribe(topic.key, { delivery: "latest", maxHz: 2 }, (message) => {
-                let grid
-                try {
-                    grid = message.value ?? decode(topic.type, message.bytes)
-                } catch (error) {
-                    this.#status(this.info, `cannot decode ${topic.name}: ${error}`)
-                    return
-                }
-                const { width, height, resolution, origin } = grid.info ?? {}
-                if (!width || !height || !(resolution > 0) || !grid.data || grid.data.length < width * height) {
-                    this.#status(this.info, `${topic.name}: empty or truncated grid`)
-                    return
-                }
-                this.grid = kept.grid = {
-                    width,
-                    height,
-                    resolution,
-                    origin,
-                    data: grid.data,
-                    frame: grid.header?.frame_id ?? "",
-                }
-                this.gridPose = null
-                this.rebuild()
-                kept.gridInfo = `${width}×${height} @ ${resolution.toFixed(2)} m`
-                this.#status(kept.gridInfo, "")
-            }))
+            this.#stop.push(
+                connection.subscribe(topic.key, { delivery: "latest", maxHz: 2 }, (message) => {
+                    let grid
+                    try {
+                        grid = message.value ?? decode(topic.type, message.bytes)
+                    } catch (error) {
+                        this.#status(this.info, `cannot decode ${topic.name}: ${error}`)
+                        return
+                    }
+                    const { width, height, resolution, origin } = grid.info ?? {}
+                    if (!width || !height || !(resolution > 0) || !grid.data || grid.data.length < width * height) {
+                        this.#status(this.info, `${topic.name}: empty or truncated grid`)
+                        return
+                    }
+                    this.grid = kept.grid = {
+                        width,
+                        height,
+                        resolution,
+                        origin,
+                        data: grid.data,
+                        frame: grid.header?.frame_id ?? "",
+                    }
+                    this.gridPose = null
+                    this.rebuild()
+                    kept.gridInfo = `${width}×${height} @ ${resolution.toFixed(2)} m`
+                    this.#status(kept.gridInfo, "")
+                }),
+            )
             return
         }
         // a cloud: its frame from one raw message (the compact encoding drops the header), then 1 Hz compact clouds
         let frameStop = connection.subscribe(topic.key, { delivery: "latest", maxHz: 1 }, (message) => {
-            this.#cloudFrame =
-                kept.cloudFrame =
-                    (message.value
-                        ? message.value.frame ?? message.value.header?.frame_id
-                        : headerFrameId(topic.type, message.bytes)) ?? ""
+            this.#cloudFrame = kept.cloudFrame =
+                (message.value
+                    ? (message.value.frame ?? message.value.header?.frame_id)
+                    : headerFrameId(topic.type, message.bytes)) ?? ""
             frameStop?.()
             frameStop = null
         })
@@ -239,7 +242,9 @@ class MapSource {
         const pose = floorPose(placed.clone().multiply(poseMatrix(this.grid.origin)).elements)
         const before = this.gridPose
         if (
-            !before || Math.abs(before.x - pose.x) > 1e-4 || Math.abs(before.y - pose.y) > 1e-4 ||
+            !before ||
+            Math.abs(before.x - pose.x) > 1e-4 ||
+            Math.abs(before.y - pose.y) > 1e-4 ||
             Math.abs(before.yaw - pose.yaw) > 1e-5
         ) {
             this.gridPose = pose
@@ -253,11 +258,16 @@ class MapSource {
     /** the drawn data's box in the fixed frame, or null */
     bounds() {
         if (this.grid && this.gridPose) {
-            const { width, height, resolution } = this.grid, { x, y, yaw } = this.gridPose
-            const cos = Math.cos(yaw), sin = Math.sin(yaw)
-            const corners = [[0, 0], [width, 0], [0, height], [width, height]].map((
-                [u, v],
-            ) => [x + (u * cos - v * sin) * resolution, y + (u * sin + v * cos) * resolution])
+            const { width, height, resolution } = this.grid,
+                { x, y, yaw } = this.gridPose
+            const cos = Math.cos(yaw),
+                sin = Math.sin(yaw)
+            const corners = [
+                [0, 0],
+                [width, 0],
+                [0, height],
+                [width, height],
+            ].map(([u, v]) => [x + (u * cos - v * sin) * resolution, y + (u * sin + v * cos) * resolution])
             return [
                 Math.min(...corners.map((c) => c[0])),
                 Math.min(...corners.map((c) => c[1])),
@@ -357,9 +367,10 @@ export class Map2DRenderer {
                 } catch {
                     return
                 }
-                const points = (path.poses ?? []).map((
-                    pose,
-                ) => [pose.pose?.position?.x ?? 0, pose.pose?.position?.y ?? 0])
+                const points = (path.poses ?? []).map((pose) => [
+                    pose.pose?.position?.x ?? 0,
+                    pose.pose?.position?.y ?? 0,
+                ])
                 this.#path = { frame: path.header?.frame_id ?? "", points }
                 this.requestDraw()
             })
@@ -405,11 +416,11 @@ export class Map2DRenderer {
             this.#base?.dispose()
             this.#base = base
                 ? new MapSource(
-                    this.map,
-                    base,
-                    () => isGridTopic(base) ? this.#palette.gridLut : this.#palette.heatLut,
-                    changed,
-                )
+                      this.map,
+                      base,
+                      () => (isGridTopic(base) ? this.#palette.gridLut : this.#palette.heatLut),
+                      changed,
+                  )
                 : null
         }
         if (overlay?.key !== this.#overlay?.topic.key) {
@@ -419,10 +430,11 @@ export class Map2DRenderer {
         changed()
     }
     #report() {
-        const base = this.#base, overlay = this.#overlay
-        const info = [base?.info, overlay?.info && `+ ${overlay.topic.name} ${overlay.info}`].filter(Boolean).join(
-            " · ",
-        )
+        const base = this.#base,
+            overlay = this.#overlay
+        const info = [base?.info, overlay?.info && `+ ${overlay.topic.name} ${overlay.info}`]
+            .filter(Boolean)
+            .join(" · ")
         const problem = !base ? "no point cloud or occupancy grid on the bus" : base.problem || overlay?.problem || ""
         this.events.onStatus({ info, problem })
     }
@@ -439,8 +451,10 @@ export class Map2DRenderer {
         const old = this.#robot
         if (
             !robot !== !old ||
-            (robot && old &&
-                (Math.abs(robot.x - old.x) > POSE_EPSILON || Math.abs(robot.y - old.y) > POSE_EPSILON ||
+            (robot &&
+                old &&
+                (Math.abs(robot.x - old.x) > POSE_EPSILON ||
+                    Math.abs(robot.y - old.y) > POSE_EPSILON ||
                     Math.abs(robot.yaw - old.yaw) > YAW_EPSILON))
         ) {
             this.#robot = robot
@@ -551,15 +565,16 @@ export class Map2DRenderer {
                 return
             }
             const box = canvas.getBoundingClientRect()
-            const others = [...this.#pointers.entries()].filter(([id]) => id !== event.pointerId).map(([, point]) =>
-                point
-            )
+            const others = [...this.#pointers.entries()]
+                .filter(([id]) => id !== event.pointerId)
+                .map(([, point]) => point)
             if (others.length) {
                 // pinch: zoom by the change in spread around the other finger, pan by the midpoint's move
                 const other = others[0]
                 const spreadBefore = Math.hypot(before.x - other.x, before.y - other.y),
                     spreadAfter = Math.hypot(event.clientX - other.x, event.clientY - other.y)
-                const middleDx = (event.clientX - before.x) / 2, middleDy = (event.clientY - before.y) / 2
+                const middleDx = (event.clientX - before.x) / 2,
+                    middleDy = (event.clientY - before.y) / 2
                 const wasFollowing = this.#follow.following
                 // a pinch zooms about the followed frame (still following) until its middle drifts: then it pans too
                 const pans = this.#follow.pinchPans(middleDx, middleDy)
@@ -580,7 +595,8 @@ export class Map2DRenderer {
                 }
                 this.#setView(view)
             } else {
-                const dx = event.clientX - before.x, dy = event.clientY - before.y
+                const dx = event.clientX - before.x,
+                    dy = event.clientY - before.y
                 if (!this.#dragged && Math.hypot(dx, dy) < 3) {
                     return
                 }
@@ -637,12 +653,14 @@ export class Map2DRenderer {
     #draw() {
         const canvas = this.canvas
         const box = canvas.getBoundingClientRect()
-        const width = box.width, height = box.height
+        const width = box.width,
+            height = box.height
         if (width < 2 || height < 2) {
             return
         }
         const ratio = globalThis.devicePixelRatio || 1
-        const pixelWidth = Math.round(width * ratio), pixelHeight = Math.round(height * ratio)
+        const pixelWidth = Math.round(width * ratio),
+            pixelHeight = Math.round(height * ratio)
         if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
             canvas.width = pixelWidth
             canvas.height = pixelHeight
@@ -685,7 +703,10 @@ export class Map2DRenderer {
         context.stroke()
         // the map: world → screen (y flipped), then each image's own placement; row 0 lands at the lowest y
         context.imageSmoothingEnabled = false
-        for (const [source, alpha] of [[this.#base, 1], [this.#overlay, 0.85]]) {
+        for (const [source, alpha] of [
+            [this.#base, 1],
+            [this.#overlay, 0.85],
+        ]) {
             if (source) {
                 context.setTransform(
                     ratio * scale,
@@ -733,11 +754,12 @@ export class Map2DRenderer {
         }
         // the planned path, placed through TF into the fixed frame
         const path = this.#path
-        const placed = path && path.points.length > 1
-            ? (path.frame && path.frame !== this.map.fixedFrame()
-                ? this.map.tf.lookup(path.frame, this.map.fixedFrame())
-                : null)
-            : null
+        const placed =
+            path && path.points.length > 1
+                ? path.frame && path.frame !== this.map.fixedFrame()
+                    ? this.map.tf.lookup(path.frame, this.map.fixedFrame())
+                    : null
+                : null
         if (path && path.points.length > 1 && (placed || !path.frame || path.frame === this.map.fixedFrame())) {
             const e = placed?.elements
             context.strokeStyle = css(palette.path, 0.95)

@@ -2,14 +2,13 @@
 // arm, a humanoid) names only the robot's frame, the fixed frame and `named` past `maxNames`. Reading tf into the tree
 // is TfFeed's job (whether or not this layer is on).
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { themeColors } from "../../theme/theme.js"
-import { FatLines } from "../lines.js"
-import { LabelPool } from "../labels.js"
-import { cssColor } from "../robot_model.js"
-import { registerLayer } from "./registry.js"
-import { Field, Slider, Toggle } from "../../components/controls.js"
+import { useStore } from "../store"
+import { themeColors } from "../../theme/theme"
+import { FatLines } from "../lines"
+import { LabelPool } from "../labels"
+import { cssColor } from "../robot_model"
+import { registerLayer } from "./registry"
+import { Field, Slider, Toggle } from "../../components/controls"
 
 /**
  * @typedef {{ axesSize: number, names: boolean, links: boolean, maxNames?: number, named?: string[],
@@ -67,7 +66,9 @@ export class TfFramesLayer {
         this.#axes.clear()
         this.#links.clear()
         this.#labels.begin()
-        const origin = new THREE.Vector3(), tip = new THREE.Vector3(), parent = new THREE.Vector3()
+        const origin = new THREE.Vector3(),
+            tip = new THREE.Vector3(),
+            parent = new THREE.Vector3()
         const baseFrame = this.context.options?.baseFrame
         let unplaced = 0
         for (const name of snapshot.frames.slice(0, settings.maxFrames)) {
@@ -81,8 +82,11 @@ export class TfFramesLayer {
                 tip.copy(unit[axis]).multiplyScalar(settings.axesSize).applyMatrix4(matrix)
                 this.#axes.push(origin.x, origin.y, origin.z, tip.x, tip.y, tip.z, this.#colors[axis])
             }
-            const nameIt = snapshot.frames.length <= settings.maxNames || name === frame.fixedFrame ||
-                name === baseFrame || settings.named.includes(name)
+            const nameIt =
+                snapshot.frames.length <= settings.maxNames ||
+                name === frame.fixedFrame ||
+                name === baseFrame ||
+                settings.named.includes(name)
             if (settings.names && nameIt) {
                 this.#labels.place(name, origin)
             }
@@ -114,31 +118,25 @@ export class TfFramesLayer {
 
 export function TfSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Axes" },
-            h(Slider, {
-                min: 0.05,
-                max: 1,
-                step: 0.05,
-                value: value.axesSize,
-                format: (size) => `${size} m`,
-                onChange: (axesSize) => settings.update({ axesSize }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Names" },
-            h(Toggle, { value: value.names, onChange: (names) => settings.update({ names }) }),
-        ),
-        h(
-            Field,
-            { label: "Links" },
-            h(Toggle, { value: value.links, onChange: (links) => settings.update({ links }) }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Axes">
+                <Slider
+                    min={0.05}
+                    max={1}
+                    step={0.05}
+                    value={value.axesSize}
+                    format={(size) => `${size} m`}
+                    onChange={(axesSize) => settings.update({ axesSize })}
+                />
+            </Field>
+            <Field label="Names">
+                <Toggle value={value.names} onChange={(names) => settings.update({ names })} />
+            </Field>
+            <Field label="Links">
+                <Toggle value={value.links} onChange={(links) => settings.update({ links })} />
+            </Field>
+        </div>
     )
 }
 

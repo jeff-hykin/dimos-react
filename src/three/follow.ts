@@ -21,7 +21,8 @@ export class SmoothFollow {
     step(target, dtSeconds) {
         const at = this.#at
         if (
-            !at || dtSeconds > SNAP_GAP_SECONDS ||
+            !at ||
+            dtSeconds > SNAP_GAP_SECONDS ||
             Math.hypot(target[0] - at[0], target[1] - at[1], target[2] - at[2]) > SNAP_METERS
         ) {
             this.#velocity = [0, 0, 0]

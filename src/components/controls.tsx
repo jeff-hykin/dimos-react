@@ -1,8 +1,8 @@
 // Buttons, form controls, badges and status dots. Every control takes `value` + `onChange(value)` (the value, not the
 // event), plus `className`, `style` and any other DOM props for its root.
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { Icon } from "./icon.js"
+import { cx } from "../cx"
+import { Icon } from "./icon"
 
 /**
  * @param {{ variant?: "default" | "primary" | "ghost" | "danger" | "ok" | "warn", size?: "sm" | "md" | "lg", icon?: string,
@@ -25,26 +25,27 @@ export function Button({
     ...rest
 }) {
     const link = href !== undefined
-    return h(
-        link ? "a" : "button",
-        {
-            ...(link ? { href: disabled ? undefined : href, "aria-disabled": disabled || undefined } : { type }),
-            className: cx(
+    const Tag = link ? "a" : "button"
+    return (
+        <Tag
+            {...(link ? { href: disabled ? undefined : href, "aria-disabled": disabled || undefined } : { type })}
+            className={cx(
                 "dr-btn",
                 variant !== "default" && `dr-btn--${variant}`,
                 size !== "md" && `dr-btn--${size}`,
                 block && "dr-btn--block",
                 className,
-            ),
-            "aria-pressed": pressed === undefined ? undefined : !!pressed,
-            "aria-busy": loading || undefined,
-            disabled: link ? undefined : disabled || loading,
-            ...rest,
-        },
-        loading ? h("span", { className: "dr-spinner dr-spinner--inline", "aria-hidden": "true" }) : null,
-        !loading && icon ? h(Icon, { name: icon, size: size === "sm" ? 14 : 16 }) : null,
-        children,
-        iconRight ? h(Icon, { name: iconRight, size: size === "sm" ? 14 : 16 }) : null,
+            )}
+            aria-pressed={pressed === undefined ? undefined : !!pressed}
+            aria-busy={loading || undefined}
+            disabled={link ? undefined : disabled || loading}
+            {...rest}
+        >
+            {loading ? <span className="dr-spinner dr-spinner--inline" aria-hidden="true" /> : null}
+            {!loading && icon ? <Icon name={icon} size={size === "sm" ? 14 : 16} /> : null}
+            {children}
+            {iconRight ? <Icon name={iconRight} size={size === "sm" ? 14 : 16} /> : null}
+        </Tag>
     )
 }
 
@@ -54,23 +55,25 @@ export function Button({
  * @param {Record<string, any>} props
  */
 export function HoldButton({ onHold, onRelease, disabled, className, ...rest }) {
-    return h(Button, {
-        className: cx("dr-btn--hold", className),
-        disabled,
-        style: { touchAction: "none", userSelect: "none", WebkitUserSelect: "none", ...rest.style },
-        onPointerDown: (event) => {
-            if (disabled || event.button !== 0) {
-                return
-            }
-            event.currentTarget.setPointerCapture?.(event.pointerId)
-            onHold?.()
-        },
-        onPointerUp: () => onRelease?.(),
-        onPointerCancel: () => onRelease?.(),
-        onLostPointerCapture: () => onRelease?.(),
-        onContextMenu: (event) => event.preventDefault(),
-        ...rest,
-    })
+    return (
+        <Button
+            className={cx("dr-btn--hold", className)}
+            disabled={disabled}
+            style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none", ...rest.style }}
+            onPointerDown={(event) => {
+                if (disabled || event.button !== 0) {
+                    return
+                }
+                event.currentTarget.setPointerCapture?.(event.pointerId)
+                onHold?.()
+            }}
+            onPointerUp={() => onRelease?.()}
+            onPointerCancel={() => onRelease?.()}
+            onLostPointerCapture={() => onRelease?.()}
+            onContextMenu={(event) => event.preventDefault()}
+            {...rest}
+        />
+    )
 }
 
 /**
@@ -78,14 +81,18 @@ export function HoldButton({ onHold, onRelease, disabled, className, ...rest }) 
  * @param {Record<string, any>} props
  */
 export function IconButton({ icon, label, size = "md", variant = "ghost", round = false, className, ...rest }) {
-    return h(Button, {
-        variant,
-        size,
-        className: cx("dr-btn--icon", round && "dr-btn--round", className),
-        "aria-label": label,
-        title: label,
-        ...rest,
-    }, h(Icon, { name: icon, size: size === "sm" ? 14 : size === "lg" ? 20 : 17 }))
+    return (
+        <Button
+            variant={variant}
+            size={size}
+            className={cx("dr-btn--icon", round && "dr-btn--round", className)}
+            aria-label={label}
+            title={label}
+            {...rest}
+        >
+            <Icon name={icon} size={size === "sm" ? 14 : size === "lg" ? 20 : 17} />
+        </Button>
+    )
 }
 
 /**
@@ -93,7 +100,11 @@ export function IconButton({ icon, label, size = "md", variant = "ghost", round 
  * @param {Record<string, any>} props
  */
 export function ButtonGroup({ className, children, ...rest }) {
-    return h("div", { className: cx("dr-btn-group", className), role: "group", ...rest }, children)
+    return (
+        <div className={cx("dr-btn-group", className)} role="group" {...rest}>
+            {children}
+        </div>
+    )
 }
 
 /**
@@ -101,16 +112,22 @@ export function ButtonGroup({ className, children, ...rest }) {
  * @param {Record<string, any>} props
  */
 export function Field({ label, hint, error, inline = false, htmlFor, className, children, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-field", inline && "dr-field--inline", error && "dr-field--error", className), ...rest },
-        label ? h("label", { className: "dr-field-label", htmlFor }, label) : null,
-        h("div", { className: "dr-field-control" }, children),
-        error
-            ? h("div", { className: "dr-field-error", role: "alert" }, error)
-            : hint
-            ? h("div", { className: "dr-field-hint" }, hint)
-            : null,
+    return (
+        <div className={cx("dr-field", inline && "dr-field--inline", error && "dr-field--error", className)} {...rest}>
+            {label ? (
+                <label className="dr-field-label" htmlFor={htmlFor}>
+                    {label}
+                </label>
+            ) : null}
+            <div className="dr-field-control">{children}</div>
+            {error ? (
+                <div className="dr-field-error" role="alert">
+                    {error}
+                </div>
+            ) : hint ? (
+                <div className="dr-field-hint">{hint}</div>
+            ) : null}
+        </div>
     )
 }
 
@@ -120,23 +137,21 @@ export function Field({ label, hint, error, inline = false, htmlFor, className, 
  * puts `value` back.
  * @param {Record<string, any>} props
  */
-export function TextInput(
-    {
-        value,
-        onChange,
-        onEnter,
-        onCommit,
-        onKeyDown,
-        onBlur,
-        size = "md",
-        mono = false,
-        icon,
-        className,
-        style,
-        invalid,
-        ...rest
-    },
-) {
+export function TextInput({
+    value,
+    onChange,
+    onEnter,
+    onCommit,
+    onKeyDown,
+    onBlur,
+    size = "md",
+    mono = false,
+    icon,
+    className,
+    style,
+    invalid,
+    ...rest
+}) {
     const [draft, setDraft] = useState(null)
     const committing = !!onCommit && !onChange
     const commit = (text) => {
@@ -145,40 +160,53 @@ export function TextInput(
             onCommit?.(text)
         }
     }
-    const input = h("input", {
-        type: "text",
-        className: cx("dr-input", size === "sm" && "dr-input--sm", mono && "dr-mono", icon && "dr-input--with-icon"),
-        value: committing ? draft ?? value ?? "" : value ?? "",
-        "aria-invalid": invalid || undefined,
-        onChange: (event) => (committing ? setDraft(event.target.value) : onChange?.(event.target.value)),
-        onKeyDown: (event) => {
-            if (event.key === "Enter") {
-                onEnter?.(event.currentTarget.value)
-                if (committing) {
+    const input = (
+        <input
+            type="text"
+            className={cx(
+                "dr-input",
+                size === "sm" && "dr-input--sm",
+                mono && "dr-mono",
+                icon && "dr-input--with-icon",
+            )}
+            value={committing ? (draft ?? value ?? "") : (value ?? "")}
+            aria-invalid={invalid || undefined}
+            onChange={(event) => (committing ? setDraft(event.target.value) : onChange?.(event.target.value))}
+            onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                    onEnter?.(event.currentTarget.value)
+                    if (committing) {
+                        commit(event.currentTarget.value)
+                    }
+                } else if (event.key === "Escape" && committing && draft !== null) {
+                    event.stopPropagation()
+                    setDraft(null)
+                }
+                onKeyDown?.(event)
+            }}
+            onBlur={(event) => {
+                if (committing && draft !== null) {
                     commit(event.currentTarget.value)
                 }
-            } else if (event.key === "Escape" && committing && draft !== null) {
-                event.stopPropagation()
-                setDraft(null)
-            }
-            onKeyDown?.(event)
-        },
-        onBlur: (event) => {
-            if (committing && draft !== null) {
-                commit(event.currentTarget.value)
-            }
-            onBlur?.(event)
-        },
-        ...rest,
-    })
+                onBlur?.(event)
+            }}
+            {...rest}
+        />
+    )
     if (!icon) {
-        return h("span", { className: cx("dr-input-wrap", className), style }, input)
+        return (
+            <span className={cx("dr-input-wrap", className)} style={style}>
+                {input}
+            </span>
+        )
     }
-    return h(
-        "span",
-        { className: cx("dr-input-wrap", className), style },
-        h("span", { className: "dr-input-icon" }, h(Icon, { name: icon, size: 15 })),
-        input,
+    return (
+        <span className={cx("dr-input-wrap", className)} style={style}>
+            <span className="dr-input-icon">
+                <Icon name={icon} size={15} />
+            </span>
+            {input}
+        </span>
     )
 }
 
@@ -187,32 +215,31 @@ export function TextInput(
  * @param {Record<string, any>} props
  */
 export function SearchInput({ value, onChange, placeholder = "Search…", className, style, ...rest }) {
-    return h(
-        "span",
-        { className: cx("dr-input-wrap dr-search", className), style },
-        h("span", { className: "dr-input-icon" }, h(Icon, { name: "search", size: 15 })),
-        h("input", {
-            type: "search",
-            className: "dr-input dr-input--with-icon",
-            value: value ?? "",
-            placeholder,
-            onChange: (event) => onChange?.(event.target.value),
-            onKeyDown: (event) => {
-                if (event.key === "Escape" && value) {
-                    event.stopPropagation()
-                    onChange?.("")
-                }
-            },
-            ...rest,
-        }),
-        value
-            ? h("button", {
-                type: "button",
-                className: "dr-input-clear",
-                "aria-label": "Clear",
-                onClick: () => onChange?.(""),
-            }, h(Icon, { name: "close", size: 13 }))
-            : null,
+    return (
+        <span className={cx("dr-input-wrap dr-search", className)} style={style}>
+            <span className="dr-input-icon">
+                <Icon name="search" size={15} />
+            </span>
+            <input
+                type="search"
+                className="dr-input dr-input--with-icon"
+                value={value ?? ""}
+                placeholder={placeholder}
+                onChange={(event) => onChange?.(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === "Escape" && value) {
+                        event.stopPropagation()
+                        onChange?.("")
+                    }
+                }}
+                {...rest}
+            />
+            {value ? (
+                <button type="button" className="dr-input-clear" aria-label="Clear" onClick={() => onChange?.("")}>
+                    <Icon name="close" size={13} />
+                </button>
+            ) : null}
+        </span>
     )
 }
 
@@ -221,13 +248,15 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
  * @param {Record<string, any>} props
  */
 export function TextArea({ value, onChange, mono = false, rows = 4, className, ...rest }) {
-    return h("textarea", {
-        className: cx("dr-input dr-textarea", mono && "dr-mono", className),
-        rows,
-        value: value ?? "",
-        onChange: (event) => onChange?.(event.target.value),
-        ...rest,
-    })
+    return (
+        <textarea
+            className={cx("dr-input dr-textarea", mono && "dr-mono", className)}
+            rows={rows}
+            value={value ?? ""}
+            onChange={(event) => onChange?.(event.target.value)}
+            {...rest}
+        />
+    )
 }
 
 const clamp = (value, min, max) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, value))
@@ -237,15 +266,26 @@ const clamp = (value, min, max) => Math.min(max ?? Infinity, Math.max(min ?? -In
  * `unit` shows after the number. `nullable`: clearing the box reports null (e.g. "auto"; pair with a placeholder).
  * @param {Record<string, any>} props
  */
-export function NumberInput(
-    { value, onChange, min, max, step = 1, unit, size = "md", precision, nullable = false, className, style, ...rest },
-) {
+export function NumberInput({
+    value,
+    onChange,
+    min,
+    max,
+    step = 1,
+    unit,
+    size = "md",
+    precision,
+    nullable = false,
+    className,
+    style,
+    ...rest
+}) {
     const shown = (number) =>
         number === null || number === undefined || !Number.isFinite(number)
             ? ""
             : precision === undefined
-            ? String(number)
-            : number.toFixed(precision)
+              ? String(number)
+              : number.toFixed(precision)
     const [text, setText] = useState(shown(value))
     const focused = useRef(false)
     useEffect(() => {
@@ -272,36 +312,36 @@ export function NumberInput(
             onChange?.(next)
         }
     }
-    return h(
-        "span",
-        { className: cx("dr-input-wrap dr-number", className), style },
-        h("input", {
-            type: "text",
-            inputMode: "decimal",
-            className: cx("dr-input dr-mono", size === "sm" && "dr-input--sm", unit && "dr-input--with-unit"),
-            value: text,
-            onFocus: () => (focused.current = true),
-            onBlur: (event) => {
-                focused.current = false
-                commit(event.target.value)
-            },
-            onChange: (event) => setText(event.target.value),
-            onKeyDown: (event) => {
-                if (event.key === "Enter") {
-                    commit(event.currentTarget.value)
-                } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-                    event.preventDefault()
-                    const base = Number.isFinite(Number(text)) ? Number(text) : value ?? 0
-                    const delta = (event.key === "ArrowUp" ? 1 : -1) * step * (event.shiftKey ? 10 : 1)
-                    const next = clamp(Math.round((base + delta) / step) * step, min, max)
-                    const rounded = Number(next.toFixed(10))
-                    setText(shown(rounded))
-                    onChange?.(rounded)
-                }
-            },
-            ...rest,
-        }),
-        unit ? h("span", { className: "dr-input-unit" }, unit) : null,
+    return (
+        <span className={cx("dr-input-wrap dr-number", className)} style={style}>
+            <input
+                type="text"
+                inputMode="decimal"
+                className={cx("dr-input dr-mono", size === "sm" && "dr-input--sm", unit && "dr-input--with-unit")}
+                value={text}
+                onFocus={() => (focused.current = true)}
+                onBlur={(event) => {
+                    focused.current = false
+                    commit(event.target.value)
+                }}
+                onChange={(event) => setText(event.target.value)}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                        commit(event.currentTarget.value)
+                    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                        event.preventDefault()
+                        const base = Number.isFinite(Number(text)) ? Number(text) : (value ?? 0)
+                        const delta = (event.key === "ArrowUp" ? 1 : -1) * step * (event.shiftKey ? 10 : 1)
+                        const next = clamp(Math.round((base + delta) / step) * step, min, max)
+                        const rounded = Number(next.toFixed(10))
+                        setText(shown(rounded))
+                        onChange?.(rounded)
+                    }
+                }}
+                {...rest}
+            />
+            {unit ? <span className="dr-input-unit">{unit}</span> : null}
+        </span>
     )
 }
 
@@ -311,8 +351,8 @@ export function normalizeOptions(options = []) {
         Array.isArray(option)
             ? { value: option[0], label: option[1] ?? String(option[0]) }
             : typeof option === "object" && option !== null
-            ? { label: String(option.value), ...option }
-            : { value: option, label: String(option) }
+              ? { label: String(option.value), ...option }
+              : { value: option, label: String(option) },
     )
 }
 
@@ -334,29 +374,40 @@ export function Select({ value, onChange, options, placeholder, size = "md", cla
         }
         group.items.push([position, item])
     }
-    const option = ([position, item]) =>
-        h("option", { key: position, value: String(position), disabled: item.disabled }, item.label)
-    return h(
-        "select",
-        {
-            className: cx("dr-select", size === "sm" && "dr-select--sm", className),
+    const option = ([position, item]) => (
+        <option key={position} value={String(position)} disabled={item.disabled}>
+            {item.label}
+        </option>
+    )
+    return (
+        <select
+            className={cx("dr-select", size === "sm" && "dr-select--sm", className)}
             // the whole choice on hover, for a select narrower than its text
-            title: index >= 0 ? String(items[index].label) : undefined,
-            value: index >= 0 ? String(index) : "",
-            onChange: (event) => {
+            title={index >= 0 ? String(items[index].label) : undefined}
+            value={index >= 0 ? String(index) : ""}
+            onChange={(event) => {
                 const item = items[Number(event.target.value)]
                 if (item) {
                     onChange?.(item.value)
                 }
-            },
-            ...rest,
-        },
-        index < 0 ? h("option", { value: "", disabled: true }, placeholder ?? "Choose…") : null,
-        groups.map((group) =>
-            group.name
-                ? h("optgroup", { key: group.name, label: group.name }, group.items.map(option))
-                : group.items.map(option)
-        ),
+            }}
+            {...rest}
+        >
+            {index < 0 ? (
+                <option value="" disabled={true}>
+                    {placeholder ?? "Choose…"}
+                </option>
+            ) : null}
+            {groups.map((group) =>
+                group.name ? (
+                    <optgroup key={group.name} label={group.name}>
+                        {group.items.map(option)}
+                    </optgroup>
+                ) : (
+                    group.items.map(option)
+                ),
+            )}
+        </select>
     )
 }
 
@@ -371,19 +422,19 @@ export function Checkbox({ value, onChange, label, indeterminate = false, disabl
             ref.current.indeterminate = indeterminate
         }
     }, [indeterminate])
-    return h(
-        "label",
-        { className: cx("dr-check", disabled && "dr-check--disabled", className) },
-        h("input", {
-            ref,
-            type: "checkbox",
-            checked: !!value,
-            disabled,
-            onChange: (event) => onChange?.(event.target.checked),
-            ...rest,
-        }),
-        h("span", { className: "dr-check-box", "aria-hidden": "true" }),
-        label ?? children ? h("span", { className: "dr-check-label" }, label ?? children) : null,
+    return (
+        <label className={cx("dr-check", disabled && "dr-check--disabled", className)}>
+            <input
+                ref={ref}
+                type="checkbox"
+                checked={!!value}
+                disabled={disabled}
+                onChange={(event) => onChange?.(event.target.checked)}
+                {...rest}
+            />
+            <span className="dr-check-box" aria-hidden="true" />
+            {(label ?? children) ? <span className="dr-check-label">{label ?? children}</span> : null}
+        </label>
     )
 }
 
@@ -392,20 +443,24 @@ export function Checkbox({ value, onChange, label, indeterminate = false, disabl
  * @param {Record<string, any>} props
  */
 export function Toggle({ value, onChange, label, size = "md", disabled, className, ...rest }) {
-    return h(
-        "label",
-        { className: cx("dr-toggle", size === "sm" && "dr-toggle--sm", disabled && "dr-check--disabled", className) },
-        h("input", {
-            type: "checkbox",
-            role: "switch",
-            checked: !!value,
-            "aria-checked": !!value,
-            disabled,
-            onChange: (event) => onChange?.(event.target.checked),
-            ...rest,
-        }),
-        h("span", { className: "dr-toggle-track", "aria-hidden": "true" }, h("span", { className: "dr-toggle-knob" })),
-        label ? h("span", { className: "dr-check-label" }, label) : null,
+    return (
+        <label
+            className={cx("dr-toggle", size === "sm" && "dr-toggle--sm", disabled && "dr-check--disabled", className)}
+        >
+            <input
+                type="checkbox"
+                role="switch"
+                checked={!!value}
+                aria-checked={!!value}
+                disabled={disabled}
+                onChange={(event) => onChange?.(event.target.checked)}
+                {...rest}
+            />
+            <span className="dr-toggle-track" aria-hidden="true">
+                <span className="dr-toggle-knob" />
+            </span>
+            {label ? <span className="dr-check-label">{label}</span> : null}
+        </label>
     )
 }
 export const Switch = Toggle
@@ -415,20 +470,20 @@ export const Switch = Toggle
  * @param {Record<string, any>} props
  */
 export function Radio({ checked, onChange, label, name, value, disabled, className, ...rest }) {
-    return h(
-        "label",
-        { className: cx("dr-check dr-radio", disabled && "dr-check--disabled", className) },
-        h("input", {
-            type: "radio",
-            name,
-            value: String(value),
-            checked: !!checked,
-            disabled,
-            onChange: () => onChange?.(value),
-            ...rest,
-        }),
-        h("span", { className: "dr-check-box", "aria-hidden": "true" }),
-        label ? h("span", { className: "dr-check-label" }, label) : null,
+    return (
+        <label className={cx("dr-check dr-radio", disabled && "dr-check--disabled", className)}>
+            <input
+                type="radio"
+                name={name}
+                value={String(value)}
+                checked={!!checked}
+                disabled={disabled}
+                onChange={() => onChange?.(value)}
+                {...rest}
+            />
+            <span className="dr-check-box" aria-hidden="true" />
+            {label ? <span className="dr-check-label">{label}</span> : null}
+        </label>
     )
 }
 
@@ -438,20 +493,20 @@ export function Radio({ checked, onChange, label, name, value, disabled, classNa
  */
 export function RadioGroup({ value, onChange, options, name, direction = "column", className, ...rest }) {
     const autoName = useId()
-    return h(
-        "div",
-        { role: "radiogroup", className: cx("dr-radio-group", `dr-radio-group--${direction}`, className), ...rest },
-        normalizeOptions(options).map((item) =>
-            h(Radio, {
-                key: String(item.value),
-                name: name ?? autoName,
-                value: item.value,
-                label: item.label,
-                disabled: item.disabled,
-                checked: item.value === value,
-                onChange,
-            })
-        ),
+    return (
+        <div role="radiogroup" className={cx("dr-radio-group", `dr-radio-group--${direction}`, className)} {...rest}>
+            {normalizeOptions(options).map((item) => (
+                <Radio
+                    key={String(item.value)}
+                    name={name ?? autoName}
+                    value={item.value}
+                    label={item.label}
+                    disabled={item.disabled}
+                    checked={item.value === value}
+                    onChange={onChange}
+                />
+            ))}
+        </div>
     )
 }
 
@@ -459,41 +514,39 @@ export function RadioGroup({ value, onChange, options, name, direction = "column
  * A range slider with its value shown. `format(value)` for the readout; `onCommit(value)` once the drag ends.
  * @param {Record<string, any>} props
  */
-export function Slider(
-    {
-        value,
-        onChange,
-        onCommit,
-        min = 0,
-        max = 1,
-        step = 0.01,
-        format,
-        showValue = true,
-        className,
-        disabled,
-        ...rest
-    },
-) {
+export function Slider({
+    value,
+    onChange,
+    onCommit,
+    min = 0,
+    max = 1,
+    step = 0.01,
+    format,
+    showValue = true,
+    className,
+    disabled,
+    ...rest
+}) {
     const fraction = (clamp(value ?? min, min, max) - min) / (max - min || 1)
-    return h(
-        "div",
-        {
-            className: cx("dr-slider", disabled && "dr-slider--disabled", className),
-            style: { "--dr-fill": `${fraction * 100}%` },
-        },
-        h("input", {
-            type: "range",
-            min,
-            max,
-            step,
-            value: value ?? min,
-            disabled,
-            onChange: (event) => onChange?.(Number(event.target.value)),
-            onPointerUp: (event) => onCommit?.(Number(event.currentTarget.value)),
-            onKeyUp: (event) => onCommit?.(Number(event.currentTarget.value)),
-            ...rest,
-        }),
-        showValue ? h("output", { className: "dr-slider-value" }, format ? format(value) : String(value)) : null,
+    return (
+        <div
+            className={cx("dr-slider", disabled && "dr-slider--disabled", className)}
+            style={{ "--dr-fill": `${fraction * 100}%` }}
+        >
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value ?? min}
+                disabled={disabled}
+                onChange={(event) => onChange?.(Number(event.target.value))}
+                onPointerUp={(event) => onCommit?.(Number(event.currentTarget.value))}
+                onKeyUp={(event) => onCommit?.(Number(event.currentTarget.value))}
+                {...rest}
+            />
+            {showValue ? <output className="dr-slider-value">{format ? format(value) : String(value)}</output> : null}
+        </div>
     )
 }
 
@@ -501,43 +554,49 @@ export function Slider(
  * Two thumbs on one track: `value` = [low, high].
  * @param {Record<string, any>} props
  */
-export function RangeSlider(
-    { value = [0, 1], onChange, min = 0, max = 1, step = 0.01, format, showValue = true, className, disabled },
-) {
+export function RangeSlider({
+    value = [0, 1],
+    onChange,
+    min = 0,
+    max = 1,
+    step = 0.01,
+    format,
+    showValue = true,
+    className,
+    disabled,
+}) {
     const [low, high] = value
     const at = (number) => `${((clamp(number, min, max) - min) / (max - min || 1)) * 100}%`
     const show = (number) => (format ? format(number) : String(number))
-    return h(
-        "div",
-        {
-            className: cx("dr-slider dr-range", disabled && "dr-slider--disabled", className),
-            style: { "--dr-from": at(low), "--dr-to": at(high) },
-        },
-        h(
-            "div",
-            { className: "dr-range-inputs" },
-            h("input", {
-                type: "range",
-                min,
-                max,
-                step,
-                value: low,
-                disabled,
-                "aria-label": "minimum",
-                onChange: (event) => onChange?.([Math.min(Number(event.target.value), high), high]),
-            }),
-            h("input", {
-                type: "range",
-                min,
-                max,
-                step,
-                value: high,
-                disabled,
-                "aria-label": "maximum",
-                onChange: (event) => onChange?.([low, Math.max(Number(event.target.value), low)]),
-            }),
-        ),
-        showValue ? h("output", { className: "dr-slider-value" }, `${show(low)} – ${show(high)}`) : null,
+    return (
+        <div
+            className={cx("dr-slider dr-range", disabled && "dr-slider--disabled", className)}
+            style={{ "--dr-from": at(low), "--dr-to": at(high) }}
+        >
+            <div className="dr-range-inputs">
+                <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={low}
+                    disabled={disabled}
+                    aria-label="minimum"
+                    onChange={(event) => onChange?.([Math.min(Number(event.target.value), high), high])}
+                />
+                <input
+                    type="range"
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={high}
+                    disabled={disabled}
+                    aria-label="maximum"
+                    onChange={(event) => onChange?.([low, Math.max(Number(event.target.value), low)])}
+                />
+            </div>
+            {showValue ? <output className="dr-slider-value">{`${show(low)} – ${show(high)}`}</output> : null}
+        </div>
     )
 }
 
@@ -546,14 +605,14 @@ export function RangeSlider(
  * @param {Record<string, any>} props
  */
 export function Badge({ tone = "default", solid = false, dot = false, className, children, ...rest }) {
-    return h(
-        "span",
-        {
-            className: cx("dr-badge", tone !== "default" && `dr-badge--${tone}`, solid && "dr-badge--solid", className),
-            ...rest,
-        },
-        dot ? h("span", { className: "dr-badge-dot" }) : null,
-        children,
+    return (
+        <span
+            className={cx("dr-badge", tone !== "default" && `dr-badge--${tone}`, solid && "dr-badge--solid", className)}
+            {...rest}
+        >
+            {dot ? <span className="dr-badge-dot" /> : null}
+            {children}
+        </span>
     )
 }
 
@@ -562,37 +621,41 @@ export function Badge({ tone = "default", solid = false, dot = false, className,
  * @param {Record<string, any>} props
  */
 export function Chip({ selected, onChange, onRemove, icon, tone, className, children, ...rest }) {
-    return h(
-        "span",
-        {
-            className: cx("dr-chip", tone && `dr-badge--${tone}`, className),
-            role: onChange ? "button" : undefined,
-            tabIndex: onChange ? 0 : undefined,
-            "aria-pressed": onChange ? !!selected : undefined,
-            onClick: onChange ? () => onChange(!selected) : undefined,
-            onKeyDown: onChange
-                ? (event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault()
-                        onChange(!selected)
-                    }
-                }
-                : undefined,
-            ...rest,
-        },
-        icon ? h(Icon, { name: icon, size: 13 }) : null,
-        children,
-        onRemove
-            ? h("button", {
-                type: "button",
-                className: "dr-chip-remove",
-                "aria-label": "Remove",
-                onClick: (event) => {
-                    event.stopPropagation()
-                    onRemove()
-                },
-            }, h(Icon, { name: "close", size: 11 }))
-            : null,
+    return (
+        <span
+            className={cx("dr-chip", tone && `dr-badge--${tone}`, className)}
+            role={onChange ? "button" : undefined}
+            tabIndex={onChange ? 0 : undefined}
+            aria-pressed={onChange ? !!selected : undefined}
+            onClick={onChange ? () => onChange(!selected) : undefined}
+            onKeyDown={
+                onChange
+                    ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault()
+                              onChange(!selected)
+                          }
+                      }
+                    : undefined
+            }
+            {...rest}
+        >
+            {icon ? <Icon name={icon} size={13} /> : null}
+            {children}
+            {onRemove ? (
+                <button
+                    type="button"
+                    className="dr-chip-remove"
+                    aria-label="Remove"
+                    onClick={(event) => {
+                        event.stopPropagation()
+                        onRemove()
+                    }}
+                >
+                    <Icon name="close" size={11} />
+                </button>
+            ) : null}
+        </span>
     )
 }
 
@@ -636,24 +699,26 @@ export function TagList({ items = [], oneLine = false, extra, className, ...rest
     }, [signature, oneLine])
     const shown = oneLine ? tags.slice(0, fits) : tags
     const hidden = oneLine ? tags.slice(fits) : []
-    return h(
-        "span",
-        { ref: box, className: cx("dr-tags", oneLine && "dr-tags--one-line", className), ...rest },
-        shown.map((tag, index) =>
-            h(Badge, {
-                key: tag.key ?? `${index}:${tag.label}`,
-                tone: tag.tone ?? "default",
-                title: tag.title,
-                className: "dr-tag-item",
-            }, tag.label)
-        ),
-        hidden.length
-            ? h(Badge, {
-                className: "dr-tag-more",
-                title: hidden.map((tag) => (typeof tag.label === "string" ? tag.label : "")).join(", "),
-            }, `+${hidden.length}`)
-            : null,
-        extra,
+    return (
+        <span ref={box} className={cx("dr-tags", oneLine && "dr-tags--one-line", className)} {...rest}>
+            {shown.map((tag, index) => (
+                <Badge
+                    key={tag.key ?? `${index}:${tag.label}`}
+                    tone={tag.tone ?? "default"}
+                    title={tag.title}
+                    className="dr-tag-item"
+                >
+                    {tag.label}
+                </Badge>
+            ))}
+            {hidden.length ? (
+                <Badge
+                    className="dr-tag-more"
+                    title={hidden.map((tag) => (typeof tag.label === "string" ? tag.label : "")).join(", ")}
+                >{`+${hidden.length}`}</Badge>
+            ) : null}
+            {extra}
+        </span>
     )
 }
 
@@ -662,13 +727,15 @@ export function TagList({ items = [], oneLine = false, extra, className, ...rest
  * @param {Record<string, any>} props
  */
 export function StatusDot({ tone = "ok", pulse = false, label, className, ...rest }) {
-    return h("span", {
-        className: cx("dr-dot", `dr-dot--${tone}`, pulse && "dr-dot--pulse", className),
-        role: label ? "img" : undefined,
-        "aria-label": label,
-        title: label,
-        ...rest,
-    })
+    return (
+        <span
+            className={cx("dr-dot", `dr-dot--${tone}`, pulse && "dr-dot--pulse", className)}
+            role={label ? "img" : undefined}
+            aria-label={label}
+            title={label}
+            {...rest}
+        />
+    )
 }
 
 const CONNECTION_TONES = { connected: "ok", connecting: "warn", degraded: "warn", lost: "danger", offline: "off" }
@@ -680,12 +747,12 @@ const CONNECTION_TONES = { connected: "ok", connecting: "warn", degraded: "warn"
  */
 export function ConnectionStatus({ state = "connecting", label, detail, className, ...rest }) {
     const tone = CONNECTION_TONES[state] ?? "off"
-    return h(
-        "span",
-        { className: cx("dr-conn", `dr-conn--${tone}`, className), role: "status", ...rest },
-        h(StatusDot, { tone, pulse: state === "connecting" }),
-        h("span", { className: "dr-conn-label" }, label ?? state),
-        detail ? h("span", { className: "dr-conn-detail" }, detail) : null,
+    return (
+        <span className={cx("dr-conn", `dr-conn--${tone}`, className)} role="status" {...rest}>
+            <StatusDot tone={tone} pulse={state === "connecting"} />
+            <span className="dr-conn-label">{label ?? state}</span>
+            {detail ? <span className="dr-conn-detail">{detail}</span> : null}
+        </span>
     )
 }
 
@@ -695,17 +762,24 @@ export function ConnectionStatus({ state = "connecting", label, detail, classNam
  */
 export function Kbd({ keys, className, children, ...rest }) {
     const mac = /mac|iphone|ipad/i.test(globalThis.navigator?.platform ?? "")
-    const label = (
-        key,
-    ) => (key === "mod" ? (mac ? "⌘" : "Ctrl") : key === "shift" ? "⇧" : key === "alt" ? (mac ? "⌥" : "Alt") : key)
+    const label = (key) =>
+        key === "mod" ? (mac ? "⌘" : "Ctrl") : key === "shift" ? "⇧" : key === "alt" ? (mac ? "⌥" : "Alt") : key
     if (keys) {
-        return h(
-            "span",
-            { className: cx("dr-kbd-group", className), ...rest },
-            keys.map((key, index) => h("kbd", { key: index, className: "dr-kbd" }, label(key))),
+        return (
+            <span className={cx("dr-kbd-group", className)} {...rest}>
+                {keys.map((key, index) => (
+                    <kbd key={index} className="dr-kbd">
+                        {label(key)}
+                    </kbd>
+                ))}
+            </span>
         )
     }
-    return h("kbd", { className: cx("dr-kbd", className), ...rest }, children)
+    return (
+        <kbd className={cx("dr-kbd", className)} {...rest}>
+            {children}
+        </kbd>
+    )
 }
 
 /**
@@ -713,27 +787,35 @@ export function Kbd({ keys, className, children, ...rest }) {
  * "info" | "ok" | "warn" | "danger"); `active` fills it (its panel is open); `attention` draws the eye: "pulse" (the
  * next step), "glow" (recommended), "spin" (working). `label` is its tooltip and accessible name.
  */
-export function Fab(
-    { icon, label, tone = "primary", active = false, attention, size = 52, className, style, ...rest },
-) {
-    return h(
-        "button",
-        {
-            type: "button",
-            className: cx(
+export function Fab({
+    icon,
+    label,
+    tone = "primary",
+    active = false,
+    attention,
+    size = 52,
+    className,
+    style,
+    ...rest
+}) {
+    return (
+        <button
+            type="button"
+            className={cx(
                 "dr-fab",
                 `dr-fab--${tone}`,
                 active && "dr-fab--active",
                 attention && `dr-fab--${attention}`,
                 className,
-            ),
-            "aria-label": label,
-            "aria-pressed": active,
-            title: label,
-            style: { "--dr-fab-size": `${size}px`, ...style },
-            ...rest,
-        },
-        h(Icon, { name: icon, size: Math.round(size * 0.4) }),
+            )}
+            aria-label={label}
+            aria-pressed={active}
+            title={label}
+            style={{ "--dr-fab-size": `${size}px`, ...style }}
+            {...rest}
+        >
+            <Icon name={icon} size={Math.round(size * 0.4)} />
+        </button>
     )
 }
 
@@ -763,17 +845,16 @@ export function AngleDial({ value = 0, onChange, size = 46, tone = "primary", di
         addEventListener("pointermove", move)
         addEventListener("pointerup", up)
     }
-    return h(
-        "div",
-        {
-            className: cx("dr-dial", `dr-dial--${tone}`, disabled && "dr-dial--disabled", className),
-            role: "slider",
-            "aria-valuenow": Math.round((value * 180) / Math.PI),
-            "aria-valuemin": -180,
-            "aria-valuemax": 180,
-            tabIndex: disabled ? -1 : 0,
-            onPointerDown: start,
-            onKeyDown: (event) => {
+    return (
+        <div
+            className={cx("dr-dial", `dr-dial--${tone}`, disabled && "dr-dial--disabled", className)}
+            role="slider"
+            aria-valuenow={Math.round((value * 180) / Math.PI)}
+            aria-valuemin={-180}
+            aria-valuemax={180}
+            tabIndex={disabled ? -1 : 0}
+            onPointerDown={start}
+            onKeyDown={(event) => {
                 const step = ((event.shiftKey ? 10 : 1) * Math.PI) / 180
                 if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
                     event.preventDefault()
@@ -782,11 +863,12 @@ export function AngleDial({ value = 0, onChange, size = 46, tone = "primary", di
                     event.preventDefault()
                     onChange?.(value - step)
                 }
-            },
-            style: { width: size, height: size, ...style },
-            ...rest,
-        },
-        h("span", { className: "dr-dial-hand", style: { transform: `rotate(${(-value * 180) / Math.PI}deg)` } }),
+            }}
+            style={{ width: size, height: size, ...style }}
+            {...rest}
+        >
+            <span className="dr-dial-hand" style={{ transform: `rotate(${(-value * 180) / Math.PI}deg)` }} />
+        </div>
     )
 }
 
@@ -800,11 +882,20 @@ export function CopyButton({ text, label = "Copy", size = "sm", children, ...res
         const timer = setTimeout(() => setCopied(false), 1500)
         return () => clearTimeout(timer)
     }, [copied])
-    return h(Button, {
-        size,
-        icon: copied ? "check" : "copy",
-        title: label,
-        onClick: () => globalThis.navigator?.clipboard?.writeText(text).then(() => setCopied(true), () => {}),
-        ...rest,
-    }, copied ? "Copied" : children ?? "Copy")
+    return (
+        <Button
+            size={size}
+            icon={copied ? "check" : "copy"}
+            title={label}
+            onClick={() =>
+                globalThis.navigator?.clipboard?.writeText(text).then(
+                    () => setCopied(true),
+                    () => {},
+                )
+            }
+            {...rest}
+        >
+            {copied ? "Copied" : (children ?? "Copy")}
+        </Button>
+    )
 }

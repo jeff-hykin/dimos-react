@@ -7,16 +7,16 @@
 // `onMap(renderer)` hands over the renderer for buttons outside it: `renderer.recenter()` (follow again), `renderer.fit()`
 // (show everything). The renderer lives while the component is mounted; nothing is subscribed once it unmounts.
 import { useEffect, useMemo, useRef } from "react"
-import { cx, h } from "../h.js"
-import { useDataSource } from "../data.js"
-import { Map2DRenderer } from "./renderer.js"
-import { DEFAULT_FOLLOW_FRAME } from "./math.js"
+import { cx } from "../cx"
+import { useDataSource } from "../data"
+import { Map2DRenderer } from "./renderer"
+import { DEFAULT_FOLLOW_FRAME } from "./math"
 
 /** each data source's last map data per topic, so a remounted map shows it at once */
 const retainedBySource = new WeakMap()
 
 /**
- * @param {{ tf: import("../three/tf.js").TfTree, topic?: { key: string, name: string, type: string } | null,
+ * @param {{ tf: import("../three/tf").TfTree, topic?: { key: string, name: string, type: string } | null,
  *   overlay?: { key: string, name: string, type: string } | null, path?: string | null, followFrame?: string,
  *   robotFrame?: string, fixedFrame?: string, view?: { centerX: number, centerY: number, metersPerPixel: number } | null,
  *   onView?: (view: object) => void, onFollow?: (follow: { following: boolean, waiting: boolean }) => void,
@@ -54,7 +54,7 @@ export function Map2D({
     const map = useMemo(() => {
         let retained = retainedBySource.get(source)
         if (!retained) {
-            retainedBySource.set(source, retained = new Map())
+            retainedBySource.set(source, (retained = new Map()))
         }
         return {
             source,
@@ -82,10 +82,10 @@ export function Map2D({
     useEffect(() => renderer.current?.setFollowFrame(followFrame), [map, followFrame])
     useEffect(() => renderer.current?.setTopics(topic, overlay), [map, topic?.key, overlay?.key])
     useEffect(() => renderer.current?.setPath(path), [map, path])
-    return h(
-        "div",
-        { className: cx("dr-map2d", className), style },
-        h("canvas", { ref: canvas, className: "dr-map2d-canvas", "aria-label": "Top-down map" }),
-        children,
+    return (
+        <div className={cx("dr-map2d", className)} style={style}>
+            <canvas ref={canvas} className="dr-map2d-canvas" aria-label="Top-down map" />
+            {children}
+        </div>
     )
 }

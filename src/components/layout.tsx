@@ -1,31 +1,27 @@
 // Surfaces and layout: cards, panels (collapsible / floating), split panes, bars, stacks, HUD overlays, type.
 import { useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { useDrag, usePersistentState } from "../hooks.js"
-import { Icon } from "./icon.js"
+import { cx } from "../cx"
+import { useDrag, usePersistentState } from "../hooks"
+import { Icon } from "./icon"
 
 /**
  * A bordered surface. `title`, `description`, `actions` (right side of the header); `padded` (default true).
  * @param {Record<string, any>} props
  */
 export function Card({ title, description, actions, padded = true, glass = false, className, children, ...rest }) {
-    return h(
-        "section",
-        { className: cx("dr-card", padded && "dr-card--padded", glass && "dr-glass", className), ...rest },
-        title || actions
-            ? h(
-                "header",
-                { className: "dr-card-head" },
-                h(
-                    "div",
-                    { className: "dr-card-titles" },
-                    title ? h("h3", { className: "dr-card-title" }, title) : null,
-                    description ? h("div", { className: "dr-card-desc" }, description) : null,
-                ),
-                actions ? h("div", { className: "dr-card-actions" }, actions) : null,
-            )
-            : null,
-        children,
+    return (
+        <section className={cx("dr-card", padded && "dr-card--padded", glass && "dr-glass", className)} {...rest}>
+            {title || actions ? (
+                <header className="dr-card-head">
+                    <div className="dr-card-titles">
+                        {title ? <h3 className="dr-card-title">{title}</h3> : null}
+                        {description ? <div className="dr-card-desc">{description}</div> : null}
+                    </div>
+                    {actions ? <div className="dr-card-actions">{actions}</div> : null}
+                </header>
+            ) : null}
+            {children}
+        </section>
     )
 }
 
@@ -65,36 +61,32 @@ export function Panel({
             }
         }
     }
-    return h(
-        "section",
-        { className: cx("dr-panel", glass && "dr-glass", !isOpen && "dr-panel--closed", className), ...rest },
-        title || actions
-            ? h(
-                "header",
-                { className: "dr-panel-head" },
-                collapsible
-                    ? h(
-                        "button",
-                        {
-                            type: "button",
-                            className: "dr-panel-toggle",
-                            "aria-expanded": isOpen,
-                            onClick: () => setOpen(!isOpen),
-                        },
-                        h(Icon, { name: isOpen ? "chevron-down" : "chevron-right", size: 14 }),
-                        icon ? h(Icon, { name: icon, size: 15 }) : null,
-                        h("span", { className: "dr-panel-title" }, title),
-                    )
-                    : h(
-                        "div",
-                        { className: "dr-panel-toggle dr-panel-toggle--static" },
-                        icon ? h(Icon, { name: icon, size: 15 }) : null,
-                        h("span", { className: "dr-panel-title" }, title),
-                    ),
-                actions ? h("div", { className: "dr-panel-actions" }, actions) : null,
-            )
-            : null,
-        isOpen ? h("div", { className: cx("dr-panel-body", bodyClassName) }, children) : null,
+    return (
+        <section className={cx("dr-panel", glass && "dr-glass", !isOpen && "dr-panel--closed", className)} {...rest}>
+            {title || actions ? (
+                <header className="dr-panel-head">
+                    {collapsible ? (
+                        <button
+                            type="button"
+                            className="dr-panel-toggle"
+                            aria-expanded={isOpen}
+                            onClick={() => setOpen(!isOpen)}
+                        >
+                            <Icon name={isOpen ? "chevron-down" : "chevron-right"} size={14} />
+                            {icon ? <Icon name={icon} size={15} /> : null}
+                            <span className="dr-panel-title">{title}</span>
+                        </button>
+                    ) : (
+                        <div className="dr-panel-toggle dr-panel-toggle--static">
+                            {icon ? <Icon name={icon} size={15} /> : null}
+                            <span className="dr-panel-title">{title}</span>
+                        </div>
+                    )}
+                    {actions ? <div className="dr-panel-actions">{actions}</div> : null}
+                </header>
+            ) : null}
+            {isOpen ? <div className={cx("dr-panel-body", bodyClassName)}>{children}</div> : null}
+        </section>
     )
 }
 
@@ -103,21 +95,19 @@ export function Panel({
  * `defaultPosition` { x, y } (px from the top-left; negative = from the right/bottom); `onClose` adds an ✕.
  * @param {Record<string, any>} props
  */
-export function FloatingPanel(
-    {
-        title,
-        icon,
-        actions,
-        onClose,
-        defaultPosition = { x: 16, y: 16 },
-        persistKey,
-        width = 300,
-        className,
-        style,
-        children,
-        ...rest
-    },
-) {
+export function FloatingPanel({
+    title,
+    icon,
+    actions,
+    onClose,
+    defaultPosition = { x: 16, y: 16 },
+    persistKey,
+    width = 300,
+    className,
+    style,
+    children,
+    ...rest
+}) {
     const [saved, setSaved] = usePersistentState(
         persistKey ? `dr.float.${persistKey}` : "dr.float.__unsaved",
         defaultPosition,
@@ -145,39 +135,30 @@ export function FloatingPanel(
         top: position.y >= 0 ? position.y : undefined,
         bottom: position.y < 0 ? -position.y : undefined,
     }
-    return h(
-        "section",
-        {
-            ref: panel,
-            className: cx("dr-panel dr-glass dr-floating", className),
-            style: { width, ...placement, ...style },
-            ...rest,
-        },
-        h(
-            "header",
-            { className: "dr-panel-head dr-floating-head", ...drag },
-            h(
-                "div",
-                { className: "dr-panel-toggle dr-panel-toggle--static" },
-                h(Icon, { name: "grip", size: 14 }),
-                icon ? h(Icon, { name: icon, size: 15 }) : null,
-                h("span", { className: "dr-panel-title" }, title),
-            ),
-            h(
-                "div",
-                { className: "dr-panel-actions", onPointerDown: (event) => event.stopPropagation() },
-                actions,
-                onClose
-                    ? h("button", {
-                        type: "button",
-                        className: "dr-panel-close",
-                        "aria-label": "Close",
-                        onClick: onClose,
-                    }, h(Icon, { name: "close", size: 14 }))
-                    : null,
-            ),
-        ),
-        h("div", { className: "dr-panel-body" }, children),
+    return (
+        <section
+            ref={panel}
+            className={cx("dr-panel dr-glass dr-floating", className)}
+            style={{ width, ...placement, ...style }}
+            {...rest}
+        >
+            <header className="dr-panel-head dr-floating-head" {...drag}>
+                <div className="dr-panel-toggle dr-panel-toggle--static">
+                    <Icon name="grip" size={14} />
+                    {icon ? <Icon name={icon} size={15} /> : null}
+                    <span className="dr-panel-title">{title}</span>
+                </div>
+                <div className="dr-panel-actions" onPointerDown={(event) => event.stopPropagation()}>
+                    {actions}
+                    {onClose ? (
+                        <button type="button" className="dr-panel-close" aria-label="Close" onClick={onClose}>
+                            <Icon name="close" size={14} />
+                        </button>
+                    ) : null}
+                </div>
+            </header>
+            <div className="dr-panel-body">{children}</div>
+        </section>
     )
 }
 
@@ -186,20 +167,18 @@ export function FloatingPanel(
  * %, controlled with onSizeChange) or `defaultSize`; `min` / `max` px; `persistKey`.
  * @param {Record<string, any>} props
  */
-export function SplitPane(
-    {
-        direction = "row",
-        size,
-        onSizeChange,
-        defaultSize = "50%",
-        min = 120,
-        max,
-        persistKey,
-        className,
-        children,
-        ...rest
-    },
-) {
+export function SplitPane({
+    direction = "row",
+    size,
+    onSizeChange,
+    defaultSize = "50%",
+    min = 120,
+    max,
+    persistKey,
+    className,
+    children,
+    ...rest
+}) {
     const [saved, setSaved] = usePersistentState(
         persistKey ? `dr.split.${persistKey}` : "dr.split.__unsaved",
         defaultSize,
@@ -227,31 +206,33 @@ export function SplitPane(
         },
     })
     const [a, b] = Array.isArray(children) ? children : [children, null]
-    return h(
-        "div",
-        { ref: container, className: cx("dr-split", `dr-split--${direction}`, className), ...rest },
-        h("div", {
-            ref: first,
-            className: "dr-split-pane",
-            style: { flexBasis: typeof current === "number" ? `${current}px` : current },
-        }, a),
-        h("div", {
-            className: "dr-split-divider",
-            role: "separator",
-            "aria-orientation": row ? "vertical" : "horizontal",
-            tabIndex: 0,
-            onKeyDown: (event) => {
-                const step = event.shiftKey ? 40 : 10
-                const now = row ? first.current.offsetWidth : first.current.offsetHeight
-                if ((row && event.key === "ArrowLeft") || (!row && event.key === "ArrowUp")) {
-                    set(Math.max(min, now - step))
-                } else if ((row && event.key === "ArrowRight") || (!row && event.key === "ArrowDown")) {
-                    set(now + step)
-                }
-            },
-            ...drag,
-        }),
-        h("div", { className: "dr-split-pane dr-split-pane--rest" }, b),
+    return (
+        <div ref={container} className={cx("dr-split", `dr-split--${direction}`, className)} {...rest}>
+            <div
+                ref={first}
+                className="dr-split-pane"
+                style={{ flexBasis: typeof current === "number" ? `${current}px` : current }}
+            >
+                {a}
+            </div>
+            <div
+                className="dr-split-divider"
+                role="separator"
+                aria-orientation={row ? "vertical" : "horizontal"}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                    const step = event.shiftKey ? 40 : 10
+                    const now = row ? first.current.offsetWidth : first.current.offsetHeight
+                    if ((row && event.key === "ArrowLeft") || (!row && event.key === "ArrowUp")) {
+                        set(Math.max(min, now - step))
+                    } else if ((row && event.key === "ArrowRight") || (!row && event.key === "ArrowDown")) {
+                        set(now + step)
+                    }
+                }}
+                {...drag}
+            />
+            <div className="dr-split-pane dr-split-pane--rest">{b}</div>
+        </div>
     )
 }
 
@@ -265,29 +246,31 @@ export function ResizeHandle({ onResize, onStart, corner = "bottom-right", label
     const start = useRef(null)
     const report = (event, done) =>
         start.current && onResize({ dx: event.clientX - start.current.x, dy: event.clientY - start.current.y, done })
-    return h("div", {
-        className: cx("dr-resize-handle", `dr-resize-handle--${corner}`, className),
-        role: "separator",
-        "aria-label": label,
-        title: label,
-        onPointerDown: (event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            event.currentTarget.setPointerCapture?.(event.pointerId)
-            start.current = { x: event.clientX, y: event.clientY }
-            onStart?.()
-        },
-        onPointerMove: (event) => report(event, false),
-        onPointerUp: (event) => {
-            report(event, true)
-            start.current = null
-        },
-        onPointerCancel: (event) => {
-            report(event, true)
-            start.current = null
-        },
-        ...rest,
-    })
+    return (
+        <div
+            className={cx("dr-resize-handle", `dr-resize-handle--${corner}`, className)}
+            role="separator"
+            aria-label={label}
+            title={label}
+            onPointerDown={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                event.currentTarget.setPointerCapture?.(event.pointerId)
+                start.current = { x: event.clientX, y: event.clientY }
+                onStart?.()
+            }}
+            onPointerMove={(event) => report(event, false)}
+            onPointerUp={(event) => {
+                report(event, true)
+                start.current = null
+            }}
+            onPointerCancel={(event) => {
+                report(event, true)
+                start.current = null
+            }}
+            {...rest}
+        />
+    )
 }
 
 /**
@@ -295,18 +278,16 @@ export function ResizeHandle({ onResize, onStart, corner = "bottom-right", label
  * @param {Record<string, any>} props
  */
 export function TopBar({ title, icon, left, right, className, children, ...rest }) {
-    return h(
-        "header",
-        { className: cx("dr-topbar", className), ...rest },
-        h(
-            "div",
-            { className: "dr-topbar-left" },
-            icon ? h(Icon, { name: icon, size: 18 }) : null,
-            title ? h("span", { className: "dr-title" }, title) : null,
-            left,
-        ),
-        h("div", { className: "dr-topbar-center" }, children),
-        h("div", { className: "dr-topbar-right" }, right),
+    return (
+        <header className={cx("dr-topbar", className)} {...rest}>
+            <div className="dr-topbar-left">
+                {icon ? <Icon name={icon} size={18} /> : null}
+                {title ? <span className="dr-title">{title}</span> : null}
+                {left}
+            </div>
+            <div className="dr-topbar-center">{children}</div>
+            <div className="dr-topbar-right">{right}</div>
+        </header>
     )
 }
 
@@ -315,16 +296,20 @@ export function TopBar({ title, icon, left, right, className, children, ...rest 
  * @param {Record<string, any>} props
  */
 export function Toolbar({ floating = false, vertical = false, className, children, ...rest }) {
-    return h("div", {
-        className: cx(
-            "dr-toolbar",
-            floating && "dr-toolbar--floating dr-glass",
-            vertical && "dr-toolbar--vertical",
-            className,
-        ),
-        role: "toolbar",
-        ...rest,
-    }, children)
+    return (
+        <div
+            className={cx(
+                "dr-toolbar",
+                floating && "dr-toolbar--floating dr-glass",
+                vertical && "dr-toolbar--vertical",
+                className,
+            )}
+            role="toolbar"
+            {...rest}
+        >
+            {children}
+        </div>
+    )
 }
 
 /**
@@ -332,7 +317,11 @@ export function Toolbar({ floating = false, vertical = false, className, childre
  * @param {Record<string, any>} props
  */
 export function BottomBar({ className, children, ...rest }) {
-    return h("footer", { className: cx("dr-bottombar", className), ...rest }, children)
+    return (
+        <footer className={cx("dr-bottombar", className)} {...rest}>
+            {children}
+        </footer>
+    )
 }
 
 /**
@@ -340,40 +329,56 @@ export function BottomBar({ className, children, ...rest }) {
  * @param {Record<string, any>} props
  */
 export function Separator({ vertical = false, className, ...rest }) {
-    return h("span", { className: cx("dr-sep", vertical && "dr-sep--vertical", className), role: "separator", ...rest })
+    return <span className={cx("dr-sep", vertical && "dr-sep--vertical", className)} role="separator" {...rest} />
 }
 
 /**
  * Flex helpers: `gap` (px), `align`, `justify`, `wrap`, `grow`.
  * @param {Record<string, any>} props
  */
-export function Row(
-    { gap = 8, align = "center", justify, wrap = false, grow = false, className, style, children, ...rest },
-) {
-    return h("div", {
-        className: cx("dr-row", className),
-        style: {
-            gap,
-            alignItems: align,
-            justifyContent: justify,
-            flexWrap: wrap ? "wrap" : undefined,
-            flex: grow ? 1 : undefined,
-            ...style,
-        },
-        ...rest,
-    }, children)
+export function Row({
+    gap = 8,
+    align = "center",
+    justify,
+    wrap = false,
+    grow = false,
+    className,
+    style,
+    children,
+    ...rest
+}) {
+    return (
+        <div
+            className={cx("dr-row", className)}
+            style={{
+                gap,
+                alignItems: align,
+                justifyContent: justify,
+                flexWrap: wrap ? "wrap" : undefined,
+                flex: grow ? 1 : undefined,
+                ...style,
+            }}
+            {...rest}
+        >
+            {children}
+        </div>
+    )
 }
 /** @param {Record<string, any>} props */
 export function Column({ gap = 8, align, justify, grow = false, className, style, children, ...rest }) {
-    return h("div", {
-        className: cx("dr-col", className),
-        style: { gap, alignItems: align, justifyContent: justify, flex: grow ? 1 : undefined, ...style },
-        ...rest,
-    }, children)
+    return (
+        <div
+            className={cx("dr-col", className)}
+            style={{ gap, alignItems: align, justifyContent: justify, flex: grow ? 1 : undefined, ...style }}
+            {...rest}
+        >
+            {children}
+        </div>
+    )
 }
 /** Takes the free space in a Row/Column. */
 export function Spacer() {
-    return h("span", { className: "dr-spacer" })
+    return <span className="dr-spacer" />
 }
 
 /**
@@ -382,7 +387,11 @@ export function Spacer() {
  * @param {Record<string, any>} props
  */
 export function Hud({ position = "top-left", className, children, ...rest }) {
-    return h("div", { className: cx("dr-hud", `dr-hud--${position}`, className), ...rest }, children)
+    return (
+        <div className={cx("dr-hud", `dr-hud--${position}`, className)} {...rest}>
+            {children}
+        </div>
+    )
 }
 
 /**
@@ -390,32 +399,50 @@ export function Hud({ position = "top-left", className, children, ...rest }) {
  * @param {Record<string, any>} props
  */
 export function Heading({ level = 2, className, children, ...rest }) {
-    return h(`h${level}`, { className: cx(`dr-h${level}`, className), ...rest }, children)
+    const Tag = `h${level}`
+    return (
+        <Tag className={cx(`dr-h${level}`, className)} {...rest}>
+            {children}
+        </Tag>
+    )
 }
 /** @param {Record<string, any>} props */
 export function Label({ className, children, ...rest }) {
-    return h("span", { className: cx("dr-label", className), ...rest }, children)
+    return (
+        <span className={cx("dr-label", className)} {...rest}>
+            {children}
+        </span>
+    )
 }
 /**
  * Text: `muted`, `mono`, `small`, `tone` ("ok" | "warn" | "danger").
  * @param {Record<string, any>} props
  */
 export function Text({ as = "span", muted, mono, small, tone, className, children, ...rest }) {
-    return h(as, {
-        className: cx(
-            "dr-text",
-            muted && "dr-muted",
-            mono && "dr-mono",
-            small && "dr-small",
-            tone && `dr-${tone}`,
-            className,
-        ),
-        ...rest,
-    }, children)
+    const Tag = as
+    return (
+        <Tag
+            className={cx(
+                "dr-text",
+                muted && "dr-muted",
+                mono && "dr-mono",
+                small && "dr-small",
+                tone && `dr-${tone}`,
+                className,
+            )}
+            {...rest}
+        >
+            {children}
+        </Tag>
+    )
 }
 /** @param {Record<string, any>} props */
 export function Link({ className, children, ...rest }) {
-    return h("a", { className: cx("dr-link", className), ...rest }, children)
+    return (
+        <a className={cx("dr-link", className)} {...rest}>
+            {children}
+        </a>
+    )
 }
 
 /**
@@ -424,12 +451,15 @@ export function Link({ className, children, ...rest }) {
  * @param {Record<string, any>} props
  */
 export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, className, children, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-shell", insetBottom && "dr-shell--inset", className), ...rest },
-        topBar,
-        h("div", { className: "dr-shell-main" }, sidebar, h("main", { className: "dr-shell-content" }, children)),
-        bottomBar,
+    return (
+        <div className={cx("dr-shell", insetBottom && "dr-shell--inset", className)} {...rest}>
+            {topBar}
+            <div className="dr-shell-main">
+                {sidebar}
+                <main className="dr-shell-content">{children}</main>
+            </div>
+            {bottomBar}
+        </div>
     )
 }
 
@@ -438,7 +468,7 @@ export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, clas
  * `title` names it for screen readers; other props go to the iframe (`src`, `allow`, `sandbox`, …).
  */
 export function Embed({ title, className, ...rest }) {
-    return h("iframe", { title, className: cx("dr-embed", className), ...rest })
+    return <iframe title={title} className={cx("dr-embed", className)} {...rest} />
 }
 
 /**
@@ -449,46 +479,55 @@ export function Embed({ title, className, ...rest }) {
  * @param {{ title?: any, subtitle?: any, media?: any, icon?: string, selected?: boolean, loading?: boolean,
  *   align?: "center" | "start", onClick?: (event: any) => void, disabled?: boolean, className?: string }} props
  */
-export function Tile(
-    { title, subtitle, media, icon, selected, loading = false, align = "center", className, children, ...rest },
-) {
+export function Tile({
+    title,
+    subtitle,
+    media,
+    icon,
+    selected,
+    loading = false,
+    align = "center",
+    className,
+    children,
+    ...rest
+}) {
     if (loading) {
-        return h(
-            "div",
-            { className: cx("dr-tile", "dr-tile--loading", className), "aria-hidden": true },
-            h("span", { className: "dr-tile__media dr-skeleton" }),
-            h("span", { className: "dr-tile__bar dr-skeleton" }),
-            h("span", { className: "dr-tile__bar dr-tile__bar--short dr-skeleton" }),
+        return (
+            <div className={cx("dr-tile", "dr-tile--loading", className)} aria-hidden={true}>
+                <span className="dr-tile__media dr-skeleton" />
+                <span className="dr-tile__bar dr-skeleton" />
+                <span className="dr-tile__bar dr-tile__bar--short dr-skeleton" />
+            </div>
         )
     }
-    return h(
-        "button",
-        {
-            type: "button",
-            className: cx("dr-tile", align === "start" && "dr-tile--start", selected && "dr-tile--selected", className),
-            "aria-pressed": selected === undefined ? undefined : !!selected,
-            ...rest,
-        },
-        media || icon ? h("span", { className: "dr-tile__media" }, media ?? h(Icon, { name: icon, size: 40 })) : null,
-        title ? h("span", { className: "dr-tile__title" }, title) : null,
-        subtitle ? h("span", { className: "dr-tile__subtitle" }, subtitle) : null,
-        children,
+    return (
+        <button
+            type="button"
+            className={cx("dr-tile", align === "start" && "dr-tile--start", selected && "dr-tile--selected", className)}
+            aria-pressed={selected === undefined ? undefined : !!selected}
+            {...rest}
+        >
+            {media || icon ? <span className="dr-tile__media">{media ?? <Icon name={icon} size={40} />}</span> : null}
+            {title ? <span className="dr-tile__title">{title}</span> : null}
+            {subtitle ? <span className="dr-tile__subtitle">{subtitle}</span> : null}
+            {children}
+        </button>
     )
 }
 
 /** Tiles in a responsive grid: as many columns of at least `min` px as fit. */
 export function TileGrid({ min = 150, className, style, children, ...rest }) {
-    return h(
-        "div",
-        {
-            role: "list",
-            className: cx("dr-tile-grid", className),
-            style: {
+    return (
+        <div
+            role="list"
+            className={cx("dr-tile-grid", className)}
+            style={{
                 gridTemplateColumns: `repeat(auto-fill, minmax(${typeof min === "number" ? `${min}px` : min}, 1fr))`,
                 ...style,
-            },
-            ...rest,
-        },
-        children,
+            }}
+            {...rest}
+        >
+            {children}
+        </div>
     )
 }

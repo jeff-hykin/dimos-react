@@ -3,14 +3,13 @@
 // data source knows a topic's whole route up front (a recording: `source.route(key)`), it's drawn faintly ahead of
 // the robot, and after a seek the trail is rebuilt from it up to the playhead instead of starting empty.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { themeColors } from "../../theme/theme.js"
-import { FatLines } from "../lines.js"
-import { cssColor } from "../robot_model.js"
-import { registerLayer, subscribeDecoded } from "./registry.js"
-import { Field, Select, Slider, Toggle } from "../../components/controls.js"
-import { ColorSwatch } from "../../components/input_devices.js"
+import { useStore } from "../store"
+import { themeColors } from "../../theme/theme"
+import { FatLines } from "../lines"
+import { cssColor } from "../robot_model"
+import { registerLayer, subscribeDecoded } from "./registry"
+import { Field, Select, Slider, Toggle } from "../../components/controls"
+import { ColorSwatch } from "../../components/input_devices"
 
 /**
  * @typedef {{ trail: boolean, trailLength: number, jumpMeters: number, color: string, width: number,
@@ -81,7 +80,10 @@ function routeOf(source, key) {
         routes.set(source, cache)
     }
     if (!cache.has(key)) {
-        cache.set(key, Promise.resolve(source.route(key)).catch(() => null))
+        cache.set(
+            key,
+            Promise.resolve(source.route(key)).catch(() => null),
+        )
     }
     return cache.get(key)
 }
@@ -103,9 +105,9 @@ export class PoseLayer {
     #unsubscribe
 
     /**
-     * @param {import("./registry.js").LayerContext} context
-     * @param {import("./registry.js").Topic | null} topic null: poses come through setData
-     * @param {import("../store.js").Store<PoseSettings>} settings
+     * @param {import("./registry").LayerContext} context
+     * @param {import("./registry").Topic | null} topic null: poses come through setData
+     * @param {import("../store").Store<PoseSettings>} settings
      */
     constructor(context, topic, settings) {
         this.context = context
@@ -180,7 +182,8 @@ export class PoseLayer {
         this.#ghostFrame = world ? this.context.viewer.fixedFrame : ""
         if (route && world) {
             const jump = this.settings.get().jumpMeters
-            const a = new THREE.Vector3(), b = new THREE.Vector3()
+            const a = new THREE.Vector3(),
+                b = new THREE.Vector3()
             for (let index = 1; index < route.points.length; index++) {
                 const [, ax, ay, az] = route.points[index - 1]
                 const [, bx, by, bz] = route.points[index]
@@ -292,9 +295,9 @@ export class PoseLayer {
         }
         if (frame.now - this.#since > 1000) {
             this.context.setStatus({
-                info: `${
-                    ((this.#count * 1000) / (frame.now - this.#since)).toFixed(0)
-                } Hz · trail ${this.#trail.count} · ${this.#frame || "no frame"}`,
+                info: `${((this.#count * 1000) / (frame.now - this.#since)).toFixed(
+                    0,
+                )} Hz · trail ${this.#trail.count} · ${this.#frame || "no frame"}`,
             })
             this.#count = 0
             this.#since = frame.now
@@ -315,67 +318,58 @@ export class PoseLayer {
 /** A color setting: a swatch for hex colors (a token like var(--primary) shows as its current color). */
 export function ColorSetting({ value, onChange }) {
     const hex = `#${cssColor(value, "white").getHexString()}`
-    return h(ColorSwatch, { value: hex, onChange })
+    return <ColorSwatch value={hex} onChange={onChange} />
 }
 
 export function PoseSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Trail" },
-            h(Toggle, { value: value.trail, onChange: (trail) => settings.update({ trail }) }),
-        ),
-        h(
-            Field,
-            { label: "Whole route", hint: "when the source knows it (a recording)" },
-            h(Toggle, { value: value.route !== false, onChange: (route) => settings.update({ route }) }),
-        ),
-        h(
-            Field,
-            { label: "Length" },
-            h(Select, {
-                value: value.trailLength,
-                options: [[500, "500 steps"], [5000, "5k steps"], [20000, "20k steps"], [100000, "100k steps"]],
-                onChange: (trailLength) => settings.update({ trailLength }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "On top" },
-            h(Toggle, { value: value.onTop !== false, onChange: (onTop) => settings.update({ onTop }) }),
-        ),
-        h(
-            Field,
-            { label: "Color" },
-            h(ColorSetting, { value: value.color, onChange: (color) => settings.update({ color }) }),
-        ),
-        h(
-            Field,
-            { label: "Width" },
-            h(Slider, {
-                min: 1,
-                max: 8,
-                step: 0.5,
-                value: value.width,
-                format: (width) => `${width}px`,
-                onChange: (width) => settings.update({ width }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Axes" },
-            h(Slider, {
-                min: 0,
-                max: 2,
-                step: 0.1,
-                value: value.axesSize,
-                format: (size) => `${size} m`,
-                onChange: (axesSize) => settings.update({ axesSize }),
-            }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Trail">
+                <Toggle value={value.trail} onChange={(trail) => settings.update({ trail })} />
+            </Field>
+            <Field label="Whole route" hint="when the source knows it (a recording)">
+                <Toggle value={value.route !== false} onChange={(route) => settings.update({ route })} />
+            </Field>
+            <Field label="Length">
+                <Select
+                    value={value.trailLength}
+                    options={[
+                        [500, "500 steps"],
+                        [5000, "5k steps"],
+                        [20000, "20k steps"],
+                        [100000, "100k steps"],
+                    ]}
+                    onChange={(trailLength) => settings.update({ trailLength })}
+                />
+            </Field>
+            <Field label="On top">
+                <Toggle value={value.onTop !== false} onChange={(onTop) => settings.update({ onTop })} />
+            </Field>
+            <Field label="Color">
+                <ColorSetting value={value.color} onChange={(color) => settings.update({ color })} />
+            </Field>
+            <Field label="Width">
+                <Slider
+                    min={1}
+                    max={8}
+                    step={0.5}
+                    value={value.width}
+                    format={(width) => `${width}px`}
+                    onChange={(width) => settings.update({ width })}
+                />
+            </Field>
+            <Field label="Axes">
+                <Slider
+                    min={0}
+                    max={2}
+                    step={0.1}
+                    value={value.axesSize}
+                    format={(size) => `${size} m`}
+                    onChange={(axesSize) => settings.update({ axesSize })}
+                />
+            </Field>
+        </div>
     )
 }
 

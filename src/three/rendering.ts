@@ -1,6 +1,6 @@
 // Rendering choices for every point layer: the default point style (a layer can pick its own), cube shading, and the
 // automatic fallback that draws splats as cubes when they can't keep up.
-import { localStore, Store } from "./store.js"
+import { localStore, Store } from "./store"
 
 /** The page-wide defaults (saved per viewer). A layer whose look says style "default" follows `pointStyle`. */
 export const rendering = localStore("dimos-react.rendering", { pointStyle: "voxel", cubeShade: "soft" })

@@ -3,13 +3,12 @@
 // around a dimmer body; unknown is clear. A map is gray. Colors come from the theme (--scene-floor, --scene-wall,
 // --scene-wall-rim, falling back to --surface / --primary). The texture is rebuilt in place for a same-size grid.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { themeColors } from "../../theme/theme.js"
-import { cssColor } from "../robot_model.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { poseMatrix } from "./pose.js"
-import { Field, Select, Slider } from "../../components/controls.js"
+import { useStore } from "../store"
+import { themeColors } from "../../theme/theme"
+import { cssColor } from "../robot_model"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { poseMatrix } from "./pose"
+import { Field, Select, Slider } from "../../components/controls"
 
 /** @typedef {{ opacity: number, style: "costmap" | "map", lift: number }} GridSettings */
 
@@ -122,8 +121,12 @@ export class GridLayer {
             column < 0 || row < 0 || column >= width || row >= height || bytes[row * width + column] === LETHAL
         for (let index = 0; index < width * height; index++) {
             if (costmap && bytes[index] === LETHAL) {
-                const column = index % width, row = (index - column) / width
-                const inside = lethal(column - 1, row) && lethal(column + 1, row) && lethal(column, row - 1) &&
+                const column = index % width,
+                    row = (index - column) / width
+                const inside =
+                    lethal(column - 1, row) &&
+                    lethal(column + 1, row) &&
+                    lethal(column, row - 1) &&
                     lethal(column, row + 1)
                 pixels.set([...(inside ? body : rim), 255], index * 4)
                 continue
@@ -138,9 +141,10 @@ export class GridLayer {
         // the plane spans the grid, its corner at the origin pose (cell (0,0) is the first row of data)
         const size = new THREE.Vector3(width * resolution, height * resolution, 1)
         const center = new THREE.Matrix4().makeTranslation(size.x / 2, size.y / 2, this.settings.get().lift)
-        this.#mesh.matrix.copy(poseMatrix(origin)).multiply(center).multiply(
-            new THREE.Matrix4().makeScale(size.x, size.y, 1),
-        )
+        this.#mesh.matrix
+            .copy(poseMatrix(origin))
+            .multiply(center)
+            .multiply(new THREE.Matrix4().makeScale(size.x, size.y, 1))
         this.context.setStatus({
             info: `${width}×${height} @ ${resolution.toFixed(2)} m · ${this.#frame || "no frame"}`,
         })
@@ -165,30 +169,29 @@ export class GridLayer {
 
 export function GridSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Style" },
-            h(Select, {
-                value: value.style,
-                options: [["costmap", "costmap (floor plan)"], ["map", "map (gray)"]],
-                onChange: (style) => settings.update({ style }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Opacity" },
-            h(Slider, {
-                min: 0.1,
-                max: 1,
-                step: 0.05,
-                value: value.opacity,
-                format: (opacity) => `${Math.round(opacity * 100)}%`,
-                onChange: (opacity) => settings.update({ opacity }),
-            }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Style">
+                <Select
+                    value={value.style}
+                    options={[
+                        ["costmap", "costmap (floor plan)"],
+                        ["map", "map (gray)"],
+                    ]}
+                    onChange={(style) => settings.update({ style })}
+                />
+            </Field>
+            <Field label="Opacity">
+                <Slider
+                    min={0.1}
+                    max={1}
+                    step={0.05}
+                    value={value.opacity}
+                    format={(opacity) => `${Math.round(opacity * 100)}%`}
+                    onChange={(opacity) => settings.update({ opacity })}
+                />
+            </Field>
+        </div>
     )
 }
 

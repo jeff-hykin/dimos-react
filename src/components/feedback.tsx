@@ -11,10 +11,10 @@ import {
     useSyncExternalStore,
 } from "react"
 import { createPortal } from "react-dom"
-import { cx, h } from "../h.js"
-import { useEscape } from "../hooks.js"
-import { Icon } from "./icon.js"
-import { Button, IconButton, TextInput } from "./controls.js"
+import { cx } from "../cx"
+import { useEscape } from "../hooks"
+import { Icon } from "./icon"
+import { Button, IconButton, TextInput } from "./controls"
 
 const TONE_ICONS = { info: "info", ok: "check-circle", warn: "warn", danger: "x-circle" }
 
@@ -23,22 +23,22 @@ const TONE_ICONS = { info: "info", ok: "check-circle", warn: "warn", danger: "x-
  * @param {Record<string, any>} props
  */
 export function Alert({ tone = "info", title, icon, actions, onClose, className, children, ...rest }) {
-    return h(
-        "div",
-        {
-            className: cx("dr-alert", `dr-alert--${tone}`, className),
-            role: tone === "danger" || tone === "warn" ? "alert" : "status",
-            ...rest,
-        },
-        h("span", { className: "dr-alert-icon" }, h(Icon, { name: icon ?? TONE_ICONS[tone] ?? "info", size: 16 })),
-        h(
-            "div",
-            { className: "dr-alert-body" },
-            title ? h("div", { className: "dr-alert-title" }, title) : null,
-            children ? h("div", { className: "dr-alert-text" }, children) : null,
-            actions ? h("div", { className: "dr-alert-actions" }, actions) : null,
-        ),
-        onClose ? h(IconButton, { icon: "close", label: "Dismiss", size: "sm", onClick: onClose }) : null,
+    return (
+        <div
+            className={cx("dr-alert", `dr-alert--${tone}`, className)}
+            role={tone === "danger" || tone === "warn" ? "alert" : "status"}
+            {...rest}
+        >
+            <span className="dr-alert-icon">
+                <Icon name={icon ?? TONE_ICONS[tone] ?? "info"} size={16} />
+            </span>
+            <div className="dr-alert-body">
+                {title ? <div className="dr-alert-title">{title}</div> : null}
+                {children ? <div className="dr-alert-text">{children}</div> : null}
+                {actions ? <div className="dr-alert-actions">{actions}</div> : null}
+            </div>
+            {onClose ? <IconButton icon="close" label="Dismiss" size="sm" onClick={onClose} /> : null}
+        </div>
     )
 }
 
@@ -91,27 +91,29 @@ function ToastItem({ entry }) {
         const timer = setTimeout(() => dismissToast(entry.id), entry.durationMs)
         return () => clearTimeout(timer)
     }, [entry.id, entry.durationMs])
-    return h(
-        "div",
-        { className: cx("dr-toast", `dr-toast--${entry.tone}`), role: entry.tone === "danger" ? "alert" : "status" },
-        h("span", { className: "dr-toast-icon" }, h(Icon, { name: TONE_ICONS[entry.tone] ?? "info", size: 16 })),
-        h(
-            "div",
-            { className: "dr-toast-body" },
-            entry.title ? h("div", { className: "dr-toast-title" }, entry.title) : null,
-            entry.message ? h("div", { className: "dr-toast-text" }, entry.message) : null,
-        ),
-        entry.action
-            ? h(Button, {
-                size: "sm",
-                variant: "ghost",
-                onClick: () => {
-                    entry.action.onClick?.()
-                    dismissToast(entry.id)
-                },
-            }, entry.action.label)
-            : null,
-        h(IconButton, { icon: "close", label: "Dismiss", size: "sm", onClick: () => dismissToast(entry.id) }),
+    return (
+        <div className={cx("dr-toast", `dr-toast--${entry.tone}`)} role={entry.tone === "danger" ? "alert" : "status"}>
+            <span className="dr-toast-icon">
+                <Icon name={TONE_ICONS[entry.tone] ?? "info"} size={16} />
+            </span>
+            <div className="dr-toast-body">
+                {entry.title ? <div className="dr-toast-title">{entry.title}</div> : null}
+                {entry.message ? <div className="dr-toast-text">{entry.message}</div> : null}
+            </div>
+            {entry.action ? (
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                        entry.action.onClick?.()
+                        dismissToast(entry.id)
+                    }}
+                >
+                    {entry.action.label}
+                </Button>
+            ) : null}
+            <IconButton icon="close" label="Dismiss" size="sm" onClick={() => dismissToast(entry.id)} />
+        </div>
     )
 }
 
@@ -127,11 +129,11 @@ export function ToastViewport({ position = "bottom-right" }) {
         return null
     }
     return createPortal(
-        h(
-            "div",
-            { className: cx("dr-toasts", `dr-toasts--${position}`), "aria-live": "polite" },
-            list.map((entry) => h(ToastItem, { key: entry.id, entry })),
-        ),
+        <div className={cx("dr-toasts", `dr-toasts--${position}`)} aria-live="polite">
+            {list.map((entry) => (
+                <ToastItem key={entry.id} entry={entry} />
+            ))}
+        </div>,
         document.body,
     )
 }
@@ -142,7 +144,12 @@ const ToastContext = createContext(toast)
  * @param {Record<string, any>} props
  */
 export function ToastProvider({ position, children }) {
-    return h(ToastContext.Provider, { value: toast }, children, h(ToastViewport, { position }))
+    return (
+        <ToastContext.Provider value={toast}>
+            {children}
+            <ToastViewport position={position} />
+        </ToastContext.Provider>
+    )
 }
 /** The toast() function (toast.ok / .warn / .error / .info). */
 export function useToast() {
@@ -173,47 +180,43 @@ export function Modal({ open, onClose, title, footer, size = "md", dismissable =
         return null
     }
     return createPortal(
-        h(
-            "div",
-            {
-                className: "dr-scrim",
-                onMouseDown: (event) => {
-                    if (event.target === event.currentTarget && dismissable) {
-                        onClose?.()
-                    }
-                },
-            },
-            h(
-                "div",
-                {
-                    ref: panel,
-                    className: cx("dr-modal", `dr-modal--${size}`, className),
-                    role: "dialog",
-                    "aria-modal": "true",
-                    "aria-labelledby": title ? titleId : undefined,
-                    tabIndex: -1,
-                    ...rest,
-                },
-                title || dismissable
-                    ? h(
-                        "header",
-                        { className: "dr-modal-head" },
-                        h("div", { id: titleId, className: "dr-modal-title" }, title),
-                        dismissable
-                            ? h(IconButton, {
-                                icon: "close",
-                                label: "Close",
-                                size: "sm",
-                                className: "dr-modal-close",
-                                onClick: onClose,
-                            })
-                            : null,
-                    )
-                    : null,
-                h("div", { className: "dr-modal-body" }, children),
-                footer ? h("footer", { className: "dr-modal-foot" }, footer) : null,
-            ),
-        ),
+        <div
+            className="dr-scrim"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget && dismissable) {
+                    onClose?.()
+                }
+            }}
+        >
+            <div
+                ref={panel}
+                className={cx("dr-modal", `dr-modal--${size}`, className)}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={title ? titleId : undefined}
+                tabIndex={-1}
+                {...rest}
+            >
+                {title || dismissable ? (
+                    <header className="dr-modal-head">
+                        <div id={titleId} className="dr-modal-title">
+                            {title}
+                        </div>
+                        {dismissable ? (
+                            <IconButton
+                                icon="close"
+                                label="Close"
+                                size="sm"
+                                className="dr-modal-close"
+                                onClick={onClose}
+                            />
+                        ) : null}
+                    </header>
+                ) : null}
+                <div className="dr-modal-body">{children}</div>
+                {footer ? <footer className="dr-modal-foot">{footer}</footer> : null}
+            </div>
+        </div>,
         document.body,
     )
 }
@@ -229,11 +232,14 @@ const DialogContext = createContext(null)
 export function DialogProvider({ children }) {
     const [dialog, setDialog] = useState(null)
     const [text, setText] = useState("")
-    const open = useCallback((kind, options) =>
-        new Promise((resolve) => {
-            setText(options.defaultValue ?? "")
-            setDialog({ kind, options, resolve })
-        }), [])
+    const open = useCallback(
+        (kind, options) =>
+            new Promise((resolve) => {
+                setText(options.defaultValue ?? "")
+                setDialog({ kind, options, resolve })
+            }),
+        [],
+    )
     const close = (result) => {
         dialog?.resolve(result)
         setDialog(null)
@@ -241,42 +247,40 @@ export function DialogProvider({ children }) {
     const options = dialog?.options ?? {}
     const isPrompt = dialog?.kind === "prompt"
     const submit = () => close(isPrompt ? text : true)
-    return h(
-        DialogContext.Provider,
-        { value: open },
-        children,
-        h(
-            Modal,
-            {
-                open: !!dialog,
-                size: "sm",
-                title: options.title ?? (isPrompt ? "Enter a value" : "Are you sure?"),
-                onClose: () => close(isPrompt ? null : false),
-                footer: [
-                    h(
-                        Button,
-                        { key: "cancel", onClick: () => close(isPrompt ? null : false) },
-                        options.cancelLabel ?? "Cancel",
-                    ),
-                    h(Button, {
-                        key: "ok",
-                        variant: options.danger ? "danger" : "primary",
-                        onClick: submit,
-                        disabled: isPrompt && options.required !== false && !text.trim(),
-                    }, options.confirmLabel ?? (isPrompt ? "OK" : "Confirm")),
-                ],
-            },
-            options.message ? h("p", { className: "dr-modal-message" }, options.message) : null,
-            isPrompt
-                ? h(TextInput, {
-                    value: text,
-                    onChange: setText,
-                    onEnter: submit,
-                    placeholder: options.placeholder,
-                    autoFocus: true,
-                })
-                : null,
-        ),
+    return (
+        <DialogContext.Provider value={open}>
+            {children}
+            <Modal
+                open={!!dialog}
+                size="sm"
+                title={options.title ?? (isPrompt ? "Enter a value" : "Are you sure?")}
+                onClose={() => close(isPrompt ? null : false)}
+                footer={[
+                    <Button key="cancel" onClick={() => close(isPrompt ? null : false)}>
+                        {options.cancelLabel ?? "Cancel"}
+                    </Button>,
+                    <Button
+                        key="ok"
+                        variant={options.danger ? "danger" : "primary"}
+                        onClick={submit}
+                        disabled={isPrompt && options.required !== false && !text.trim()}
+                    >
+                        {options.confirmLabel ?? (isPrompt ? "OK" : "Confirm")}
+                    </Button>,
+                ]}
+            >
+                {options.message ? <p className="dr-modal-message">{options.message}</p> : null}
+                {isPrompt ? (
+                    <TextInput
+                        value={text}
+                        onChange={setText}
+                        onEnter={submit}
+                        placeholder={options.placeholder}
+                        autoFocus={true}
+                    />
+                ) : null}
+            </Modal>
+        </DialogContext.Provider>
     )
 }
 
@@ -300,9 +304,10 @@ export function useConfirm() {
 /** `const prompt = usePrompt(); const name = await prompt({ title, defaultValue, placeholder })` → string or null. */
 export function usePrompt() {
     const open = useDialog()
-    return useCallback((options = {}) => open("prompt", typeof options === "string" ? { title: options } : options), [
-        open,
-    ])
+    return useCallback(
+        (options = {}) => open("prompt", typeof options === "string" ? { title: options } : options),
+        [open],
+    )
 }
 
 // ── progress ──
@@ -312,13 +317,15 @@ export function usePrompt() {
  * @param {Record<string, any>} props
  */
 export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
-    return h("span", {
-        className: cx("dr-spinner", className),
-        style: { width: size, height: size },
-        role: "status",
-        "aria-label": label,
-        ...rest,
-    })
+    return (
+        <span
+            className={cx("dr-spinner", className)}
+            style={{ width: size, height: size }}
+            role="status"
+            aria-label={label}
+            {...rest}
+        />
+    )
 }
 
 /**
@@ -327,26 +334,26 @@ export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
  */
 export function Progress({ value, tone = "primary", label, className, ...rest }) {
     const known = typeof value === "number" && Number.isFinite(value)
-    return h(
-        "div",
-        {
-            className: cx(
+    return (
+        <div
+            className={cx(
                 "dr-progress",
                 !known && "dr-progress--indeterminate",
                 tone !== "primary" && `dr-progress--${tone}`,
                 className,
-            ),
-            role: "progressbar",
-            "aria-valuemin": 0,
-            "aria-valuemax": 100,
-            "aria-valuenow": known ? Math.round(value * 100) : undefined,
-            "aria-label": label,
-            ...rest,
-        },
-        h("div", {
-            className: "dr-progress-fill",
-            style: known ? { width: `${Math.min(1, Math.max(0, value)) * 100}%` } : undefined,
-        }),
+            )}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={known ? Math.round(value * 100) : undefined}
+            aria-label={label}
+            {...rest}
+        >
+            <div
+                className="dr-progress-fill"
+                style={known ? { width: `${Math.min(1, Math.max(0, value)) * 100}%` } : undefined}
+            />
+        </div>
     )
 }
 
@@ -358,39 +365,37 @@ export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary
     const radius = (size - stroke) / 2
     const length = 2 * Math.PI * radius
     const clamped = Math.min(1, Math.max(0, value))
-    return h(
-        "div",
-        {
-            className: cx("dr-ring", tone !== "primary" && `dr-ring--${tone}`, className),
-            style: { width: size, height: size },
-            role: "progressbar",
-            "aria-valuenow": Math.round(clamped * 100),
-            ...rest,
-        },
-        h(
-            "svg",
-            { width: size, height: size, viewBox: `0 0 ${size} ${size}` },
-            h("circle", {
-                className: "dr-ring-track",
-                cx: size / 2,
-                cy: size / 2,
-                r: radius,
-                strokeWidth: stroke,
-                fill: "none",
-            }),
-            h("circle", {
-                className: "dr-ring-fill",
-                cx: size / 2,
-                cy: size / 2,
-                r: radius,
-                strokeWidth: stroke,
-                fill: "none",
-                strokeDasharray: length,
-                strokeDashoffset: length * (1 - clamped),
-                transform: `rotate(-90 ${size / 2} ${size / 2})`,
-            }),
-        ),
-        h("span", { className: "dr-ring-label" }, children ?? `${Math.round(clamped * 100)}%`),
+    return (
+        <div
+            className={cx("dr-ring", tone !== "primary" && `dr-ring--${tone}`, className)}
+            style={{ width: size, height: size }}
+            role="progressbar"
+            aria-valuenow={Math.round(clamped * 100)}
+            {...rest}
+        >
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <circle
+                    className="dr-ring-track"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    strokeWidth={stroke}
+                    fill="none"
+                />
+                <circle
+                    className="dr-ring-fill"
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    strokeWidth={stroke}
+                    fill="none"
+                    strokeDasharray={length}
+                    strokeDashoffset={length * (1 - clamped)}
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+            </svg>
+            <span className="dr-ring-label">{children ?? `${Math.round(clamped * 100)}%`}</span>
+        </div>
     )
 }
 
@@ -399,30 +404,38 @@ export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary
  * @param {Record<string, any>} props
  */
 export function Skeleton({ width = "100%", height = 14, className, style, ...rest }) {
-    return h("span", { className: cx("dr-skeleton", className), style: { width, height, ...style }, ...rest })
+    return <span className={cx("dr-skeleton", className)} style={{ width, height, ...style }} {...rest} />
 }
 
 /**
  * A first-run / empty / error message with next steps. `layer` centers it over a whole view (a canvas, a 3D scene).
  * @param {Record<string, any>} props
  */
-export function EmptyState(
-    { icon = "info", title, message, actions, tone, layer = false, className, children, ...rest },
-) {
-    return h(
-        "div",
-        { className: cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className), ...rest },
-        h(
-            "div",
-            { className: "dr-empty-inner" },
-            icon
-                ? h("span", { className: "dr-empty-icon" }, h(Icon, { name: icon, size: 28, strokeWidth: 1.5 }))
-                : null,
-            title ? h("div", { className: "dr-empty-title" }, title) : null,
-            message ? h("div", { className: "dr-empty-text" }, message) : null,
-            children,
-            actions ? h("div", { className: "dr-empty-actions" }, actions) : null,
-        ),
+export function EmptyState({
+    icon = "info",
+    title,
+    message,
+    actions,
+    tone,
+    layer = false,
+    className,
+    children,
+    ...rest
+}) {
+    return (
+        <div className={cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className)} {...rest}>
+            <div className="dr-empty-inner">
+                {icon ? (
+                    <span className="dr-empty-icon">
+                        <Icon name={icon} size={28} strokeWidth={1.5} />
+                    </span>
+                ) : null}
+                {title ? <div className="dr-empty-title">{title}</div> : null}
+                {message ? <div className="dr-empty-text">{message}</div> : null}
+                {children}
+                {actions ? <div className="dr-empty-actions">{actions}</div> : null}
+            </div>
+        </div>
     )
 }
 
@@ -451,12 +464,20 @@ export class ErrorBoundary extends Component {
         if (typeof fallback === "function") {
             return fallback({ error, reset: this.reset })
         }
-        return fallback ?? h(EmptyState, {
-            icon: "warn",
-            tone: "danger",
-            title: "Something went wrong",
-            message: String(error?.message ?? error),
-            actions: h(Button, { size: "sm", onClick: this.reset }, "Try again"),
-        })
+        return (
+            fallback ?? (
+                <EmptyState
+                    icon="warn"
+                    tone="danger"
+                    title="Something went wrong"
+                    message={String(error?.message ?? error)}
+                    actions={
+                        <Button size="sm" onClick={this.reset}>
+                            Try again
+                        </Button>
+                    }
+                />
+            )
+        )
     }
 }

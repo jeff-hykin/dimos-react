@@ -2,8 +2,8 @@
 // shaders sample. Ported from dim-controller core/render/gradients.ts.
 import * as THREE from "three"
 
-export { DEFAULT_GRADIENT, GRADIENTS, RAMPS, sampleGradient } from "../colormaps.js"
-import { DEFAULT_GRADIENT, DEFAULT_PALETTE, isPalette, PALETTES, RAMPS, sampleGradient } from "../colormaps.js"
+export { DEFAULT_GRADIENT, GRADIENTS, RAMPS, sampleGradient } from "../colormaps"
+import { DEFAULT_GRADIENT, DEFAULT_PALETTE, isPalette, PALETTES, RAMPS, sampleGradient } from "../colormaps"
 
 const textures = new Map()
 

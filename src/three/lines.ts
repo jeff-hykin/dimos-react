@@ -27,7 +27,7 @@ export class FatLines {
     constructor(resolution, options) {
         this.material = new LineMaterial({
             linewidth: options.width,
-            color: options.vertexColors ? 0xffffff : options.color ?? 0xffffff,
+            color: options.vertexColors ? 0xffffff : (options.color ?? 0xffffff),
             vertexColors: !!options.vertexColors,
             transparent: (options.opacity ?? 1) < 1,
             opacity: options.opacity ?? 1,
@@ -134,7 +134,9 @@ export class FatLines {
 
 /** Twelve edges of a box centered at the origin with full sizes (x, y, z), pushed into `lines` through `matrix`. */
 export function pushBox(lines, matrix, size, color) {
-    const hx = size.x / 2, hy = size.y / 2, hz = size.z / 2
+    const hx = size.x / 2,
+        hy = size.y / 2,
+        hz = size.z / 2
     const corners = [
         [-hx, -hy, -hz],
         [hx, -hy, -hz],
@@ -145,7 +147,20 @@ export function pushBox(lines, matrix, size, color) {
         [hx, hy, hz],
         [-hx, hy, hz],
     ].map(([x, y, z]) => new THREE.Vector3(x, y, z).applyMatrix4(matrix))
-    const edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
+    const edges = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7],
+    ]
     for (const [a, b] of edges) {
         lines.push(corners[a].x, corners[a].y, corners[a].z, corners[b].x, corners[b].y, corners[b].z, color)
     }

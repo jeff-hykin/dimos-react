@@ -4,7 +4,6 @@
 //     h(DimThemeProvider, { skin: "research" }, h(App))        // pinned (demos, screenshots)
 //     const { skin, dark, corners, colors } = useTheme()
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react"
-import { h } from "../h.js"
 import {
     applyTheme,
     desktopCorners,
@@ -14,7 +13,7 @@ import {
     signalReady,
     themeColors,
     watchDesktopTheme,
-} from "./theme.js"
+} from "./theme"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
@@ -77,17 +76,20 @@ export function DimThemeProvider({ skin, corners, themeUrl, bundled, global = tr
         }
     }, [wantedSkin, wantedCorners, themeUrl, bundled, global])
 
-    const value = useMemo(() => ({
-        skin: wantedSkin,
-        corners: wantedCorners,
-        dark: state.dark,
-        square: state.square,
-        colors: state.colors,
-        ready: state.ready,
-        setSkin: (next) => setOverride((old) => ({ ...old, skin: next })),
-        setCorners: (next) => setOverride((old) => ({ ...old, corners: next })),
-    }), [wantedSkin, wantedCorners, state])
-    return h(ThemeContext.Provider, { value }, children)
+    const value = useMemo(
+        () => ({
+            skin: wantedSkin,
+            corners: wantedCorners,
+            dark: state.dark,
+            square: state.square,
+            colors: state.colors,
+            ready: state.ready,
+            setSkin: (next) => setOverride((old) => ({ ...old, skin: next })),
+            setCorners: (next) => setOverride((old) => ({ ...old, corners: next })),
+        }),
+        [wantedSkin, wantedCorners, state],
+    )
+    return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 /** `{ skin, corners, dark, square, colors, ready, setSkin, setCorners }` (setSkin/setCorners: this page only). */

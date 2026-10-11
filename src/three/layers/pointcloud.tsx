@@ -3,12 +3,11 @@
 // go straight into preallocated GPU buffers (a ring when accumulating) and are colored in the shader, so a new scan
 // costs one buffer upload and nothing is allocated per frame.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { headerFrameId } from "../../lcm.js"
-import { decodeMessage } from "../../data.js"
-import { applyLook, makePointMaterial } from "../point_material.js"
-import { rendering, resolveLook, splatFallback } from "../rendering.js"
+import { useStore } from "../store"
+import { headerFrameId } from "../../lcm"
+import { decodeMessage } from "../../data"
+import { applyLook, makePointMaterial } from "../point_material"
+import { rendering, resolveLook, splatFallback } from "../rendering"
 import {
     CLOUD_PRESETS,
     cloudQualities,
@@ -18,13 +17,13 @@ import {
     formatCount,
     setCloudQuality,
     setCloudRate,
-} from "../cloud_quality.js"
-import { placeLayer, registerLayer } from "./registry.js"
-import { Field, Select } from "../../components/controls.js"
-import { PointLookEditor } from "../look_editor.js"
+} from "../cloud_quality"
+import { placeLayer, registerLayer } from "./registry"
+import { Field, Select } from "../../components/controls"
+import { PointLookEditor } from "../look_editor"
 
 /**
- * @typedef {{ look: import("../point_material.js").PointLook & { style: string }, mode: "latest" | "accumulate",
+ * @typedef {{ look: import("../point_material").PointLook & { style: string }, mode: "latest" | "accumulate",
  *   windowSeconds: number, maxPoints: number, maxHz?: number, quality?: number, frame?: string }} CloudSettings
  *   "latest": only the newest scan, moved by TF every frame; "accumulate": scans stay where they were seen;
  *   `maxHz` / `quality` pin the subscription (else this viewer's preset); `frame` overrides the data's frame_id
@@ -88,9 +87,10 @@ export function pointCloud2ToPositions(cloud) {
         positions[kept * 3 + 1] = y
         positions[kept * 3 + 2] = z
         if (raw) {
-            raw[kept] = intensityField.datatype === 7
-                ? view.getFloat32(at + intensityField.offset, little)
-                : view.getUint8(at + intensityField.offset)
+            raw[kept] =
+                intensityField.datatype === 7
+                    ? view.getFloat32(at + intensityField.offset, little)
+                    : view.getUint8(at + intensityField.offset)
         }
         kept++
     }
@@ -147,9 +147,9 @@ export class CloudLayer {
     #epoch
 
     /**
-     * @param {import("./registry.js").LayerContext} context
-     * @param {import("./registry.js").Topic | null} topic null: data comes through setData
-     * @param {import("../store.js").Store<CloudSettings>} settings
+     * @param {import("./registry").LayerContext} context
+     * @param {import("./registry").Topic | null} topic null: data comes through setData
+     * @param {import("../store").Store<CloudSettings>} settings
      */
     constructor(context, topic, settings) {
         this.context = context
@@ -199,12 +199,16 @@ export class CloudLayer {
         if (maxHz !== undefined || quality !== undefined) {
             // the app pinned rate / detail: one fixed subscription instead of the viewer's preset
             this.#stream = null
-            const stop = this.context.source.subscribe(topic.key, {
-                delivery: "latest",
-                maxHz: maxHz ?? 20,
-                encoding: "dimos_lcm_pointcloud2",
-                encodeOptions: { quality: quality ?? 1 },
-            }, onMessage)
+            const stop = this.context.source.subscribe(
+                topic.key,
+                {
+                    delivery: "latest",
+                    maxHz: maxHz ?? 20,
+                    encoding: "dimos_lcm_pointcloud2",
+                    encodeOptions: { quality: quality ?? 1 },
+                },
+                onMessage,
+            )
             this.#fixedStream = { stop }
             return
         }
@@ -222,9 +226,8 @@ export class CloudLayer {
             this.#mode = settings.mode
             this.#clear()
         }
-        this.#material.uniforms.uWindow.value = settings.mode === "accumulate" && settings.windowSeconds > 0
-            ? settings.windowSeconds
-            : -1
+        this.#material.uniforms.uWindow.value =
+            settings.mode === "accumulate" && settings.windowSeconds > 0 ? settings.windowSeconds : -1
         applyLook(this.#material, resolveLook(settings.look), this.#range)
         this.#syncSplatBudget()
         this.context.viewer.requestRender()
@@ -241,7 +244,7 @@ export class CloudLayer {
             const value = message.value ?? message.decoded
             try {
                 frame = value
-                    ? value.frame ?? value.header?.frame_id ?? null
+                    ? (value.frame ?? value.header?.frame_id ?? null)
                     : headerFrameId(this.topic.type, message.bytes)
             } catch {
                 // not LCM and no frame in the payload
@@ -342,7 +345,9 @@ export class CloudLayer {
         const e = transform?.elements
         for (let index = 0; index < count; index++) {
             const slot = (start + index) % this.#capacity
-            const x = positions[index * 3], y = positions[index * 3 + 1], z = positions[index * 3 + 2]
+            const x = positions[index * 3],
+                y = positions[index * 3 + 1],
+                z = positions[index * 3 + 2]
             if (e) {
                 xyz[slot * 3] = e[0] * x + e[4] * y + e[8] * z + e[12]
                 xyz[slot * 3 + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]
@@ -398,7 +403,9 @@ export class CloudLayer {
             const step = Math.max(1, Math.floor(count / 2048))
             const samples = []
             for (let index = 0; index < count; index += step) {
-                const x = positions[index * 3], y = positions[index * 3 + 1], z = positions[index * 3 + 2]
+                const x = positions[index * 3],
+                    y = positions[index * 3 + 1],
+                    z = positions[index * 3 + 2]
                 const world = [
                     e[0] * x + e[4] * y + e[8] * z + e[12],
                     e[1] * x + e[5] * y + e[9] * z + e[13],
@@ -446,8 +453,8 @@ export class CloudLayer {
             this.context.viewer.requestRender() // old points fade out by time even with no new scans
         }
         if (this.#frame !== null) {
-            const placed = settings.mode === "accumulate" ||
-                placeLayer(this.context, this.#points, this.#frame, frame.fixedFrame)
+            const placed =
+                settings.mode === "accumulate" || placeLayer(this.context, this.#points, this.#frame, frame.fixedFrame)
             if (placed) {
                 const sensor = this.context.tf.lookup(this.#frame, frame.fixedFrame)
                 if (sensor) {
@@ -469,11 +476,12 @@ export class CloudLayer {
             const kept = settings.mode === "accumulate" ? `${formatCount(this.#filled)} kept · ` : ""
             const bytes = rate.bytesPerSecond ? ` · ${formatBytes(rate.bytesPerSecond)}/s` : ""
             this.context.setStatus({
-                info: this.#frame === null
-                    ? "waiting for frame_id…"
-                    : `${kept}${formatCount(this.#lastCount)} pts · ${rate.hz.toFixed(1)} Hz${bytes} · ${
-                        this.#frame || "no frame"
-                    }`,
+                info:
+                    this.#frame === null
+                        ? "waiting for frame_id…"
+                        : `${kept}${formatCount(this.#lastCount)} pts · ${rate.hz.toFixed(1)} Hz${bytes} · ${
+                              this.#frame || "no frame"
+                          }`,
                 frame: this.#frame ?? undefined,
             })
         }
@@ -495,53 +503,58 @@ export class CloudLayer {
 /** This viewer's bandwidth preset for a cloud topic (shared by every place that shows it). */
 export function CloudQualitySelect({ topicKey, ...rest }) {
     useStore(cloudQualities)
-    return h(Select, {
-        value: cloudQualityOf(topicKey),
-        options: CLOUD_PRESETS.map((preset) => [preset.id, preset.label]),
-        onChange: (quality) => setCloudQuality(topicKey, quality),
-        ...rest,
-    })
+    return (
+        <Select
+            value={cloudQualityOf(topicKey)}
+            options={CLOUD_PRESETS.map((preset) => [preset.id, preset.label])}
+            onChange={(quality) => setCloudQuality(topicKey, quality)}
+            {...rest}
+        />
+    )
 }
 
 /** A point-cloud layer's settings: its look, keep mode and window, and this viewer's bandwidth preset. */
 export function CloudSettingsEditor({ settings, topic }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(PointLookEditor, { look: value.look, onChange: (look) => settings.update({ look }) }),
-        h(
-            Field,
-            { label: "Keep" },
-            h(Select, {
-                value: value.mode,
-                options: [["latest", "latest scan"], ["accumulate", "accumulate"]],
-                onChange: (mode) => settings.update({ mode }),
-            }),
-        ),
-        value.mode === "accumulate"
-            ? h(
-                Field,
-                { label: "Window" },
-                h(Select, {
-                    value: value.windowSeconds,
-                    options: [[5, "5 s"], [10, "10 s"], [30, "30 s"], [120, "2 min"], [0, "forever"]],
-                    onChange: (windowSeconds) => settings.update({ windowSeconds }),
-                }),
-            )
-            : null,
-        topic
-            ? h(
-                Field,
-                {
-                    label: "Bandwidth",
-                    hint: `this viewer's: ${
-                        CLOUD_PRESETS.map((preset) => `${preset.label}: ${preset.about}`).join("; ")
-                    }`,
-                },
-                h(CloudQualitySelect, { topicKey: topic.key }),
-            )
-            : null,
+    return (
+        <div className="dr-layer-settings-grid">
+            <PointLookEditor look={value.look} onChange={(look) => settings.update({ look })} />
+            <Field label="Keep">
+                <Select
+                    value={value.mode}
+                    options={[
+                        ["latest", "latest scan"],
+                        ["accumulate", "accumulate"],
+                    ]}
+                    onChange={(mode) => settings.update({ mode })}
+                />
+            </Field>
+            {value.mode === "accumulate" ? (
+                <Field label="Window">
+                    <Select
+                        value={value.windowSeconds}
+                        options={[
+                            [5, "5 s"],
+                            [10, "10 s"],
+                            [30, "30 s"],
+                            [120, "2 min"],
+                            [0, "forever"],
+                        ]}
+                        onChange={(windowSeconds) => settings.update({ windowSeconds })}
+                    />
+                </Field>
+            ) : null}
+            {topic ? (
+                <Field
+                    label="Bandwidth"
+                    hint={`this viewer's: ${CLOUD_PRESETS.map((preset) => `${preset.label}: ${preset.about}`).join(
+                        "; ",
+                    )}`}
+                >
+                    <CloudQualitySelect topicKey={topic.key} />
+                </Field>
+            ) : null}
+        </div>
     )
 }
 

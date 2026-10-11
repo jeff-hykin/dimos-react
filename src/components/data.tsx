@@ -1,9 +1,9 @@
 // Data display: tables, trees, key/value readouts, stats, lists, logs, code, sparklines, an attitude indicator and a
 // timeline scrubber.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { Icon } from "./icon.js"
-import { copyText } from "../hooks.js"
+import { cx } from "../cx"
+import { Icon } from "./icon"
+import { copyText } from "../hooks"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
@@ -84,7 +84,7 @@ export function Table({
         return currentSort.dir === "desc" ? out.reverse() : out
     }, [rows, columns, currentSort?.key, currentSort?.dir, sortRows])
     const keyOf = (row, index) =>
-        typeof rowKey === "function" ? rowKey(row, index) : rowKey ? row?.[rowKey] : row?.id ?? row?.key ?? index
+        typeof rowKey === "function" ? rowKey(row, index) : rowKey ? row?.[rowKey] : (row?.id ?? row?.key ?? index)
     const onHeader = (column) => {
         if (!column.sort) {
             return
@@ -97,75 +97,75 @@ export function Table({
             setSort(null)
         }
     }
-    return h(
-        "div",
-        {
-            className: cx("dr-table-wrap", "dr-scroll", className),
-            style: { maxHeight, ...style },
-            ...rest,
-        },
-        h(
-            "table",
-            { className: cx("dr-table", compact && "dr-table--compact", sticky && "dr-table--sticky") },
-            h(
-                "thead",
-                null,
-                h(
-                    "tr",
-                    null,
-                    columns.map((column) => {
-                        const active = currentSort?.key === column.key
-                        return h(
-                            "th",
-                            {
-                                key: column.key,
-                                style: { width: column.width, textAlign: column.align },
-                                className: cx(column.sort && "dr-table__sortable", active && "dr-table__sorted"),
-                                onClick: () => onHeader(column),
-                                "aria-sort": active
-                                    ? (currentSort.dir === "asc" ? "ascending" : "descending")
-                                    : undefined,
-                            },
-                            h("span", null, column.label ?? column.key),
-                            column.sort
-                                ? h(Icon, {
-                                    name: active ? (currentSort.dir === "asc" ? "chevron-up" : "chevron-down") : "sort",
-                                    size: 12,
-                                    className: "dr-table__sort-icon",
-                                })
-                                : null,
-                        )
-                    }),
-                ),
-            ),
-            h(
-                "tbody",
-                null,
-                sorted.length === 0
-                    ? h("tr", null, h("td", { className: "dr-table__empty", colSpan: columns.length }, empty))
-                    : sorted.map((row, index) => {
-                        const key = keyOf(row, index)
-                        return h(
-                            "tr",
-                            {
-                                key,
-                                className: cx(
-                                    onRowClick && "dr-table__clickable",
-                                    selected === key && "dr-table__selected",
-                                ),
-                                onClick: onRowClick ? () => onRowClick(row, index) : undefined,
-                            },
-                            columns.map((column) =>
-                                h(
-                                    "td",
-                                    { key: column.key, style: { textAlign: column.align } },
-                                    column.render ? column.render(row, index) : String(row?.[column.key] ?? ""),
-                                )
-                            ),
-                        )
-                    }),
-            ),
-        ),
+    return (
+        <div className={cx("dr-table-wrap", "dr-scroll", className)} style={{ maxHeight, ...style }} {...rest}>
+            <table className={cx("dr-table", compact && "dr-table--compact", sticky && "dr-table--sticky")}>
+                <thead>
+                    <tr>
+                        {columns.map((column) => {
+                            const active = currentSort?.key === column.key
+                            return (
+                                <th
+                                    key={column.key}
+                                    style={{ width: column.width, textAlign: column.align }}
+                                    className={cx(column.sort && "dr-table__sortable", active && "dr-table__sorted")}
+                                    onClick={() => onHeader(column)}
+                                    aria-sort={
+                                        active ? (currentSort.dir === "asc" ? "ascending" : "descending") : undefined
+                                    }
+                                >
+                                    <span>{column.label ?? column.key}</span>
+                                    {column.sort ? (
+                                        <Icon
+                                            name={
+                                                active
+                                                    ? currentSort.dir === "asc"
+                                                        ? "chevron-up"
+                                                        : "chevron-down"
+                                                    : "sort"
+                                            }
+                                            size={12}
+                                            className="dr-table__sort-icon"
+                                        />
+                                    ) : null}
+                                </th>
+                            )
+                        })}
+                    </tr>
+                </thead>
+                <tbody>
+                    {sorted.length === 0 ? (
+                        <tr>
+                            <td className="dr-table__empty" colSpan={columns.length}>
+                                {empty}
+                            </td>
+                        </tr>
+                    ) : (
+                        sorted.map((row, index) => {
+                            const key = keyOf(row, index)
+                            return (
+                                <tr
+                                    key={key}
+                                    className={cx(
+                                        onRowClick && "dr-table__clickable",
+                                        selected === key && "dr-table__selected",
+                                    )}
+                                    onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+                                >
+                                    {columns.map((column) => (
+                                        <td key={column.key} style={{ textAlign: column.align }}>
+                                            {column.render
+                                                ? column.render(row, index)
+                                                : String(row?.[column.key] ?? "")}
+                                        </td>
+                                    ))}
+                                </tr>
+                            )
+                        })
+                    )}
+                </tbody>
+            </table>
+        </div>
     )
 }
 
@@ -214,42 +214,44 @@ export function Tree({
         list.map((node) => {
             const hasChildren = !!node.children?.length
             const isOpen = openSet.has(node.id)
-            return h(
-                "li",
-                { key: node.id, role: "treeitem", "aria-expanded": hasChildren ? isOpen : undefined },
-                h(
-                    "div",
-                    {
-                        className: cx("dr-tree__row", selected === node.id && "dr-tree__row--selected"),
-                        style: { paddingLeft: 6 + depth * 14 },
-                        onClick: () => onSelect?.(node.id, node),
-                    },
-                    h(
-                        "button",
-                        {
-                            type: "button",
-                            className: cx("dr-tree__twisty", !hasChildren && "dr-tree__twisty--leaf"),
-                            tabIndex: hasChildren ? 0 : -1,
-                            "aria-label": hasChildren ? (isOpen ? "Collapse" : "Expand") : undefined,
-                            onClick: (event) => {
+            return (
+                <li key={node.id} role="treeitem" aria-expanded={hasChildren ? isOpen : undefined}>
+                    <div
+                        className={cx("dr-tree__row", selected === node.id && "dr-tree__row--selected")}
+                        style={{ paddingLeft: 6 + depth * 14 }}
+                        onClick={() => onSelect?.(node.id, node)}
+                    >
+                        <button
+                            type="button"
+                            className={cx("dr-tree__twisty", !hasChildren && "dr-tree__twisty--leaf")}
+                            tabIndex={hasChildren ? 0 : -1}
+                            aria-label={hasChildren ? (isOpen ? "Collapse" : "Expand") : undefined}
+                            onClick={(event) => {
                                 event.stopPropagation()
                                 if (hasChildren) {
                                     toggle(node.id)
                                 }
-                            },
-                        },
-                        hasChildren ? h(Icon, { name: isOpen ? "chevron-down" : "chevron-right", size: 12 }) : null,
-                    ),
-                    node.icon ? h(Icon, { name: node.icon, size: 14, className: "dr-tree__icon" }) : null,
-                    h("span", { className: "dr-tree__label" }, renderLabel ? renderLabel(node) : node.label ?? node.id),
-                    node.badge !== undefined && node.badge !== null
-                        ? h("span", { className: "dr-tree__badge" }, node.badge)
-                        : null,
-                ),
-                hasChildren && isOpen ? h("ul", { role: "group" }, renderNodes(node.children, depth + 1)) : null,
+                            }}
+                        >
+                            {hasChildren ? <Icon name={isOpen ? "chevron-down" : "chevron-right"} size={12} /> : null}
+                        </button>
+                        {node.icon ? <Icon name={node.icon} size={14} className="dr-tree__icon" /> : null}
+                        <span className="dr-tree__label">
+                            {renderLabel ? renderLabel(node) : (node.label ?? node.id)}
+                        </span>
+                        {node.badge !== undefined && node.badge !== null ? (
+                            <span className="dr-tree__badge">{node.badge}</span>
+                        ) : null}
+                    </div>
+                    {hasChildren && isOpen ? <ul role="group">{renderNodes(node.children, depth + 1)}</ul> : null}
+                </li>
             )
         })
-    return h("ul", { className: cx("dr-tree", className), role: "tree", ...rest }, renderNodes(nodes, 0))
+    return (
+        <ul className={cx("dr-tree", className)} role="tree" {...rest}>
+            {renderNodes(nodes, 0)}
+        </ul>
+    )
 }
 
 // ── key / value ──
@@ -259,11 +261,11 @@ export function Tree({
  * @param {Record<string, any>} props
  */
 export function KeyValueRow({ label, children, mono = true, className, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-kv__row", className), ...rest },
-        h("span", { className: "dr-kv__key" }, label),
-        h("span", { className: cx("dr-kv__value", mono && "dr-mono") }, children),
+    return (
+        <div className={cx("dr-kv__row", className)} {...rest}>
+            <span className="dr-kv__key">{label}</span>
+            <span className={cx("dr-kv__value", mono && "dr-mono")}>{children}</span>
+        </div>
     )
 }
 
@@ -272,11 +274,15 @@ export function KeyValueRow({ label, children, mono = true, className, ...rest }
  * @param {{ items?: [any, any][], children?: any, mono?: boolean, className?: string }} props
  */
 export function KeyValue({ items, children, mono = true, className, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-kv", className), ...rest },
-        items?.map(([label, value], index) => h(KeyValueRow, { key: index, label, mono }, value)),
-        children,
+    return (
+        <div className={cx("dr-kv", className)} {...rest}>
+            {items?.map(([label, value], index) => (
+                <KeyValueRow key={index} label={label} mono={mono}>
+                    {value}
+                </KeyValueRow>
+            ))}
+            {children}
+        </div>
     )
 }
 
@@ -287,24 +293,20 @@ export function KeyValue({ items, children, mono = true, className, ...rest }) {
  */
 export function Stat({ label, value, unit, delta, tone, hint, className, ...rest }) {
     const deltaTone = typeof delta === "number" ? (delta > 0 ? "up" : delta < 0 ? "down" : "flat") : "flat"
-    return h(
-        "div",
-        { className: cx("dr-stat", tone && `dr-stat--${tone}`, className), ...rest },
-        h("div", { className: "dr-stat__label" }, label),
-        h(
-            "div",
-            { className: "dr-stat__value" },
-            value,
-            unit ? h("span", { className: "dr-stat__unit" }, unit) : null,
-        ),
-        delta !== undefined && delta !== null
-            ? h(
-                "div",
-                { className: cx("dr-stat__delta", `dr-stat__delta--${deltaTone}`) },
-                typeof delta === "number" && delta > 0 ? `+${delta}` : String(delta),
-            )
-            : null,
-        hint ? h("div", { className: "dr-stat__hint" }, hint) : null,
+    return (
+        <div className={cx("dr-stat", tone && `dr-stat--${tone}`, className)} {...rest}>
+            <div className="dr-stat__label">{label}</div>
+            <div className="dr-stat__value">
+                {value}
+                {unit ? <span className="dr-stat__unit">{unit}</span> : null}
+            </div>
+            {delta !== undefined && delta !== null ? (
+                <div className={cx("dr-stat__delta", `dr-stat__delta--${deltaTone}`)}>
+                    {typeof delta === "number" && delta > 0 ? `+${delta}` : String(delta)}
+                </div>
+            ) : null}
+            {hint ? <div className="dr-stat__hint">{hint}</div> : null}
+        </div>
     )
 }
 
@@ -315,10 +317,10 @@ export function Stat({ label, value, unit, delta, tone, hint, className, ...rest
  * @param {Record<string, any>} props
  */
 export function List({ children, className, divided = true, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-list", divided && "dr-list--divided", className), role: "list", ...rest },
-        children,
+    return (
+        <div className={cx("dr-list", divided && "dr-list--divided", className)} role="list" {...rest}>
+            {children}
+        </div>
     )
 }
 
@@ -328,58 +330,66 @@ export function List({ children, className, divided = true, ...rest }) {
  *   onClick?: (event: any) => void, handle?: boolean | object, disabled?: boolean, className?: string }} props
  *   `handle`: show a drag grip (an object = props for it, e.g. from useDrag)
  */
-export function ListRow(
-    { icon, title, subtitle, meta, actions, selected, onClick, handle, disabled, className, ...rest },
-) {
-    return h(
-        "div",
-        {
-            className: cx(
+export function ListRow({
+    icon,
+    title,
+    subtitle,
+    meta,
+    actions,
+    selected,
+    onClick,
+    handle,
+    disabled,
+    className,
+    ...rest
+}) {
+    return (
+        <div
+            className={cx(
                 "dr-list-row",
                 onClick && "dr-list-row--clickable",
                 selected && "dr-list-row--selected",
                 disabled && "dr-list-row--disabled",
                 className,
-            ),
-            role: "listitem",
-            tabIndex: onClick && !disabled ? 0 : undefined,
-            "aria-selected": selected || undefined,
-            onClick: disabled ? undefined : onClick,
-            onKeyDown: onClick && !disabled
-                ? (event) => {
-                    // keys typed into a control inside the row (a rename box) are that control's
-                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-                        event.preventDefault()
-                        onClick(event)
-                    }
-                }
-                : undefined,
-            ...rest,
-        },
-        handle
-            ? h(
-                "span",
-                { className: "dr-list-row__handle", ...(typeof handle === "object" ? handle : {}) },
-                h(Icon, { name: "grip", size: 14 }),
-            )
-            : null,
-        icon
-            ? h(
-                "span",
-                { className: "dr-list-row__icon" },
-                typeof icon === "string" ? h(Icon, { name: icon, size: 16 }) : icon,
-            )
-            : null,
-        h(
-            "span",
-            { className: "dr-list-row__text" },
-            h("span", { className: "dr-list-row__title" }, title),
-            subtitle ? h("span", { className: "dr-list-row__subtitle" }, subtitle) : null,
-        ),
-        meta !== undefined && meta !== null ? h("span", { className: "dr-list-row__meta" }, meta) : null,
-        actions
-            ? h("span", { className: "dr-list-row__actions", onClick: (event) => event.stopPropagation() }, actions)
-            : null,
+            )}
+            role="listitem"
+            tabIndex={onClick && !disabled ? 0 : undefined}
+            aria-selected={selected || undefined}
+            onClick={disabled ? undefined : onClick}
+            onKeyDown={
+                onClick && !disabled
+                    ? (event) => {
+                          // keys typed into a control inside the row (a rename box) are that control's
+                          if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                              event.preventDefault()
+                              onClick(event)
+                          }
+                      }
+                    : undefined
+            }
+            {...rest}
+        >
+            {handle ? (
+                <span className="dr-list-row__handle" {...(typeof handle === "object" ? handle : {})}>
+                    <Icon name="grip" size={14} />
+                </span>
+            ) : null}
+            {icon ? (
+                <span className="dr-list-row__icon">
+                    {typeof icon === "string" ? <Icon name={icon} size={16} /> : icon}
+                </span>
+            ) : null}
+            <span className="dr-list-row__text">
+                <span className="dr-list-row__title">{title}</span>
+                {subtitle ? <span className="dr-list-row__subtitle">{subtitle}</span> : null}
+            </span>
+            {meta !== undefined && meta !== null ? <span className="dr-list-row__meta">{meta}</span> : null}
+            {actions ? (
+                <span className="dr-list-row__actions" onClick={(event) => event.stopPropagation()}>
+                    {actions}
+                </span>
+            ) : null}
+        </div>
     )
 }
 
@@ -436,33 +446,33 @@ export function LogView({
             box.current.scrollTop = box.current.scrollHeight
         }
     }
-    return h(
-        "div",
-        { className: cx("dr-log", className), style: { height, ...style }, ...rest },
-        h(
-            "div",
-            { className: cx("dr-log__lines", "dr-scroll", wrap && "dr-log__lines--wrap"), ref: box, onScroll },
-            shown.length === 0
-                ? h("div", { className: "dr-log__empty" }, filter ? "No lines match" : "No output yet")
-                : shown.map((line, index) =>
-                    h(
-                        "div",
-                        { key: index, className: cx("dr-log__line", line.level && `dr-log__line--${line.level}`) },
-                        showTime && line.ts !== undefined
-                            ? h("span", { className: "dr-log__ts" }, formatTs(line.ts))
-                            : null,
-                        h("span", { className: "dr-log__text" }, line.text),
-                    )
-                ),
-        ),
-        !atEnd && follow
-            ? h(
-                "button",
-                { type: "button", className: "dr-log__jump", onClick: jump },
-                h(Icon, { name: "arrow-down", size: 12 }),
-                "Jump to end",
-            )
-            : null,
+    return (
+        <div className={cx("dr-log", className)} style={{ height, ...style }} {...rest}>
+            <div
+                className={cx("dr-log__lines", "dr-scroll", wrap && "dr-log__lines--wrap")}
+                ref={box}
+                onScroll={onScroll}
+            >
+                {shown.length === 0 ? (
+                    <div className="dr-log__empty">{filter ? "No lines match" : "No output yet"}</div>
+                ) : (
+                    shown.map((line, index) => (
+                        <div key={index} className={cx("dr-log__line", line.level && `dr-log__line--${line.level}`)}>
+                            {showTime && line.ts !== undefined ? (
+                                <span className="dr-log__ts">{formatTs(line.ts)}</span>
+                            ) : null}
+                            <span className="dr-log__text">{line.text}</span>
+                        </div>
+                    ))
+                )}
+            </div>
+            {!atEnd && follow ? (
+                <button type="button" className="dr-log__jump" onClick={jump}>
+                    <Icon name="arrow-down" size={12} />
+                    Jump to end
+                </button>
+            ) : null}
+        </div>
     )
 }
 
@@ -482,11 +492,12 @@ KEYWORDS.javascript = KEYWORDS.js
 /** Splits one line of code into [kind, text] tokens (kw, str, num, com, func, plain). */
 export function tokenizeLine(line, language = "js") {
     const keywords = new Set((KEYWORDS[language] ?? KEYWORDS.js).split(" "))
-    const comment = language === "py" || language === "python" || language === "sh" || language === "bash"
-        ? "#[^\\n]*"
-        : language === "json"
-        ? "(?!)"
-        : "\\/\\/[^\\n]*"
+    const comment =
+        language === "py" || language === "python" || language === "sh" || language === "bash"
+            ? "#[^\\n]*"
+            : language === "json"
+              ? "(?!)"
+              : "\\/\\/[^\\n]*"
     const pattern = new RegExp(
         `(${comment})|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`)|(\\b\\d+(?:\\.\\d+)?\\b)|([A-Za-z_$][\\w$]*)(?=\\s*\\()|([A-Za-z_$][\\w$]*)`,
         "g",
@@ -521,9 +532,17 @@ export function tokenizeLine(line, language = "js") {
  * @param {{ code: string, language?: string, lineNumbers?: boolean, copy?: boolean, title?: any,
  *   maxHeight?: string | number, className?: string, style?: object }} props
  */
-export function CodeBlock(
-    { code = "", language = "js", lineNumbers = false, copy = true, title, maxHeight, className, style, ...rest },
-) {
+export function CodeBlock({
+    code = "",
+    language = "js",
+    lineNumbers = false,
+    copy = true,
+    title,
+    maxHeight,
+    className,
+    style,
+    ...rest
+}) {
     const [copied, setCopied] = useState(false)
     const lines = String(code).replace(/\n$/, "").split("\n")
     const onCopy = async () => {
@@ -532,49 +551,41 @@ export function CodeBlock(
             setTimeout(() => setCopied(false), 1200)
         }
     }
-    return h(
-        "div",
-        { className: cx("dr-code", className), style, ...rest },
-        title || language || copy
-            ? h(
-                "div",
-                { className: "dr-code__head" },
-                h("span", { className: "dr-code__lang" }, title ?? language),
-                copy
-                    ? h(
-                        "button",
-                        { type: "button", className: "dr-code__copy", onClick: onCopy, "aria-label": "Copy code" },
-                        h(Icon, { name: copied ? "check" : "copy", size: 13 }),
-                        copied ? "Copied" : "Copy",
-                    )
-                    : null,
-            )
-            : null,
-        h(
-            "pre",
-            { className: "dr-code__pre dr-scroll", style: { maxHeight } },
-            h(
-                "code",
-                null,
-                lines.map((line, index) =>
-                    h(
-                        "div",
-                        { key: index, className: "dr-code__line" },
-                        lineNumbers ? h("span", { className: "dr-code__num" }, index + 1) : null,
-                        h(
-                            "span",
-                            null,
-                            tokenizeLine(line, language).map(([kind, text], tokenIndex) =>
-                                kind === "plain"
-                                    ? text
-                                    : h("span", { key: tokenIndex, className: `dr-tok-${kind}` }, text)
-                            ),
-                            line === "" ? "​" : null,
-                        ),
-                    )
-                ),
-            ),
-        ),
+    return (
+        <div className={cx("dr-code", className)} style={style} {...rest}>
+            {title || language || copy ? (
+                <div className="dr-code__head">
+                    <span className="dr-code__lang">{title ?? language}</span>
+                    {copy ? (
+                        <button type="button" className="dr-code__copy" onClick={onCopy} aria-label="Copy code">
+                            <Icon name={copied ? "check" : "copy"} size={13} />
+                            {copied ? "Copied" : "Copy"}
+                        </button>
+                    ) : null}
+                </div>
+            ) : null}
+            <pre className="dr-code__pre dr-scroll" style={{ maxHeight }}>
+                <code>
+                    {lines.map((line, index) => (
+                        <div key={index} className="dr-code__line">
+                            {lineNumbers ? <span className="dr-code__num">{index + 1}</span> : null}
+                            <span>
+                                {tokenizeLine(line, language).map(([kind, text], tokenIndex) =>
+                                    kind === "plain" ? (
+                                        text
+                                    ) : (
+                                        <span key={tokenIndex} className={`dr-tok-${kind}`}>
+                                            {text}
+                                        </span>
+                                    ),
+                                )}
+                                {line === "" ? "​" : null}
+                            </span>
+                        </div>
+                    ))}
+                </code>
+            </pre>
+        </div>
     )
 }
 
@@ -586,29 +597,37 @@ export function CodeBlock(
  * @param {{ roll?: number | null, pitch?: number | null, yaw?: number | null, height?: number,
  *   pitchScale?: number, className?: string }} props `pitchScale`: px of shift per degree of pitch (default 1.4)
  */
-export function AttitudeIndicator(
-    { roll = null, pitch = null, yaw = null, height = 84, pitchScale = 1.4, className, ...rest },
-) {
-    const deg = (radians) => radians * 180 / Math.PI
+export function AttitudeIndicator({
+    roll = null,
+    pitch = null,
+    yaw = null,
+    height = 84,
+    pitchScale = 1.4,
+    className,
+    ...rest
+}) {
+    const deg = (radians) => (radians * 180) / Math.PI
     const known = roll !== null && pitch !== null
     const shift = known ? Math.max(-height / 2, Math.min(height / 2, deg(pitch) * pitchScale)) : 0
-    return h(
-        "div",
-        {
-            className: cx("dr-attitude", !known && "dr-attitude--unknown", className),
-            style: { height },
-            role: "img",
-            "aria-label": known ? `roll ${deg(roll).toFixed(1)}°, pitch ${deg(pitch).toFixed(1)}°` : "attitude unknown",
-            ...rest,
-        },
-        h("div", {
-            className: "dr-attitude__sky",
-            style: known
-                ? { transform: `rotate(${(-deg(roll)).toFixed(1)}deg) translateY(${shift.toFixed(0)}px)` }
-                : undefined,
-        }),
-        h("div", { className: "dr-attitude__cross" }),
-        h("div", { className: "dr-attitude__yaw" }, `yaw ${yaw === null ? "—" : deg(yaw).toFixed(0)}°`),
+    return (
+        <div
+            className={cx("dr-attitude", !known && "dr-attitude--unknown", className)}
+            style={{ height }}
+            role="img"
+            aria-label={known ? `roll ${deg(roll).toFixed(1)}°, pitch ${deg(pitch).toFixed(1)}°` : "attitude unknown"}
+            {...rest}
+        >
+            <div
+                className="dr-attitude__sky"
+                style={
+                    known
+                        ? { transform: `rotate(${(-deg(roll)).toFixed(1)}deg) translateY(${shift.toFixed(0)}px)` }
+                        : undefined
+                }
+            />
+            <div className="dr-attitude__cross" />
+            <div className="dr-attitude__yaw">{`yaw ${yaw === null ? "—" : deg(yaw).toFixed(0)}°`}</div>
+        </div>
     )
 }
 
@@ -638,29 +657,29 @@ export function Sparkline({
     const step = values.length > 1 ? width / (values.length - 1) : width
     const points = values.map((value, index) => [
         index * step,
-        height - 1 - ((Number.isFinite(value) ? value : low) - low) / span * (height - 2),
+        height - 1 - (((Number.isFinite(value) ? value : low) - low) / span) * (height - 2),
     ])
     const line = points.map(([x, y], index) => `${index ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("")
-    return h(
-        "svg",
-        {
-            className: cx("dr-sparkline", className),
-            width,
-            height,
-            viewBox: `0 0 ${width} ${height}`,
-            role: title ? "img" : undefined,
-            "aria-hidden": title ? undefined : "true",
-            style: { color },
-            ...rest,
-        },
-        title ? h("title", null, title) : null,
-        points.length > 1 && fill
-            ? h("path", { d: `${line}L${width},${height}L0,${height}Z`, className: "dr-sparkline__fill" })
-            : null,
-        points.length > 1
-            ? h("path", { d: line, fill: "none", stroke: "currentColor", strokeWidth, strokeLinejoin: "round" })
-            : null,
-        points.length ? h("circle", { cx: points.at(-1)[0], cy: points.at(-1)[1], r: 2, fill: "currentColor" }) : null,
+    return (
+        <svg
+            className={cx("dr-sparkline", className)}
+            width={width}
+            height={height}
+            viewBox={`0 0 ${width} ${height}`}
+            role={title ? "img" : undefined}
+            aria-hidden={title ? undefined : "true"}
+            style={{ color }}
+            {...rest}
+        >
+            {title ? <title>{title}</title> : null}
+            {points.length > 1 && fill ? (
+                <path d={`${line}L${width},${height}L0,${height}Z`} className="dr-sparkline__fill" />
+            ) : null}
+            {points.length > 1 ? (
+                <path d={line} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" />
+            ) : null}
+            {points.length ? <circle cx={points.at(-1)[0]} cy={points.at(-1)[1]} r={2} fill="currentColor" /> : null}
+        </svg>
     )
 }
 
@@ -738,52 +757,48 @@ export function Timeline({
         }
         event.preventDefault()
     }
-    return h(
-        "div",
-        { className: cx("dr-timeline", disabled && "dr-timeline--disabled", className), style, ...rest },
-        onPlayPause
-            ? h(
-                "button",
-                {
-                    type: "button",
-                    className: "dr-timeline__play",
-                    onClick: () => onPlayPause(!playing),
-                    disabled,
-                    "aria-label": playing ? "Pause" : "Play",
-                },
-                h(Icon, { name: playing ? "pause" : "play", size: 16 }),
-            )
-            : null,
-        h("span", { className: "dr-timeline__time" }, show(value)),
-        h(
-            "div",
-            {
-                className: "dr-timeline__track",
-                ref: track,
-                role: "slider",
-                tabIndex: disabled ? -1 : 0,
-                "aria-valuemin": start,
-                "aria-valuemax": end,
-                "aria-valuenow": value,
-                "aria-valuetext": show(value),
-                onPointerDown,
-                onPointerMove,
-                onKeyDown,
-                style: { touchAction: "none" },
-            },
-            h("div", { className: "dr-timeline__rail" }),
-            h("div", { className: "dr-timeline__done", style: { width: `${fraction * 100}%` } }),
-            markers.map((marker, index) =>
-                h("span", {
-                    key: index,
-                    className: cx("dr-timeline__marker", marker.tone && `dr-timeline__marker--${marker.tone}`),
-                    style: { left: `${Math.min(1, Math.max(0, (marker.t - start) / span)) * 100}%` },
-                    title: marker.label,
-                })
-            ),
-            h("div", { className: "dr-timeline__thumb", style: { left: `${fraction * 100}%` } }),
-        ),
-        h("span", { className: "dr-timeline__time dr-timeline__time--end" }, show(end)),
+    return (
+        <div className={cx("dr-timeline", disabled && "dr-timeline--disabled", className)} style={style} {...rest}>
+            {onPlayPause ? (
+                <button
+                    type="button"
+                    className="dr-timeline__play"
+                    onClick={() => onPlayPause(!playing)}
+                    disabled={disabled}
+                    aria-label={playing ? "Pause" : "Play"}
+                >
+                    <Icon name={playing ? "pause" : "play"} size={16} />
+                </button>
+            ) : null}
+            <span className="dr-timeline__time">{show(value)}</span>
+            <div
+                className="dr-timeline__track"
+                ref={track}
+                role="slider"
+                tabIndex={disabled ? -1 : 0}
+                aria-valuemin={start}
+                aria-valuemax={end}
+                aria-valuenow={value}
+                aria-valuetext={show(value)}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onKeyDown={onKeyDown}
+                style={{ touchAction: "none" }}
+            >
+                <div className="dr-timeline__rail" />
+                <div className="dr-timeline__done" style={{ width: `${fraction * 100}%` }} />
+                {markers.map((marker, index) => (
+                    <span
+                        key={index}
+                        className={cx("dr-timeline__marker", marker.tone && `dr-timeline__marker--${marker.tone}`)}
+                        style={{ left: `${Math.min(1, Math.max(0, (marker.t - start) / span)) * 100}%` }}
+                        title={marker.label}
+                    />
+                ))}
+                <div className="dr-timeline__thumb" style={{ left: `${fraction * 100}%` }} />
+            </div>
+            <span className="dr-timeline__time dr-timeline__time--end">{show(end)}</span>
+        </div>
     )
 }
 
@@ -794,9 +809,18 @@ export function Timeline({
  * @param {{ stream?: MediaStream | null, src?: string | null, alt?: string, fit?: "contain" | "cover",
  *   height?: string | number, placeholder?: any, ref?: any, className?: string, style?: object }} props
  */
-export function MediaFrame(
-    { stream, src, alt = "", fit = "contain", height = 360, placeholder = "No video", ref, className, style, ...rest },
-) {
+export function MediaFrame({
+    stream,
+    src,
+    alt = "",
+    fit = "contain",
+    height = 360,
+    placeholder = "No video",
+    ref,
+    className,
+    style,
+    ...rest
+}) {
     const element = useRef(null)
     const [playing, setPlaying] = useState(false)
     const isVideo = stream !== undefined
@@ -816,28 +840,28 @@ export function MediaFrame(
         }
     }
     const shown = isVideo ? stream && playing : Boolean(src)
-    return h(
-        "div",
-        {
-            className: cx("dr-media", className),
-            style: { maxHeight: height, aspectRatio: "16 / 9", ...style },
-            ...rest,
-        },
-        isVideo
-            ? h("video", {
-                ref: setRef,
-                className: "dr-media__el",
-                style: { objectFit: fit },
-                autoPlay: true,
-                muted: true,
-                playsInline: true,
-                onPlaying: () => setPlaying(true),
-                onEmptied: () => setPlaying(false),
-            })
-            : src
-            ? h("img", { ref: setRef, className: "dr-media__el", style: { objectFit: fit }, src, alt })
-            : null,
-        !shown && placeholder ? h("div", { className: "dr-media__placeholder" }, placeholder) : null,
+    return (
+        <div
+            className={cx("dr-media", className)}
+            style={{ maxHeight: height, aspectRatio: "16 / 9", ...style }}
+            {...rest}
+        >
+            {isVideo ? (
+                <video
+                    ref={setRef}
+                    className="dr-media__el"
+                    style={{ objectFit: fit }}
+                    autoPlay={true}
+                    muted={true}
+                    playsInline={true}
+                    onPlaying={() => setPlaying(true)}
+                    onEmptied={() => setPlaying(false)}
+                />
+            ) : src ? (
+                <img ref={setRef} className="dr-media__el" style={{ objectFit: fit }} src={src} alt={alt} />
+            ) : null}
+            {!shown && placeholder ? <div className="dr-media__placeholder">{placeholder}</div> : null}
+        </div>
     )
 }
 

@@ -20,17 +20,20 @@ export function usePersistentState(key, initial) {
         }
         return typeof initial === "function" ? initial() : initial
     })
-    const set = useCallback((next) => {
-        setValue((old) => {
-            const resolved = typeof next === "function" ? next(old) : next
-            try {
-                globalThis.localStorage?.setItem(key, JSON.stringify(resolved))
-            } catch {
-                // storage blocked or full
-            }
-            return resolved
-        })
-    }, [key])
+    const set = useCallback(
+        (next) => {
+            setValue((old) => {
+                const resolved = typeof next === "function" ? next(old) : next
+                try {
+                    globalThis.localStorage?.setItem(key, JSON.stringify(resolved))
+                } catch {
+                    // storage blocked or full
+                }
+                return resolved
+            })
+        },
+        [key],
+    )
     return [value, set]
 }
 
@@ -41,7 +44,10 @@ const isTyping = (event) => {
 
 /** "mod+k" → does `event` match it (mod = ⌘ on Mac, Ctrl elsewhere)? */
 export function matchesHotkey(event, combo) {
-    const parts = combo.toLowerCase().split("+").map((part) => part.trim())
+    const parts = combo
+        .toLowerCase()
+        .split("+")
+        .map((part) => part.trim())
     const key = parts.pop()
     const mac = /mac|iphone|ipad/i.test(globalThis.navigator?.platform ?? "")
     const want = {
@@ -59,9 +65,13 @@ export function matchesHotkey(event, combo) {
         left: "arrowleft",
         right: "arrowright",
     }
-    return (pressed === (named[key] ?? key) || (event.code ?? "").toLowerCase() === `key${key}`) &&
-        event.ctrlKey === want.ctrl && event.metaKey === want.meta && event.altKey === want.alt &&
-        (event.shiftKey === want.shift || key.length === 1 && !/[a-z0-9]/.test(key))
+    return (
+        (pressed === (named[key] ?? key) || (event.code ?? "").toLowerCase() === `key${key}`) &&
+        event.ctrlKey === want.ctrl &&
+        event.metaKey === want.meta &&
+        event.altKey === want.alt &&
+        (event.shiftKey === want.shift || (key.length === 1 && !/[a-z0-9]/.test(key)))
+    )
 }
 
 /**
@@ -172,12 +182,19 @@ export function useEscape(handler, enabled = true) {
 
 /** Whether a CSS media query matches, live. */
 export function useMediaQuery(query) {
-    const subscribe = useCallback((notify) => {
-        const list = globalThis.matchMedia?.(query)
-        list?.addEventListener("change", notify)
-        return () => list?.removeEventListener("change", notify)
-    }, [query])
-    return useSyncExternalStore(subscribe, () => !!globalThis.matchMedia?.(query).matches, () => false)
+    const subscribe = useCallback(
+        (notify) => {
+            const list = globalThis.matchMedia?.(query)
+            list?.addEventListener("change", notify)
+            return () => list?.removeEventListener("change", notify)
+        },
+        [query],
+    )
+    return useSyncExternalStore(
+        subscribe,
+        () => !!globalThis.matchMedia?.(query).matches,
+        () => false,
+    )
 }
 
 /** A phone-sized or touch-first viewport (narrow, or a coarse pointer with no hover). */
@@ -252,10 +269,10 @@ export function useGamepad({ deadzone = 0.08, enabled = true } = {}) {
             const found = [...navigator.getGamepads()].find(Boolean)
             const next = found
                 ? {
-                    id: found.id,
-                    axes: found.axes.map((value) => (Math.abs(value) < deadzone ? 0 : value)),
-                    buttons: found.buttons.map((button) => button.pressed),
-                }
+                      id: found.id,
+                      axes: found.axes.map((value) => (Math.abs(value) < deadzone ? 0 : value)),
+                      buttons: found.buttons.map((button) => button.pressed),
+                  }
                 : null
             const signature = JSON.stringify(next)
             if (signature !== last) {

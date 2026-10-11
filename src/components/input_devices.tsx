@@ -1,8 +1,8 @@
 // Touch and pointer input: a virtual joystick, a stick readout, a D-pad, a file drop zone, a color swatch and HUD key
 // hints.
 import { useEffect, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { Icon } from "./icon.js"
+import { cx } from "../cx"
+import { Icon } from "./icon"
 
 /** Pointer offset from a circle's center → stick value in -1..1 (y up), clamped to the unit circle. */
 export function stickValue(dx, dy, radius) {
@@ -40,48 +40,48 @@ export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label
         onChange?.({ x: 0, y: 0 })
         onEnd?.()
     }
-    return h(
-        "div",
-        {
-            ref: base,
-            className: cx(
+    return (
+        <div
+            ref={base}
+            className={cx(
                 "dr-joystick",
                 knob.active && "dr-joystick--active",
                 disabled && "dr-joystick--disabled",
                 className,
-            ),
-            style: { width: size, height: size, touchAction: "none", ...style },
-            role: "application",
-            "aria-label": typeof label === "string" ? label : "Joystick",
-            onPointerDown: (event) => {
+            )}
+            style={{ width: size, height: size, touchAction: "none", ...style }}
+            role="application"
+            aria-label={typeof label === "string" ? label : "Joystick"}
+            onPointerDown={(event) => {
                 if (disabled) {
                     return
                 }
                 event.currentTarget.setPointerCapture?.(event.pointerId)
                 onStart?.()
                 update(event)
-            },
-            onPointerMove: (event) => {
+            }}
+            onPointerMove={(event) => {
                 if (knob.active && !disabled) {
                     update(event)
                 }
-            },
-            onPointerUp: () => knob.active && release(),
-            onPointerCancel: () => knob.active && release(),
-            onLostPointerCapture: () => knob.active && release(),
-            ...rest,
-        },
-        h("span", { className: "dr-joystick__ring" }),
-        h("span", { className: "dr-joystick__cross" }),
-        h("span", {
-            className: "dr-joystick__knob",
-            style: {
-                width: size * 0.36,
-                height: size * 0.36,
-                transform: `translate(calc(-50% + ${knob.x * radius}px), calc(-50% + ${-knob.y * radius}px))`,
-            },
-        }),
-        label ? h("span", { className: "dr-joystick__label" }, label) : null,
+            }}
+            onPointerUp={() => knob.active && release()}
+            onPointerCancel={() => knob.active && release()}
+            onLostPointerCapture={() => knob.active && release()}
+            {...rest}
+        >
+            <span className="dr-joystick__ring" />
+            <span className="dr-joystick__cross" />
+            <span
+                className="dr-joystick__knob"
+                style={{
+                    width: size * 0.36,
+                    height: size * 0.36,
+                    transform: `translate(calc(-50% + ${knob.x * radius}px), calc(-50% + ${-knob.y * radius}px))`,
+                }}
+            />
+            {label ? <span className="dr-joystick__label">{label}</span> : null}
+        </div>
     )
 }
 
@@ -93,20 +93,20 @@ export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label
 export function StickIndicator({ value, size = 22, label = "stick", className, ...rest }) {
     const x = value?.x ?? 0
     const y = value?.y ?? 0
-    return h(
-        "svg",
-        {
-            className: cx("dr-stick-indicator", value && (x || y) && "dr-stick-indicator--live", className),
-            width: size,
-            height: size,
-            viewBox: "-1.2 -1.2 2.4 2.4",
-            role: "img",
-            "aria-label": `${label} ${x.toFixed(2)}, ${y.toFixed(2)}`,
-            ...rest,
-        },
-        h("circle", { r: 1, className: "dr-stick-indicator__ring" }),
-        h("line", { x1: 0, y1: 0, x2: x, y2: -y, className: "dr-stick-indicator__arm" }),
-        h("circle", { cx: x, cy: -y, r: 0.28, className: "dr-stick-indicator__dot" }),
+    return (
+        <svg
+            className={cx("dr-stick-indicator", value && (x || y) && "dr-stick-indicator--live", className)}
+            width={size}
+            height={size}
+            viewBox="-1.2 -1.2 2.4 2.4"
+            role="img"
+            aria-label={`${label} ${x.toFixed(2)}, ${y.toFixed(2)}`}
+            {...rest}
+        >
+            <circle r={1} className="dr-stick-indicator__ring" />
+            <line x1={0} y1={0} x2={x} y2={-y} className="dr-stick-indicator__arm" />
+            <circle cx={x} cy={-y} r={0.28} className="dr-stick-indicator__dot" />
+        </svg>
     )
 }
 
@@ -141,36 +141,36 @@ export function DPad({ onPress, onRelease, size = 132, center, disabled, held = 
             onRelease?.(dir)
         }
     }
-    return h(
-        "div",
-        {
-            className: cx("dr-dpad", disabled && "dr-dpad--disabled", className),
-            style: { width: size, height: size, ...style },
-            ...rest,
-        },
-        DIRECTIONS.map(([dir, icon]) => {
-            if (dir === "center" && center === undefined) {
-                return h("span", { key: dir, className: "dr-dpad__hub" })
-            }
-            return h(
-                "button",
-                {
-                    key: dir,
-                    type: "button",
-                    "aria-label": dir,
-                    "aria-pressed": down === dir || held.includes(dir),
-                    disabled,
-                    className: cx("dr-dpad__btn", `dr-dpad__btn--${dir}`),
-                    style: { touchAction: "none" },
-                    onPointerDown: (event) => press(dir, event),
-                    onPointerUp: () => release(dir),
-                    onPointerCancel: () => release(dir),
-                    onLostPointerCapture: () => release(dir),
-                    onContextMenu: (event) => event.preventDefault(),
-                },
-                icon ? h(Icon, { name: icon, size: Math.round(size * 0.15) }) : center,
-            )
-        }),
+    return (
+        <div
+            className={cx("dr-dpad", disabled && "dr-dpad--disabled", className)}
+            style={{ width: size, height: size, ...style }}
+            {...rest}
+        >
+            {DIRECTIONS.map(([dir, icon]) => {
+                if (dir === "center" && center === undefined) {
+                    return <span key={dir} className="dr-dpad__hub" />
+                }
+                return (
+                    <button
+                        key={dir}
+                        type="button"
+                        aria-label={dir}
+                        aria-pressed={down === dir || held.includes(dir)}
+                        disabled={disabled}
+                        className={cx("dr-dpad__btn", `dr-dpad__btn--${dir}`)}
+                        style={{ touchAction: "none" }}
+                        onPointerDown={(event) => press(dir, event)}
+                        onPointerUp={() => release(dir)}
+                        onPointerCancel={() => release(dir)}
+                        onLostPointerCapture={() => release(dir)}
+                        onContextMenu={(event) => event.preventDefault()}
+                    >
+                        {icon ? <Icon name={icon} size={Math.round(size * 0.15)} /> : center}
+                    </button>
+                )
+            })}
+        </div>
     )
 }
 
@@ -179,34 +179,35 @@ export function DPad({ onPress, onRelease, size = 132, center, disabled, held = 
  * @param {{ onFiles: (files: File[]) => void, accept?: string, multiple?: boolean, disabled?: boolean, title?: any,
  *   hint?: any, icon?: string, children?: any, className?: string, style?: object }} props
  */
-export function FileDrop(
-    {
-        onFiles,
-        accept,
-        multiple = false,
-        disabled,
-        title = "Drop a file here",
-        hint = "or click to choose",
-        icon = "upload",
-        children,
-        className,
-        style,
-        ...rest
-    },
-) {
+export function FileDrop({
+    onFiles,
+    accept,
+    multiple = false,
+    disabled,
+    title = "Drop a file here",
+    hint = "or click to choose",
+    icon = "upload",
+    children,
+    className,
+    style,
+    ...rest
+}) {
     const input = useRef(null)
     const [over, setOver] = useState(false)
     const accepts = (file) => {
         if (!accept) {
             return true
         }
-        return accept.split(",").map((part) => part.trim().toLowerCase()).some((rule) =>
-            rule.startsWith(".")
-                ? file.name.toLowerCase().endsWith(rule)
-                : rule.endsWith("/*")
-                ? file.type.startsWith(rule.slice(0, -1))
-                : file.type === rule
-        )
+        return accept
+            .split(",")
+            .map((part) => part.trim().toLowerCase())
+            .some((rule) =>
+                rule.startsWith(".")
+                    ? file.name.toLowerCase().endsWith(rule)
+                    : rule.endsWith("/*")
+                      ? file.type.startsWith(rule.slice(0, -1))
+                      : file.type === rule,
+            )
     }
     const take = (list) => {
         const files = [...(list ?? [])].filter(accepts)
@@ -214,53 +215,59 @@ export function FileDrop(
             onFiles?.(multiple ? files : files.slice(0, 1))
         }
     }
-    return h(
-        "div",
-        {
-            className: cx("dr-filedrop", over && "dr-filedrop--over", disabled && "dr-filedrop--disabled", className),
-            style,
-            role: "button",
-            tabIndex: disabled ? -1 : 0,
-            onClick: () => !disabled && input.current?.click(),
-            onKeyDown: (event) => {
+    return (
+        <div
+            className={cx("dr-filedrop", over && "dr-filedrop--over", disabled && "dr-filedrop--disabled", className)}
+            style={style}
+            role="button"
+            tabIndex={disabled ? -1 : 0}
+            onClick={() => !disabled && input.current?.click()}
+            onKeyDown={(event) => {
                 if (!disabled && (event.key === "Enter" || event.key === " ")) {
                     event.preventDefault()
                     input.current?.click()
                 }
-            },
-            onDragOver: (event) => {
+            }}
+            onDragOver={(event) => {
                 if (disabled) {
                     return
                 }
                 event.preventDefault()
                 setOver(true)
-            },
-            onDragLeave: () => setOver(false),
-            onDrop: (event) => {
+            }}
+            onDragLeave={() => setOver(false)}
+            onDrop={(event) => {
                 event.preventDefault()
                 setOver(false)
                 if (!disabled) {
                     take(event.dataTransfer?.files)
                 }
-            },
-            ...rest,
-        },
-        h("input", {
-            ref: input,
-            type: "file",
-            accept,
-            multiple,
-            hidden: true,
-            onChange: (event) => {
-                take(event.target.files)
-                event.target.value = ""
-            },
-        }),
-        children ?? [
-            h(Icon, { key: "i", name: icon, size: 24, className: "dr-filedrop__icon" }),
-            h("div", { key: "t", className: "dr-filedrop__title" }, title),
-            hint ? h("div", { key: "h", className: "dr-filedrop__hint" }, hint) : null,
-        ],
+            }}
+            {...rest}
+        >
+            <input
+                ref={input}
+                type="file"
+                accept={accept}
+                multiple={multiple}
+                hidden={true}
+                onChange={(event) => {
+                    take(event.target.files)
+                    event.target.value = ""
+                }}
+            />
+            {children ?? [
+                <Icon key="i" name={icon} size={24} className="dr-filedrop__icon" />,
+                <div key="t" className="dr-filedrop__title">
+                    {title}
+                </div>,
+                hint ? (
+                    <div key="h" className="dr-filedrop__hint">
+                        {hint}
+                    </div>
+                ) : null,
+            ]}
+        </div>
     )
 }
 
@@ -270,35 +277,33 @@ export function FileDrop(
  *   label?: string, className?: string }} props
  */
 export function ColorSwatch({ value, onChange, presets, disabled, label = "Color", className, ...rest }) {
-    return h(
-        "span",
-        { className: cx("dr-swatch", className), ...rest },
-        h(
-            "label",
-            { className: cx("dr-swatch__pick", disabled && "dr-swatch__pick--disabled"), title: value },
-            h("span", { className: "dr-swatch__color", style: { background: value } }),
-            h("input", {
-                type: "color",
-                className: "dr-sr-only",
-                "aria-label": label,
-                value,
-                disabled,
-                onChange: (event) => onChange?.(event.target.value),
-            }),
-        ),
-        presets?.map((preset) =>
-            h("button", {
-                key: preset,
-                type: "button",
-                disabled,
-                title: preset,
-                "aria-label": `${label} ${preset}`,
-                "aria-pressed": preset.toLowerCase() === String(value).toLowerCase(),
-                className: "dr-swatch__preset",
-                style: { background: preset },
-                onClick: () => onChange?.(preset),
-            })
-        ),
+    return (
+        <span className={cx("dr-swatch", className)} {...rest}>
+            <label className={cx("dr-swatch__pick", disabled && "dr-swatch__pick--disabled")} title={value}>
+                <span className="dr-swatch__color" style={{ background: value }} />
+                <input
+                    type="color"
+                    className="dr-sr-only"
+                    aria-label={label}
+                    value={value}
+                    disabled={disabled}
+                    onChange={(event) => onChange?.(event.target.value)}
+                />
+            </label>
+            {presets?.map((preset) => (
+                <button
+                    key={preset}
+                    type="button"
+                    disabled={disabled}
+                    title={preset}
+                    aria-label={`${label} ${preset}`}
+                    aria-pressed={preset.toLowerCase() === String(value).toLowerCase()}
+                    className="dr-swatch__preset"
+                    style={{ background: preset }}
+                    onClick={() => onChange?.(preset)}
+                />
+            ))}
+        </span>
     )
 }
 
@@ -307,19 +312,19 @@ export function ColorSwatch({ value, onChange, presets, disabled, label = "Color
  * @param {{ hints: [string | string[], any][], vertical?: boolean, className?: string }} props
  */
 export function KeyHints({ hints = [], vertical = false, className, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-keyhints", vertical && "dr-keyhints--vertical", className), ...rest },
-        hints.map(([keys, label], index) =>
-            h(
-                "span",
-                { key: index, className: "dr-keyhints__item" },
-                (Array.isArray(keys) ? keys : String(keys).split(" ")).map((key, keyIndex) =>
-                    h("kbd", { key: keyIndex, className: "dr-kbd" }, key)
-                ),
-                h("span", { className: "dr-keyhints__label" }, label),
-            )
-        ),
+    return (
+        <div className={cx("dr-keyhints", vertical && "dr-keyhints--vertical", className)} {...rest}>
+            {hints.map(([keys, label], index) => (
+                <span key={index} className="dr-keyhints__item">
+                    {(Array.isArray(keys) ? keys : String(keys).split(" ")).map((key, keyIndex) => (
+                        <kbd key={keyIndex} className="dr-kbd">
+                            {key}
+                        </kbd>
+                    ))}
+                    <span className="dr-keyhints__label">{label}</span>
+                </span>
+            ))}
+        </div>
     )
 }
 

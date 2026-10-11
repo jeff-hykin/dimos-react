@@ -4,8 +4,8 @@
 // localStorage ("portal.theme" / "portal.corners", Desktop's origin, which an app under /apps/<name>/ shares), so a
 // change in Settings → Appearance is a `storage` event in every open app. Off Desktop the bundled copy of those tokens
 // (tokens.js) stands in. Components (css.js) use only the tokens, so they follow every skin.
-import { SKINS, TOKENS_CSS } from "./tokens.js"
-import { COMPONENT_CSS } from "./css.js"
+import { SKINS, TOKENS_CSS } from "./tokens"
+import { COMPONENT_CSS } from "./css"
 
 export { SKINS }
 
@@ -83,11 +83,15 @@ export function installThemeCss({ themeUrl = null, bundled } = {}) {
     link.dataset.dimosReactTheme = ""
     const loaded = new Promise((resolve) => {
         link.addEventListener("load", () => resolve(), { once: true })
-        link.addEventListener("error", () => {
-            // Desktop's sheet unreachable: the bundled copy keeps the page themed
-            ensureStyle("tokens", TOKENS_CSS, { first: true })
-            resolve()
-        }, { once: true })
+        link.addEventListener(
+            "error",
+            () => {
+                // Desktop's sheet unreachable: the bundled copy keeps the page themed
+                ensureStyle("tokens", TOKENS_CSS, { first: true })
+                resolve()
+            },
+            { once: true },
+        )
     })
     document.head.prepend(link)
     return loaded
@@ -179,7 +183,7 @@ export function signalReady() {
             } catch {
                 // not Desktop's origin
             }
-        })
+        }),
     )
 }
 

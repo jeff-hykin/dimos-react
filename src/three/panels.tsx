@@ -9,13 +9,13 @@
 //     h(LayersPanel, { manager: layers })
 //     h(TfPanel, { tf, fixedFrame, onFixedFrame, issues, onHover: setHovered })
 import { useEffect, useMemo, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { useDataSource } from "../data.js"
-import { useStore } from "./store.js"
-import { LayerManager } from "./layers/manager.js"
-import { Badge, Field, Select, Toggle } from "../components/controls.js"
-import { Icon } from "../components/icon.js"
-import { Alert, EmptyState } from "../components/feedback.js"
+import { cx } from "../cx"
+import { useDataSource } from "../data"
+import { useStore } from "./store"
+import { LayerManager } from "./layers/manager"
+import { Badge, Field, Select, Toggle } from "../components/controls"
+import { Icon } from "../components/icon"
+import { Alert, EmptyState } from "../components/feedback"
 
 /**
  * A LayerManager for the data source in effect, watching its topics while mounted.
@@ -34,60 +34,50 @@ function LayerRow({ manager, entry }) {
     const [open, setOpen] = useState(false)
     const Settings = entry.type.Settings
     const status = entry.status
-    return h(
-        "div",
-        {
-            className: cx(
+    return (
+        <div
+            className={cx(
                 "dr-layer-row",
                 entry.enabled && "dr-layer-row--on",
                 status.problem && "dr-layer-row--problem",
-            ),
-            "data-key": entry.topic.key,
-        },
-        h(
-            "div",
-            { className: "dr-layer-line" },
-            h(Toggle, {
-                value: entry.enabled,
-                size: "sm",
-                "aria-label": `Show ${entry.topic.name}`,
-                onChange: (enabled) => manager.setEnabled(entry.topic.key, enabled),
-            }),
-            h(
-                "button",
-                {
-                    type: "button",
-                    className: "dr-layer-name",
-                    onClick: () => setOpen(!open),
-                    disabled: !Settings,
-                    title: entry.topic.key,
-                    "aria-expanded": Settings ? open : undefined,
-                },
-                h("span", { className: "dr-layer-topic" }, entry.topic.name),
-                h("span", { className: "dr-layer-type" }, entry.topic.type.split(".")[1]),
-                Settings
-                    ? h(
-                        "span",
-                        { className: cx("dr-layer-chevron", open && "dr-layer-chevron--open") },
-                        h(Icon, { name: "chevron-right", size: 14 }),
-                    )
-                    : null,
-            ),
-        ),
-        entry.enabled && (status.problem || status.info)
-            ? h(
-                "div",
-                { className: cx("dr-layer-status", status.problem && "dr-layer-status--problem") },
-                status.problem ?? status.info,
-            )
-            : null,
-        open && Settings
-            ? h(
-                "div",
-                { className: "dr-layer-settings" },
-                h(Settings, { settings: entry.settings, topic: entry.topic }),
-            )
-            : null,
+            )}
+            data-key={entry.topic.key}
+        >
+            <div className="dr-layer-line">
+                <Toggle
+                    value={entry.enabled}
+                    size="sm"
+                    aria-label={`Show ${entry.topic.name}`}
+                    onChange={(enabled) => manager.setEnabled(entry.topic.key, enabled)}
+                />
+                <button
+                    type="button"
+                    className="dr-layer-name"
+                    onClick={() => setOpen(!open)}
+                    disabled={!Settings}
+                    title={entry.topic.key}
+                    aria-expanded={Settings ? open : undefined}
+                >
+                    <span className="dr-layer-topic">{entry.topic.name}</span>
+                    <span className="dr-layer-type">{entry.topic.type.split(".")[1]}</span>
+                    {Settings ? (
+                        <span className={cx("dr-layer-chevron", open && "dr-layer-chevron--open")}>
+                            <Icon name="chevron-right" size={14} />
+                        </span>
+                    ) : null}
+                </button>
+            </div>
+            {entry.enabled && (status.problem || status.info) ? (
+                <div className={cx("dr-layer-status", status.problem && "dr-layer-status--problem")}>
+                    {status.problem ?? status.info}
+                </div>
+            ) : null}
+            {open && Settings ? (
+                <div className="dr-layer-settings">
+                    <Settings settings={entry.settings} topic={entry.topic} />
+                </div>
+            ) : null}
+        </div>
     )
 }
 
@@ -105,39 +95,35 @@ export function LayersPanel({ manager, emptyText, className }) {
     }
     const drawn = new Set(list.map((entry) => entry.topic.key))
     const other = topics.filter((topic) => !drawn.has(topic.key))
-    return h(
-        "div",
-        { className: cx("dr-layers", className) },
-        !list.length
-            ? h(EmptyState, {
-                icon: "layers",
-                title: "Waiting for topics…",
-                message: emptyText ?? "Start a blueprint (or a replay) and they appear here.",
-            })
-            : null,
-        [...groups].map(([label, entries]) =>
-            h(
-                "section",
-                { key: label, className: "dr-layer-group" },
-                h("h3", { className: "dr-layer-group-title" }, label),
-                entries.map((entry) => h(LayerRow, { key: entry.topic.key, manager, entry })),
-            )
-        ),
-        other.length
-            ? h(
-                "details",
-                { className: "dr-layer-group dr-layer-other" },
-                h("summary", null, `${other.length} other topics (not drawn)`),
-                other.map((topic) =>
-                    h(
-                        "div",
-                        { key: topic.key, className: "dr-layer-other-topic" },
-                        h("span", null, topic.name),
-                        h("span", { className: "dr-layer-type" }, topic.type),
-                    )
-                ),
-            )
-            : null,
+    return (
+        <div className={cx("dr-layers", className)}>
+            {!list.length ? (
+                <EmptyState
+                    icon="layers"
+                    title="Waiting for topics…"
+                    message={emptyText ?? "Start a blueprint (or a replay) and they appear here."}
+                />
+            ) : null}
+            {[...groups].map(([label, entries]) => (
+                <section key={label} className="dr-layer-group">
+                    <h3 className="dr-layer-group-title">{label}</h3>
+                    {entries.map((entry) => (
+                        <LayerRow key={entry.topic.key} manager={manager} entry={entry} />
+                    ))}
+                </section>
+            ))}
+            {other.length ? (
+                <details className="dr-layer-group dr-layer-other">
+                    <summary>{`${other.length} other topics (not drawn)`}</summary>
+                    {other.map((topic) => (
+                        <div key={topic.key} className="dr-layer-other-topic">
+                            <span>{topic.name}</span>
+                            <span className="dr-layer-type">{topic.type}</span>
+                        </div>
+                    ))}
+                </details>
+            ) : null}
+        </div>
     )
 }
 
@@ -149,29 +135,30 @@ function TreeRows({ snapshot, frame, depth, seen, hovered, flagged, onHover, row
     const edge = snapshot.edges.find((other) => other.child === frame)
     const stale = snapshot.problems.stale.includes(frame)
     rows.push(
-        h(
-            "div",
-            {
-                key: frame,
-                className: cx(
-                    "dr-tf-frame",
-                    stale && "dr-tf-frame--stale",
-                    flagged.has(frame) && "dr-tf-frame--flagged",
-                    hovered === frame && "dr-tf-frame--highlighted",
-                ),
-                style: { paddingLeft: depth * 14 + 4 },
-                "data-frame": frame,
-                title: onHover ? "Hover to find it in the 3D view" : undefined,
-                onPointerEnter: () => onHover?.(frame),
-                onPointerLeave: () => onHover?.(null),
-            },
-            h("span", null, frame),
-            edge
-                ? h("span", { className: "dr-tf-age" }, edge.isStatic ? "static" : `${Math.round(edge.ageMs)} ms`)
-                : null,
-        ),
+        <div
+            key={frame}
+            className={cx(
+                "dr-tf-frame",
+                stale && "dr-tf-frame--stale",
+                flagged.has(frame) && "dr-tf-frame--flagged",
+                hovered === frame && "dr-tf-frame--highlighted",
+            )}
+            style={{ paddingLeft: depth * 14 + 4 }}
+            data-frame={frame}
+            title={onHover ? "Hover to find it in the 3D view" : undefined}
+            onPointerEnter={() => onHover?.(frame)}
+            onPointerLeave={() => onHover?.(null)}
+        >
+            <span>{frame}</span>
+            {edge ? (
+                <span className="dr-tf-age">{edge.isStatic ? "static" : `${Math.round(edge.ageMs)} ms`}</span>
+            ) : null}
+        </div>,
     )
-    const children = snapshot.edges.filter((other) => other.parent === frame).map((other) => other.child).sort()
+    const children = snapshot.edges
+        .filter((other) => other.parent === frame)
+        .map((other) => other.child)
+        .sort()
     for (const child of children) {
         TreeRows({ snapshot, frame: child, depth: depth + 1, seen, hovered, flagged, onHover, rows })
     }
@@ -180,8 +167,8 @@ function TreeRows({ snapshot, frame, depth, seen, hovered, flagged, onHover, row
 /**
  * The TF tree as an indented list (age per edge, stale and flagged frames marked), what's wrong with it, and which
  * frame the view is fixed to (`fixedFrame` = the choice, "" = auto; `activeFixedFrame` = the one in use).
- * @param {{ tf: import("./tf.js").TfTree, fixedFrame?: string, activeFixedFrame?: string,
- *   onFixedFrame?: (frame: string) => void, issues?: import("./tf_check.js").TfIssue[], robotFrame?: string,
+ * @param {{ tf: import("./tf").TfTree, fixedFrame?: string, activeFixedFrame?: string,
+ *   onFixedFrame?: (frame: string) => void, issues?: import("./tf_check").TfIssue[], robotFrame?: string,
  *   robotFound?: boolean, hovered?: string | null, hoveredPlaced?: boolean, onHover?: (frame: string | null) => void,
  *   className?: string }} props
  */
@@ -220,68 +207,64 @@ export function TfPanel({
     for (const root of snapshot.problems.roots) {
         TreeRows({ snapshot, frame: root, depth: 0, seen: new Set(), hovered, flagged, onHover, rows })
     }
-    return h(
-        "div",
-        { className: cx("dr-tf-panel", className) },
-        onFixedFrame
-            ? h(
-                Field,
-                { label: "Fixed frame", hint: "everything is drawn relative to this frame" },
-                h(Select, {
-                    value: fixedFrame,
-                    options: [["", `auto (${active})`], ...snapshot.frames.map((frame) => [frame, frame])],
-                    onChange: onFixedFrame,
-                }),
-            )
-            : null,
-        robotFrame
-            ? h(
-                "p",
-                { className: "dr-hint" },
-                `Robot frame: ${robotFrame} `,
-                h(Badge, { tone: robotFound ? "ok" : "warn" }, robotFound ? "in TF" : "not in TF yet"),
-            )
-            : null,
-        issues.map((issue) =>
-            h(
-                Alert,
-                {
-                    key: issue.kind + issue.summary,
-                    tone: "warn",
-                    title: issue.summary,
-                    "data-frames": issue.frames.join(","),
-                },
-                issue.detail,
-            )
-        ),
-        !snapshot.frames.length ? h(EmptyState, { icon: "info", title: "no tf yet" }) : null,
-        h("div", { className: "dr-tf-tree", ref: tree, onPointerLeave: () => onHover?.(null) }, rows),
-        hovered && !hoveredPlaced
-            ? h("p", { className: "dr-hint" }, `${hovered} isn't connected to ${active}: it can't be shown in the view`)
-            : null,
+    return (
+        <div className={cx("dr-tf-panel", className)}>
+            {onFixedFrame ? (
+                <Field label="Fixed frame" hint="everything is drawn relative to this frame">
+                    <Select
+                        value={fixedFrame}
+                        options={[["", `auto (${active})`], ...snapshot.frames.map((frame) => [frame, frame])]}
+                        onChange={onFixedFrame}
+                    />
+                </Field>
+            ) : null}
+            {robotFrame ? (
+                <p className="dr-hint">
+                    {`Robot frame: ${robotFrame} `}
+                    <Badge tone={robotFound ? "ok" : "warn"}>{robotFound ? "in TF" : "not in TF yet"}</Badge>
+                </p>
+            ) : null}
+            {issues.map((issue) => (
+                <Alert
+                    key={issue.kind + issue.summary}
+                    tone="warn"
+                    title={issue.summary}
+                    data-frames={issue.frames.join(",")}
+                >
+                    {issue.detail}
+                </Alert>
+            ))}
+            {!snapshot.frames.length ? <EmptyState icon="info" title="no tf yet" /> : null}
+            <div className="dr-tf-tree" ref={tree} onPointerLeave={() => onHover?.(null)}>
+                {rows}
+            </div>
+            {hovered && !hoveredPlaced ? (
+                <p className="dr-hint">{`${hovered} isn't connected to ${active}: it can't be shown in the view`}</p>
+            ) : null}
+        </div>
     )
 }
 
 /**
  * A quiet one-line note over the view's corner when the TF tree is broken; nothing when it's fine. `onOpen`: e.g.
  * open the TF panel, where the frames involved are marked.
- * @param {{ issues: import("./tf_check.js").TfIssue[], onOpen?: () => void, className?: string }} props
+ * @param {{ issues: import("./tf_check").TfIssue[], onOpen?: () => void, className?: string }} props
  */
 export function TfFootnote({ issues, onOpen, className }) {
     if (!issues?.length) {
         return null
     }
     const more = issues.length > 1 ? ` · +${issues.length - 1} more` : ""
-    return h(
-        "button",
-        {
-            type: "button",
-            className: cx("dr-tf-footnote", className),
-            "data-testid": "tf-footnote",
-            title: issues.map((issue) => `${issue.summary}: ${issue.detail}`).join("\n"),
-            onClick: onOpen,
-        },
-        h(Icon, { name: "warn", size: 13 }),
-        h("span", null, `TF: ${issues[0].summary}${more}`),
+    return (
+        <button
+            type="button"
+            className={cx("dr-tf-footnote", className)}
+            data-testid="tf-footnote"
+            title={issues.map((issue) => `${issue.summary}: ${issue.detail}`).join("\n")}
+            onClick={onOpen}
+        >
+            <Icon name="warn" size={13} />
+            <span>{`TF: ${issues[0].summary}${more}`}</span>
+        </button>
     )
 }

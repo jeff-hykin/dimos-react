@@ -2,10 +2,10 @@
 // fingerprint) and geometry_msgs.PointStamped (a clicked point, a goal). A sphere and a text label each, colored by
 // kind from the theme (--entity-person / --entity-object / --entity-location, else --danger / --ok / --info).
 import * as THREE from "three"
-import { LabelPool } from "../labels.js"
-import { cssColor } from "../robot_model.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { colorFor } from "./path.js"
+import { LabelPool } from "../labels"
+import { cssColor } from "../robot_model"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { colorFor } from "./path"
 
 const ENTITY_COLORS = {
     person: "var(--entity-person, var(--danger))",
@@ -44,7 +44,7 @@ export class LabeledPoints {
         this.#spheres.count = 0
         this.#spheres.frustumCulled = false
         this.root.add(this.#spheres, this.#labels.group)
-        const show = this.#show = (entities, frame, timestamp) => {
+        const show = (this.#show = (entities, frame, timestamp) => {
             this.#frame = frame
             this.#labels.begin()
             const matrix = new THREE.Matrix4()
@@ -66,7 +66,7 @@ export class LabeledPoints {
                 context.viewer.noteData(timestamp)
             }
             context.viewer.requestRender()
-        }
+        })
         if (!topic) {
             return
         }
@@ -77,10 +77,10 @@ export class LabeledPoints {
                     show(
                         Array.isArray(message.value)
                             ? message.value.map((entity) => ({
-                                label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
-                                color: ENTITY_COLORS[entity.type] ?? OTHER,
-                                position: new THREE.Vector3(entity.x, entity.y, entity.z),
-                            }))
+                                  label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
+                                  color: ENTITY_COLORS[entity.type] ?? OTHER,
+                                  position: new THREE.Vector3(entity.x, entity.y, entity.z),
+                              }))
                             : entitiesOf(message.bytes),
                         "",
                         message.timestamp,
@@ -93,11 +93,13 @@ export class LabeledPoints {
             this.#stop = subscribeDecoded(context, topic, { maxHz: 10 }, (message, timestamp) => {
                 const point = message.point ?? {}
                 show(
-                    [{
-                        label: topic.name,
-                        color: `#${colorFor(topic.name).getHexString()}`,
-                        position: new THREE.Vector3(point.x, point.y, point.z),
-                    }],
+                    [
+                        {
+                            label: topic.name,
+                            color: `#${colorFor(topic.name).getHexString()}`,
+                            position: new THREE.Vector3(point.x, point.y, point.z),
+                        },
+                    ],
                     message.header?.frame_id ?? "",
                     timestamp,
                 )
@@ -117,9 +119,10 @@ export class LabeledPoints {
             const entities = []
             for (const item of this.#data) {
                 const position = new THREE.Vector3(...(item.position ?? [0, 0, 0]))
-                const matrix = !item.frame || item.frame === frame.fixedFrame
-                    ? null
-                    : this.context.tf.lookup(item.frame, frame.fixedFrame)
+                const matrix =
+                    !item.frame || item.frame === frame.fixedFrame
+                        ? null
+                        : this.context.tf.lookup(item.frame, frame.fixedFrame)
                 if (item.frame && item.frame !== frame.fixedFrame && !matrix) {
                     continue
                 }
@@ -128,9 +131,11 @@ export class LabeledPoints {
                 }
                 entities.push({ label: item.label ?? "", color: item.color ?? "var(--warn)", position })
             }
-            const signature = entities.map((entity) =>
-                `${entity.label}|${entity.color}|${entity.position.toArray().map((v) => v.toFixed(3))}`
-            ).join("\n")
+            const signature = entities
+                .map(
+                    (entity) => `${entity.label}|${entity.color}|${entity.position.toArray().map((v) => v.toFixed(3))}`,
+                )
+                .join("\n")
             if (signature !== this.#placed) {
                 this.#placed = signature
                 this.#show(entities, "", undefined)

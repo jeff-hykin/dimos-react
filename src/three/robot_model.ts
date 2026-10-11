@@ -2,7 +2,7 @@
 // or a plain arrow. Real-world sized, +x forward (REP-103), base_link at the body's center (ground robots stand on
 // z = -height). Colors come from the theme (--primary body, --muted-fg joints, --warn nose) unless given.
 import * as THREE from "three"
-import { themeColors } from "../theme/theme.js"
+import { themeColors } from "../theme/theme"
 
 export const ROBOT_KINDS = ["dog", "humanoid", "wheeled", "drone", "arrow"]
 
@@ -11,7 +11,9 @@ export function cssColor(value, fallback = "#888888") {
     let text = value
     if (typeof value === "string" && value.startsWith("var(") && typeof document !== "undefined") {
         const name = value.slice(4, -1).split(",")[0].trim()
-        text = getComputedStyle(document.body ?? document.documentElement).getPropertyValue(name).trim()
+        text = getComputedStyle(document.body ?? document.documentElement)
+            .getPropertyValue(name)
+            .trim()
     }
     const color = new THREE.Color()
     try {

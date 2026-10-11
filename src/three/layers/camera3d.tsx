@@ -3,18 +3,17 @@
 // the shared camera stream (CameraStreams): a live H.264 track as a video texture, a replay's frames (an ImageBitmap /
 // ImageData) drawn into a canvas texture, depth as a GPU heat map.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { headerFrameId } from "../../lcm.js"
-import { themeColors } from "../../theme/theme.js"
-import { cameraInfoFor, isDepthTopic } from "../../components/camera.js"
-import { DEPTH_COLORMAPS } from "../../components/media.js"
-import { FatLines } from "../lines.js"
-import { cssColor } from "../robot_model.js"
-import { DepthMaterial } from "../../camera/depth.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { RangeInput } from "../look_editor.js"
-import { Field, Select, Slider, Toggle } from "../../components/controls.js"
+import { useStore } from "../store"
+import { headerFrameId } from "../../lcm"
+import { themeColors } from "../../theme/theme"
+import { cameraInfoFor, isDepthTopic } from "../../components/camera"
+import { DEPTH_COLORMAPS } from "../../components/media"
+import { FatLines } from "../lines"
+import { cssColor } from "../robot_model"
+import { DepthMaterial } from "../../camera/depth"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { RangeInput } from "../look_editor"
+import { Field, Select, Slider, Toggle } from "../../components/controls"
 
 /**
  * @typedef {{ distance: number, opacity: number, image: boolean, frustum: boolean,
@@ -72,15 +71,17 @@ export class Camera3dLayer {
         if (isDepthTopic(topic)) {
             this.#depth = new DepthMaterial()
             this.#plane = new THREE.Mesh(new THREE.BufferGeometry(), this.#depth.material)
-            this.#stops.push(this.#camera.depth.subscribe(() => {
-                const image = this.#camera.depth.get().image
-                if (image && this.#depth) {
-                    this.#depthSize = [image.width, image.height]
-                    this.#depth.update(image, this.settings.get().depth ?? DEFAULT_DEPTH_LOOK)
-                    this.#reshape(false)
-                    context.viewer.requestRender()
-                }
-            }))
+            this.#stops.push(
+                this.#camera.depth.subscribe(() => {
+                    const image = this.#camera.depth.get().image
+                    if (image && this.#depth) {
+                        this.#depthSize = [image.width, image.height]
+                        this.#depth.update(image, this.settings.get().depth ?? DEFAULT_DEPTH_LOOK)
+                        this.#reshape(false)
+                        context.viewer.requestRender()
+                    }
+                }),
+            )
         } else {
             this.#picture = new THREE.MeshBasicMaterial({
                 side: THREE.DoubleSide,
@@ -214,7 +215,7 @@ export class Camera3dLayer {
                 this.#stopInfo?.()
                 this.#stopInfo = null
                 this.#reshape(false)
-            })
+            }),
         )
         this.#stopInfo = () => stops.forEach((stop) => stop())
     }
@@ -245,7 +246,10 @@ export class Camera3dLayer {
         const geometry = new THREE.BufferGeometry()
         geometry.setAttribute(
             "position",
-            new THREE.Float32BufferAttribute(corners.flatMap((point) => point.toArray()), 3),
+            new THREE.Float32BufferAttribute(
+                corners.flatMap((point) => point.toArray()),
+                3,
+            ),
         )
         geometry.setAttribute("uv", new THREE.Float32BufferAttribute([0, 1, 1, 1, 1, 0, 0, 0], 2))
         geometry.setIndex([0, 1, 2, 0, 2, 3])
@@ -261,18 +265,18 @@ export class Camera3dLayer {
         for (const point of corners) {
             this.#frustum.push(0, 0, 0, point.x, point.y, point.z)
         }
-        for (
-            const [a, b] of [[topLeft, topRight], [topRight, bottomRight], [bottomRight, bottomLeft], [
-                bottomLeft,
-                topLeft,
-            ]]
-        ) {
+        for (const [a, b] of [
+            [topLeft, topRight],
+            [topRight, bottomRight],
+            [bottomRight, bottomLeft],
+            [bottomLeft, topLeft],
+        ]) {
             this.#frustum.push(a.x, a.y, a.z, b.x, b.y, b.z)
         }
         this.#frustum.commit()
         this.#frustum.object.visible = settings.frustum
-        const optical = settings.convention === "optical" ||
-            (settings.convention === "auto" && /optical/i.test(this.#frame ?? ""))
+        const optical =
+            settings.convention === "optical" || (settings.convention === "auto" && /optical/i.test(this.#frame ?? ""))
         this.#content.matrix.copy(optical ? new THREE.Matrix4() : OPTICAL_TO_BODY)
         this.#content.matrixWorldNeedsUpdate = true
         this.context.setStatus({
@@ -318,72 +322,63 @@ export class Camera3dLayer {
 export function Camera3dSettingsEditor({ settings, topic }) {
     const value = useStore(settings)
     const depth = value.depth ?? DEFAULT_DEPTH_LOOK
-    const slider = (label, key, min, max, step, format) =>
-        h(
-            Field,
-            { label },
-            h(Slider, {
-                min,
-                max,
-                step,
-                value: value[key],
-                format,
-                onChange: (next) => settings.update({ [key]: next }),
-            }),
-        )
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Picture" },
-            h(Toggle, { value: value.image, onChange: (image) => settings.update({ image }) }),
-        ),
-        h(
-            Field,
-            { label: "Frustum" },
-            h(Toggle, { value: value.frustum, onChange: (frustum) => settings.update({ frustum }) }),
-        ),
-        slider("Distance", "distance", 0.2, 10, 0.1, (distance) => `${distance.toFixed(1)} m`),
-        slider("Opacity", "opacity", 0.1, 1, 0.05, (opacity) => `${Math.round(opacity * 100)}%`),
-        topic && isDepthTopic(topic)
-            ? [
-                h(
-                    Field,
-                    { label: "Colormap", key: "colormap" },
-                    h(Select, {
-                        value: depth.colormap,
-                        options: DEPTH_COLORMAPS,
-                        onChange: (colormap) => settings.update({ depth: { ...depth, colormap } }),
-                    }),
-                ),
-                h(
-                    Field,
-                    { label: "Range", hint: "meters; empty = automatic (2nd–98th percentile)", key: "range" },
-                    h(
-                        "span",
-                        { className: "dr-range-inputs" },
-                        h(RangeInput, {
-                            value: depth.near,
-                            onChange: (near) => settings.update({ depth: { ...depth, near } }),
-                        }),
-                        h(RangeInput, {
-                            value: depth.far,
-                            onChange: (far) => settings.update({ depth: { ...depth, far } }),
-                        }),
-                    ),
-                ),
-            ]
-            : null,
-        h(
-            Field,
-            { label: "Frame" },
-            h(Select, {
-                value: value.convention,
-                options: [["auto", "auto (by name)"], ["optical", "optical (z forward)"], ["body", "body (x forward)"]],
-                onChange: (convention) => settings.update({ convention }),
-            }),
-        ),
+    const slider = (label, key, min, max, step, format) => (
+        <Field label={label}>
+            <Slider
+                min={min}
+                max={max}
+                step={step}
+                value={value[key]}
+                format={format}
+                onChange={(next) => settings.update({ [key]: next })}
+            />
+        </Field>
+    )
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Picture">
+                <Toggle value={value.image} onChange={(image) => settings.update({ image })} />
+            </Field>
+            <Field label="Frustum">
+                <Toggle value={value.frustum} onChange={(frustum) => settings.update({ frustum })} />
+            </Field>
+            {slider("Distance", "distance", 0.2, 10, 0.1, (distance) => `${distance.toFixed(1)} m`)}
+            {slider("Opacity", "opacity", 0.1, 1, 0.05, (opacity) => `${Math.round(opacity * 100)}%`)}
+            {topic && isDepthTopic(topic)
+                ? [
+                      <Field label="Colormap" key="colormap">
+                          <Select
+                              value={depth.colormap}
+                              options={DEPTH_COLORMAPS}
+                              onChange={(colormap) => settings.update({ depth: { ...depth, colormap } })}
+                          />
+                      </Field>,
+                      <Field label="Range" hint="meters; empty = automatic (2nd–98th percentile)" key="range">
+                          <span className="dr-range-inputs">
+                              <RangeInput
+                                  value={depth.near}
+                                  onChange={(near) => settings.update({ depth: { ...depth, near } })}
+                              />
+                              <RangeInput
+                                  value={depth.far}
+                                  onChange={(far) => settings.update({ depth: { ...depth, far } })}
+                              />
+                          </span>
+                      </Field>,
+                  ]
+                : null}
+            <Field label="Frame">
+                <Select
+                    value={value.convention}
+                    options={[
+                        ["auto", "auto (by name)"],
+                        ["optical", "optical (z forward)"],
+                        ["body", "body (x forward)"],
+                    ]}
+                    onChange={(convention) => settings.update({ convention })}
+                />
+            </Field>
+        </div>
     )
 }
 

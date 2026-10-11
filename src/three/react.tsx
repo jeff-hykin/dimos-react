@@ -12,28 +12,28 @@
 //         h(RobotModel, { kind: "dog", frame: "base_link" }))
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import * as THREE from "three"
-import { cx, h } from "../h.js"
-import { decodeMessage, parseKey, useDataSource, useTopicList } from "../data.js"
-import { cameraStreamsFor } from "../components/camera.js"
-import { Viewer } from "./viewer.js"
-import { TfTree } from "./tf.js"
-import { cssColor, disposeTree, robotModel } from "./robot_model.js"
-import { Store, useStore } from "./store.js"
-import { IconButton, Select } from "../components/controls.js"
-import "./layers/index.js"
-import { defaultSettings, layerTypeById, RobotPose } from "./layers/registry.js"
-import { CLOUD_DEFAULTS, CloudLayer } from "./layers/pointcloud.js"
-import { POSE_DEFAULTS, PoseLayer } from "./layers/pose.js"
-import { PathLayer } from "./layers/path.js"
-import { PoseArrayLayer } from "./layers/pose_array.js"
-import { TF_DEFAULTS, TfFramesLayer } from "./layers/tf_frames.js"
-import { checkTf, confirmedIssues } from "./tf_check.js"
-import { FrameHighlighter } from "./frame_highlight.js"
-import { poseMatrix as poseMatrixOf } from "./layers/pose.js"
+import { cx } from "../cx"
+import { decodeMessage, parseKey, useDataSource, useTopicList } from "../data"
+import { cameraStreamsFor } from "../components/camera"
+import { Viewer } from "./viewer"
+import { TfTree } from "./tf"
+import { cssColor, disposeTree, robotModel } from "./robot_model"
+import { Store, useStore } from "./store"
+import { IconButton, Select } from "../components/controls"
+import "./layers/index"
+import { defaultSettings, layerTypeById, RobotPose } from "./layers/registry"
+import { CLOUD_DEFAULTS, CloudLayer } from "./layers/pointcloud"
+import { POSE_DEFAULTS, PoseLayer } from "./layers/pose"
+import { PathLayer } from "./layers/path"
+import { PoseArrayLayer } from "./layers/pose_array"
+import { TF_DEFAULTS, TfFramesLayer } from "./layers/tf_frames"
+import { checkTf, confirmedIssues } from "./tf_check"
+import { FrameHighlighter } from "./frame_highlight"
+import { poseMatrix as poseMatrixOf } from "./layers/pose"
 
-export { pointCloud2ToPositions } from "./layers/pointcloud.js"
-export { poseMatrix, poseOf } from "./layers/pose.js"
-export { colorFor } from "./layers/path.js"
+export { pointCloud2ToPositions } from "./layers/pointcloud"
+export { poseMatrix, poseOf } from "./layers/pose"
+export { colorFor } from "./layers/path"
 
 const SceneContext = createContext({ viewer: null, tf: null, fixedFrame: "world" })
 
@@ -341,7 +341,7 @@ export function Scene3D({
         const followAt = new THREE.Vector3()
         const off = viewer.onFrame((frame) => {
             const { follow, followFrame, robot, viewDistance } = props.current
-            const robotMatrix = robot ? tf.lookup(robot, frame.fixedFrame) ?? robotPose.matrix : robotPose.matrix
+            const robotMatrix = robot ? (tf.lookup(robot, frame.fixedFrame) ?? robotPose.matrix) : robotPose.matrix
             const robotPosition = robotMatrix ? robotAt.setFromMatrixPosition(robotMatrix) : null
             if (robotPosition && !positions.current.framed) {
                 positions.current.framed = true
@@ -361,8 +361,10 @@ export function Scene3D({
             const following = !!(follow && followFrame) && !viewer.followPaused.get().paused
             const info = frameInfo.get()
             if (
-                info.fixedFrame !== frame.fixedFrame || info.robotFound !== !!robotPosition ||
-                info.followFound !== !!followed || info.following !== following
+                info.fixedFrame !== frame.fixedFrame ||
+                info.robotFound !== !!robotPosition ||
+                info.followFound !== !!followed ||
+                info.following !== following
             ) {
                 frameInfo.set({
                     fixedFrame: frame.fixedFrame,
@@ -382,46 +384,49 @@ export function Scene3D({
         viewer?.resumeFollow()
     }, [viewer, followFrame])
 
-    const actions = useMemo(() => ({
-        /**
-         * Not following (paused by a pan, or off): follows again, gliding the followed frame back to the middle with
-         * the angle and zoom kept. Already following: frames it afresh. Without it in TF, frames the data that's
-         * drawn, or else the origin.
-         */
-        recenter() {
-            if (!viewer) {
-                return
-            }
-            const { follow, followFrame, viewDistance, onFollowChange } = props.current
-            const wasFollowing = follow && !!followFrame && !viewer.followPaused.get().paused
-            if (!follow) {
-                onFollowChange?.(true)
-            }
-            viewer.resumeFollow()
-            const followed = positions.current.follow
-            if (wasFollowing && followed) {
-                viewer.frame(followed.clone(), viewDistance)
-                return
-            }
-            if (followed) {
-                return
-            }
-            const bounds = viewer.dataBounds()
-            if (bounds) {
-                const size = bounds.getSize(new THREE.Vector3())
-                viewer.frame(
-                    bounds.getCenter(new THREE.Vector3()),
-                    THREE.MathUtils.clamp(Math.max(size.x, size.y, size.z) * 1.2, 4, 300),
-                )
-                return
-            }
-            viewer.frame(new THREE.Vector3(), viewDistance)
-        },
-        /** Straight down on the area around the robot (or on everything drawn without one). */
-        topDown() {
-            viewer?.topDownAround(positions.current.robot)
-        },
-    }), [viewer])
+    const actions = useMemo(
+        () => ({
+            /**
+             * Not following (paused by a pan, or off): follows again, gliding the followed frame back to the middle with
+             * the angle and zoom kept. Already following: frames it afresh. Without it in TF, frames the data that's
+             * drawn, or else the origin.
+             */
+            recenter() {
+                if (!viewer) {
+                    return
+                }
+                const { follow, followFrame, viewDistance, onFollowChange } = props.current
+                const wasFollowing = follow && !!followFrame && !viewer.followPaused.get().paused
+                if (!follow) {
+                    onFollowChange?.(true)
+                }
+                viewer.resumeFollow()
+                const followed = positions.current.follow
+                if (wasFollowing && followed) {
+                    viewer.frame(followed.clone(), viewDistance)
+                    return
+                }
+                if (followed) {
+                    return
+                }
+                const bounds = viewer.dataBounds()
+                if (bounds) {
+                    const size = bounds.getSize(new THREE.Vector3())
+                    viewer.frame(
+                        bounds.getCenter(new THREE.Vector3()),
+                        THREE.MathUtils.clamp(Math.max(size.x, size.y, size.z) * 1.2, 4, 300),
+                    )
+                    return
+                }
+                viewer.frame(new THREE.Vector3(), viewDistance)
+            },
+            /** Straight down on the area around the robot (or on everything drawn without one). */
+            topDown() {
+                viewer?.topDownAround(positions.current.robot)
+            },
+        }),
+        [viewer],
+    )
 
     // a click (not the end of a drag) picks the point under it
     const pickRef = useRef(onPick)
@@ -455,23 +460,26 @@ export function Scene3D({
     const topicsRef = useRef(topics)
     topicsRef.current = topics
     const optionsSignature = JSON.stringify(layerOptions ?? {})
-    const value = useMemo(() => ({
-        viewer,
-        tf,
-        fixedFrame: fixed,
-        source,
-        video: cameraStreamsFor(source),
-        robotPose,
-        options: { baseFrame: robot ?? undefined, ...layerOptions },
-        topics: () => topicsRef.current?.() ?? [],
-        frameInfo,
-        actions,
-    }), [viewer, tf, fixed, source, robotPose, robot, optionsSignature, frameInfo, actions])
-    return h(
-        "div",
-        { className: cx("dr-scene", className), style, ...rest },
-        h("div", { className: "dr-scene-host", ref: hostRef }),
-        h(SceneContext.Provider, { value }, viewer ? children : null),
+    const value = useMemo(
+        () => ({
+            viewer,
+            tf,
+            fixedFrame: fixed,
+            source,
+            video: cameraStreamsFor(source),
+            robotPose,
+            options: { baseFrame: robot ?? undefined, ...layerOptions },
+            topics: () => topicsRef.current?.() ?? [],
+            frameInfo,
+            actions,
+        }),
+        [viewer, tf, fixed, source, robotPose, robot, optionsSignature, frameInfo, actions],
+    )
+    return (
+        <div className={cx("dr-scene", className)} style={style} {...rest}>
+            <div className="dr-scene-host" ref={hostRef} />
+            <SceneContext.Provider value={value}>{viewer ? children : null}</SceneContext.Provider>
+        </div>
     )
 }
 
@@ -504,7 +512,7 @@ export function TfFeed({ topics, transforms, staticTransforms, tf: given }) {
                 }
                 tf.setMessage(decoded, /static/i.test(key))
                 viewer?.noteData(message.timestamp)
-            })
+            }),
         )
         return () => stops.forEach((stop) => stop())
     }, [source, tf, viewer, keysSignature])
@@ -526,7 +534,7 @@ function applyTransforms(tf, transforms, isStatic) {
     if (!tf || !transforms) {
         return
     }
-    const list = Array.isArray(transforms) ? transforms : transforms.transforms ?? []
+    const list = Array.isArray(transforms) ? transforms : (transforms.transforms ?? [])
     for (const item of list) {
         if (item?.child !== undefined) {
             tf.set(
@@ -556,9 +564,8 @@ export function Layer({ type, topic, settings, data, onStatus, onPose }) {
     if (!layerType) {
         throw new Error(`[dimos-react] no layer type "${type}"`)
     }
-    const topicObject = typeof topic === "string"
-        ? parseKey(topic) ?? { key: topic, name: topic, type: "" }
-        : topic ?? null
+    const topicObject =
+        typeof topic === "string" ? (parseKey(topic) ?? { key: topic, name: topic, type: "" }) : (topic ?? null)
     const store = useMemo(
         () => new Store({ ...defaultSettings(layerType, topicObject), ...settings }),
         [layerType, topicObject?.key],
@@ -594,7 +601,7 @@ export function Layer({ type, topic, settings, data, onStatus, onPose }) {
 /**
  * Every topic a LayerManager lists, drawn by its layer type while switched on (unsubscribed while off or paused).
  * The manager (panels.js useLayerManager) is shared with a LayersPanel outside the scene.
- * @param {{ manager: import("./layers/manager.js").LayerManager }} props
+ * @param {{ manager: import("./layers/manager").LayerManager }} props
  */
 export function TopicLayers({ manager }) {
     const scene = useScene()
@@ -646,16 +653,19 @@ export function TopicLayers({ manager }) {
         }
     }, [scene.viewer, list, paused, manager])
     // the scene went away: everything stops
-    useEffect(() => () => {
-        for (const [key, running] of instances.current) {
-            running.offFrame?.()
-            running.offReset?.()
-            running.instance.root.removeFromParent()
-            running.instance.dispose()
-            manager.clearStatus(key)
-        }
-        instances.current.clear()
-    }, [scene.viewer, manager])
+    useEffect(
+        () => () => {
+            for (const [key, running] of instances.current) {
+                running.offFrame?.()
+                running.offReset?.()
+                running.instance.root.removeFromParent()
+                running.instance.dispose()
+                manager.clearStatus(key)
+            }
+            instances.current.clear()
+        },
+        [scene.viewer, manager],
+    )
     return null
 }
 
@@ -664,11 +674,17 @@ export function TopicLayers({ manager }) {
  * names only `named` frames (and the fixed frame) past `maxNames`.
  * @param {Record<string, any>} props
  */
-export function TfFrames(
-    { axesSize = 0.25, names = true, links = true, maxNames = 16, named = [], maxFrames = 512, onStatus },
-) {
+export function TfFrames({
+    axesSize = 0.25,
+    names = true,
+    links = true,
+    maxNames = 16,
+    named = [],
+    maxFrames = 512,
+    onStatus,
+}) {
     const settings = { axesSize, names, links, maxNames, named, maxFrames }
-    return h(Layer, { type: tfType, settings, onStatus })
+    return <Layer type={tfType} settings={settings} onStatus={onStatus} />
 }
 const tfType = {
     id: "tf-frames",
@@ -720,20 +736,18 @@ export function PointCloud({
     onStatus,
 }) {
     const look = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
-    for (
-        const [name, value] of Object.entries({
-            style,
-            size,
-            colorMode,
-            gradient,
-            period,
-            axis,
-            rangeMin,
-            rangeMax,
-            opacity,
-            cubeShade,
-        })
-    ) {
+    for (const [name, value] of Object.entries({
+        style,
+        size,
+        colorMode,
+        gradient,
+        period,
+        axis,
+        rangeMin,
+        rangeMax,
+        opacity,
+        cubeShade,
+    })) {
         if (value !== undefined) {
             look[name] = value
         }
@@ -742,12 +756,11 @@ export function PointCloud({
         look.solid = `#${cssColor(color, "white").getHexString()}`
     }
     const settings = { look, mode, windowSeconds, maxPoints, maxHz, quality, frame }
-    const data = useMemo(() => (points ? { positions: points, intensity, frame } : undefined), [
-        points,
-        intensity,
-        frame,
-    ])
-    return h(Layer, { type: cloudType, topic, settings, data, onStatus })
+    const data = useMemo(
+        () => (points ? { positions: points, intensity, frame } : undefined),
+        [points, intensity, frame],
+    )
+    return <Layer type={cloudType} topic={topic} settings={settings} data={data} onStatus={onStatus} />
 }
 
 const pathType = { id: "path-props", create: (context, topic, settings) => new PathLayer(context, topic, settings) }
@@ -757,11 +770,20 @@ const pathType = { id: "path-props", create: (context, topic, settings) => new P
  * @param {{ topic?: string, poses?: any[], frame?: string, color?: string, width?: number, lift?: number,
  *   onTop?: boolean, onStatus?: Function }} props `color`: CSS or token (default var(--primary))
  */
-export function Path(
-    { topic, poses, frame = "", color = "var(--primary)", width = 4, lift = 0.03, onTop = false, onStatus },
-) {
+export function Path({
+    topic,
+    poses,
+    frame = "",
+    color = "var(--primary)",
+    width = 4,
+    lift = 0.03,
+    onTop = false,
+    onStatus,
+}) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
-    return h(Layer, { type: pathType, topic, settings: { color, width, lift, onTop }, data, onStatus })
+    return (
+        <Layer type={pathType} topic={topic} settings={{ color, width, lift, onTop }} data={data} onStatus={onStatus} />
+    )
 }
 
 const poseType = {
@@ -794,14 +816,16 @@ export function Pose({
     onStatus,
 }) {
     const data = useMemo(() => (pose ? { pose, frame } : undefined), [pose, frame])
-    return h(Layer, {
-        type: poseType,
-        topic,
-        settings: { axesSize, trail, trailLength, jumpMeters, color, width, onTop, route },
-        data,
-        onPose,
-        onStatus,
-    })
+    return (
+        <Layer
+            type={poseType}
+            topic={topic}
+            settings={{ axesSize, trail, trailLength, jumpMeters, color, width, onTop, route }}
+            data={data}
+            onPose={onPose}
+            onStatus={onStatus}
+        />
+    )
 }
 
 const poseArrayType = {
@@ -813,11 +837,19 @@ const poseArrayType = {
  * Many poses as arrows: a geometry_msgs.PoseArray topic, or `poses` (+ `frame`) as props.
  * @param {{ topic?: string, poses?: any[], frame?: string, color?: string, length?: number, width?: number }} props
  */
-export function PoseArray(
-    { topic, poses, frame = "", color = "var(--accent-alt)", length = 0.4, width = 2, onStatus },
-) {
+export function PoseArray({
+    topic,
+    poses,
+    frame = "",
+    color = "var(--accent-alt)",
+    length = 0.4,
+    width = 2,
+    onStatus,
+}) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
-    return h(Layer, { type: poseArrayType, topic, settings: { color, length, width }, data, onStatus })
+    return (
+        <Layer type={poseArrayType} topic={topic} settings={{ color, length, width }} data={data} onStatus={onStatus} />
+    )
 }
 
 /**
@@ -832,51 +864,54 @@ export function RobotModel({ kind = "wheeled", frame, pose, poseFrame = "", scal
     const settings = useRef({})
     settings.current = { frame: frame ?? scene.options?.baseFrame ?? "base_link", pose, poseFrame, scale, visible }
     const colorsSignature = JSON.stringify(colors ?? {})
-    useLayer(({ viewer, tf, robotPose }) => {
-        let model = robotModel(kind, colors)
-        if (!model) {
-            return null
-        }
-        const root = new THREE.Group()
-        root.add(model)
-        const rebuild = () => {
-            disposeTree(model)
-            model = robotModel(kind, colors)
+    useLayer(
+        ({ viewer, tf, robotPose }) => {
+            let model = robotModel(kind, colors)
+            if (!model) {
+                return null
+            }
+            const root = new THREE.Group()
             root.add(model)
-            viewer.requestRender()
-        }
-        addEventListener("dimos-react-theme", rebuild)
-        const local = new THREE.Matrix4()
-        const scaleVector = new THREE.Vector3()
-        return {
-            root,
-            update(frameInfo) {
-                const { frame, pose, poseFrame, scale, visible } = settings.current
-                const base = pose
-                    ? tf.lookup(poseFrame, frameInfo.fixedFrame)
-                    : tf.lookup(frame, frameInfo.fixedFrame) ?? robotPose?.matrix ?? null
-                if (!base || !visible) {
-                    if (model.visible) {
-                        model.visible = false
+            const rebuild = () => {
+                disposeTree(model)
+                model = robotModel(kind, colors)
+                root.add(model)
+                viewer.requestRender()
+            }
+            addEventListener("dimos-react-theme", rebuild)
+            const local = new THREE.Matrix4()
+            const scaleVector = new THREE.Vector3()
+            return {
+                root,
+                update(frameInfo) {
+                    const { frame, pose, poseFrame, scale, visible } = settings.current
+                    const base = pose
+                        ? tf.lookup(poseFrame, frameInfo.fixedFrame)
+                        : (tf.lookup(frame, frameInfo.fixedFrame) ?? robotPose?.matrix ?? null)
+                    if (!base || !visible) {
+                        if (model.visible) {
+                            model.visible = false
+                            viewer.requestRender()
+                        }
+                        return
+                    }
+                    const matrix = pose ? base.clone().multiply(poseMatrixOf(pose, local)) : base.clone()
+                    matrix.scale(scaleVector.setScalar(scale))
+                    if (!model.visible || !model.matrix.equals(matrix)) {
+                        model.matrix.copy(matrix)
+                        model.matrixWorldNeedsUpdate = true
+                        model.visible = true
                         viewer.requestRender()
                     }
-                    return
-                }
-                const matrix = pose ? base.clone().multiply(poseMatrixOf(pose, local)) : base.clone()
-                matrix.scale(scaleVector.setScalar(scale))
-                if (!model.visible || !model.matrix.equals(matrix)) {
-                    model.matrix.copy(matrix)
-                    model.matrixWorldNeedsUpdate = true
-                    model.visible = true
-                    viewer.requestRender()
-                }
-            },
-            dispose() {
-                removeEventListener("dimos-react-theme", rebuild)
-                disposeTree(model)
-            },
-        }
-    }, [kind, colorsSignature])
+                },
+                dispose() {
+                    removeEventListener("dimos-react-theme", rebuild)
+                    disposeTree(model)
+                },
+            }
+        },
+        [kind, colorsSignature],
+    )
     return null
 }
 
@@ -901,7 +936,7 @@ export function FrameHighlight({ frame, onPlaced }) {
 /**
  * What's wrong with the scene's TF tree (tf_check.js), checked every `intervalMs`; a problem shows once two checks in a
  * row see it. `layers`: the drawn layers' frames (a LayerManager's layerFrames()).
- * @returns {import("./tf_check.js").TfIssue[]}
+ * @returns {import("./tf_check").TfIssue[]}
  */
 export function useTfIssues({ layers, tf: given, fixedFrame: givenFixed, intervalMs = 2000 } = {}) {
     const scene = useScene()
@@ -922,7 +957,7 @@ export function useTfIssues({ layers, tf: given, fixedFrame: givenFixed, interva
             const next = checkTf({
                 snapshot: tf.snapshot(),
                 fixedFrame,
-                layers: typeof layersRef.current === "function" ? layersRef.current() : layersRef.current ?? [],
+                layers: typeof layersRef.current === "function" ? layersRef.current() : (layersRef.current ?? []),
                 placed: (frame) => tf.lookup(frame, fixedFrame) !== null,
             })
             const confirmed = confirmedIssues(seen, next)
@@ -950,7 +985,7 @@ export function FramePicker({ value, onChange, tf, noneLabel = null, placeholder
     if (value && !frames.includes(value)) {
         options.push([value, `${value} (not seen)`])
     }
-    return h(Select, { value: value ?? null, onChange, options, placeholder, ...rest })
+    return <Select value={value ?? null} onChange={onChange} options={options} placeholder={placeholder} {...rest} />
 }
 
 const emptyStats = new Store({
@@ -973,29 +1008,26 @@ export function SceneStats({ className, detailed = false, rttMs }) {
     const stats = useStore(viewer?.stats ?? emptyStats)
     if (detailed) {
         const ms = (value) => (value === null || value === undefined ? "–" : `${value.toFixed(1)} ms`)
-        return h(
-            "div",
-            { className: cx("dr-scene-stats dr-scene-stats--detailed", className), "data-testid": "stats" },
-            h("div", null, `${stats.fps} fps · ${stats.frameMs.toFixed(2)} ms/frame CPU`),
-            h("div", null, `latency p50 ${ms(stats.latencyP50)} · p95 ${ms(stats.latencyP95)}`),
-            h(
-                "div",
-                null,
-                `arrival→frame ${ms(stats.arrivalToFrameMs)}${rttMs !== undefined ? ` · rtt ${ms(rttMs)}` : ""}`,
-            ),
-            h("div", null, `${stats.points.toLocaleString()} points · ${stats.drawCalls} draws`),
+        return (
+            <div className={cx("dr-scene-stats dr-scene-stats--detailed", className)} data-testid="stats">
+                <div>{`${stats.fps} fps · ${stats.frameMs.toFixed(2)} ms/frame CPU`}</div>
+                <div>{`latency p50 ${ms(stats.latencyP50)} · p95 ${ms(stats.latencyP95)}`}</div>
+                <div>{`arrival→frame ${ms(stats.arrivalToFrameMs)}${rttMs !== undefined ? ` · rtt ${ms(rttMs)}` : ""}`}</div>
+                <div>{`${stats.points.toLocaleString()} points · ${stats.drawCalls} draws`}</div>
+            </div>
         )
     }
-    const points = stats.points > 1e6
-        ? `${(stats.points / 1e6).toFixed(1)}M`
-        : stats.points > 1e3
-        ? `${(stats.points / 1e3).toFixed(0)}k`
-        : String(stats.points)
-    return h(
-        "div",
-        { className: cx("dr-scene-stats", className) },
-        `${stats.fps} fps · ${points} pts · ${stats.frameMs.toFixed(1)} ms`,
-        stats.latencyP50 !== null ? ` · ${Math.round(stats.latencyP50)} ms latency` : "",
+    const points =
+        stats.points > 1e6
+            ? `${(stats.points / 1e6).toFixed(1)}M`
+            : stats.points > 1e3
+              ? `${(stats.points / 1e3).toFixed(0)}k`
+              : String(stats.points)
+    return (
+        <div className={cx("dr-scene-stats", className)}>
+            {`${stats.fps} fps · ${points} pts · ${stats.frameMs.toFixed(1)} ms`}
+            {stats.latencyP50 !== null ? ` · ${Math.round(stats.latencyP50)} ms latency` : ""}
+        </div>
     )
 }
 
@@ -1007,39 +1039,47 @@ export function SceneStats({ className, detailed = false, rttMs }) {
  * @param {{ className?: string, children?: any, frameAll?: boolean, onFrameAll?: () => void,
  *   onTopDown?: () => void, position?: string }} props
  */
-export function SceneControls(
-    { className, children, frameAll = true, onFrameAll, onTopDown, position = "bottom-right" },
-) {
+export function SceneControls({
+    className,
+    children,
+    frameAll = true,
+    onFrameAll,
+    onTopDown,
+    position = "bottom-right",
+}) {
     const { viewer, frameInfo, actions } = useScene()
     const info = useStore(frameInfo ?? emptyFrameInfo)
-    const button = (icon, label, onClick, pressed) =>
-        h(IconButton, {
-            icon,
-            label,
-            title: label,
-            className: "dr-scene-btn",
-            "aria-pressed": pressed,
-            onClick,
-        })
+    const button = (icon, label, onClick, pressed) => (
+        <IconButton
+            icon={icon}
+            label={label}
+            title={label}
+            className="dr-scene-btn"
+            aria-pressed={pressed}
+            onClick={onClick}
+        />
+    )
     const followTitle = info.following
         ? `Following${
-            info.followFound ? "" : " (waiting for the frame in TF)"
-        }: orbit and zoom keep following, a pan looks around. Click to reframe`
+              info.followFound ? "" : " (waiting for the frame in TF)"
+          }: orbit and zoom keep following, a pan looks around. Click to reframe`
         : "Follow again"
-    return h(
-        "div",
-        {
-            className: cx(
+    return (
+        <div
+            className={cx(
                 "dr-scene-controls",
                 position !== "bottom-right" && `dr-scene-controls--${position}`,
                 className,
-            ),
-            "data-testid": "view-controls",
-        },
-        button("target", followTitle, () => actions?.recenter(), info.following),
-        button("top", "Top-down", () => (onTopDown ? onTopDown() : actions?.topDown())),
-        frameAll ? button("fit", "Frame everything", () => (onFrameAll ? onFrameAll() : viewer?.frameAll())) : null,
-        children,
+            )}
+            data-testid="view-controls"
+        >
+            {button("target", followTitle, () => actions?.recenter(), info.following)}
+            {button("top", "Top-down", () => (onTopDown ? onTopDown() : actions?.topDown()))}
+            {frameAll
+                ? button("fit", "Frame everything", () => (onFrameAll ? onFrameAll() : viewer?.frameAll()))
+                : null}
+            {children}
+        </div>
     )
 }
 const emptyFrameInfo = new Store({ fixedFrame: "", robotFound: false, followFound: false, following: false })
@@ -1127,10 +1167,9 @@ export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }) {
                 offset.applyAxisAngle(camera.up, -turn)
             }
             if (held.has("i") || held.has("k")) {
-                const pitched = offset.clone().applyAxisAngle(
-                    right,
-                    (held.has("i") ? 1 : 0) * turn - (held.has("k") ? 1 : 0) * turn,
-                )
+                const pitched = offset
+                    .clone()
+                    .applyAxisAngle(right, (held.has("i") ? 1 : 0) * turn - (held.has("k") ? 1 : 0) * turn)
                 // never pitch fully vertical (the view would flip)
                 if (Math.abs(pitched.clone().normalize().dot(camera.up)) < 0.985) {
                     offset.copy(pitched)

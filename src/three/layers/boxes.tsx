@@ -1,15 +1,14 @@
 // vision_msgs.Detection3DArray / Detection3D / BoundingBox3DArray: wireframe boxes with a "class score" label, colored
 // per class so the same kind of object keeps its color.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { FatLines, pushBox } from "../lines.js"
-import { LabelPool } from "../labels.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { poseMatrix } from "./pose.js"
-import { colorFor } from "./path.js"
-import { cssColor } from "../robot_model.js"
-import { Field, Slider, Toggle } from "../../components/controls.js"
+import { useStore } from "../store"
+import { FatLines, pushBox } from "../lines"
+import { LabelPool } from "../labels"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { poseMatrix } from "./pose"
+import { colorFor } from "./path"
+import { cssColor } from "../robot_model"
+import { Field, Slider, Toggle } from "../../components/controls"
 
 /** @typedef {{ width: number, labels: boolean }} BoxSettings */
 
@@ -23,10 +22,11 @@ export function boxesOf(type, message) {
             className: "box",
         }))
     }
-    const detections = type === "vision_msgs.Detection3D" ? [message] : message.detections ?? []
+    const detections = type === "vision_msgs.Detection3D" ? [message] : (message.detections ?? [])
     return detections.map((detection) => {
-        const best = [...(detection.results ?? [])]
-            .sort((a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0))[0]
+        const best = [...(detection.results ?? [])].sort(
+            (a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
+        )[0]
         const className = best?.hypothesis?.class_id || detection.id || "object"
         const score = best?.hypothesis?.score
         return {
@@ -114,9 +114,12 @@ export class BoxLayer {
             }
             placed.push({ box, matrix: local })
         }
-        const signature = placed.map(({ box, matrix }) =>
-            `${box.label}|${box.color}|${box.fill}|${box.size}|${matrix.elements.map((v) => v.toFixed(3))}`
-        ).join("\n")
+        const signature = placed
+            .map(
+                ({ box, matrix }) =>
+                    `${box.label}|${box.color}|${box.fill}|${box.size}|${matrix.elements.map((v) => v.toFixed(3))}`,
+            )
+            .join("\n")
         if (signature === this.#placed) {
             return
         }
@@ -177,26 +180,22 @@ export class BoxLayer {
 
 export function BoxSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Width" },
-            h(Slider, {
-                min: 1,
-                max: 8,
-                step: 0.5,
-                value: value.width,
-                format: (width) => `${width}px`,
-                onChange: (width) => settings.update({ width }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Labels" },
-            h(Toggle, { value: value.labels, onChange: (labels) => settings.update({ labels }) }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Width">
+                <Slider
+                    min={1}
+                    max={8}
+                    step={0.5}
+                    value={value.width}
+                    format={(width) => `${width}px`}
+                    onChange={(width) => settings.update({ width })}
+                />
+            </Field>
+            <Field label="Labels">
+                <Toggle value={value.labels} onChange={(labels) => settings.update({ labels })} />
+            </Field>
+        </div>
     )
 }
 

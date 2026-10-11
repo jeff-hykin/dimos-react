@@ -1,10 +1,10 @@
 // One TF frame picked out in the 3D view (e.g. a TF panel's hovered row): big axes drawn over everything, with a halo
 // behind them and the frame's name, following the frame as it moves. Works whether or not a TF layer is on.
 import * as THREE from "three"
-import { themeColors } from "../theme/theme.js"
-import { FatLines } from "./lines.js"
-import { LabelPool } from "./labels.js"
-import { cssColor } from "./robot_model.js"
+import { themeColors } from "../theme/theme"
+import { FatLines } from "./lines"
+import { LabelPool } from "./labels"
+import { cssColor } from "./robot_model"
 
 /** axes length (m) and line widths (CSS px) of the highlight */
 const AXES_METERS = 1.2

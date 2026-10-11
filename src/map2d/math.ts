@@ -99,8 +99,11 @@ export const MIN_FIT_SPAN = 4
 /** A view that's usable: finite and within the zoom limits. */
 export const isValidView = (view) => {
     const { centerX, centerY, metersPerPixel } = view ?? {}
-    return [centerX, centerY, metersPerPixel].every(Number.isFinite) && metersPerPixel >= MIN_METERS_PER_PIXEL &&
+    return (
+        [centerX, centerY, metersPerPixel].every(Number.isFinite) &&
+        metersPerPixel >= MIN_METERS_PER_PIXEL &&
         metersPerPixel <= MAX_METERS_PER_PIXEL
+    )
 }
 /** The view that shows a world box (minX, minY, maxX, maxY) with a margin; null when the box isn't finite. */
 export function fitView(box, width, height) {
@@ -108,7 +111,8 @@ export function fitView(box, width, height) {
     if (!box.every(Number.isFinite) || maxX < minX || maxY < minY) {
         return null
     }
-    const spanX = Math.max(MIN_FIT_SPAN, maxX - minX), spanY = Math.max(MIN_FIT_SPAN, maxY - minY)
+    const spanX = Math.max(MIN_FIT_SPAN, maxX - minX),
+        spanY = Math.max(MIN_FIT_SPAN, maxY - minY)
     const metersPerPixel = Math.min(
         MAX_METERS_PER_PIXEL,
         Math.max(MIN_METERS_PER_PIXEL, Math.max(spanX / Math.max(1, width), spanY / Math.max(1, height)) * 1.1),
@@ -142,13 +146,14 @@ export function gridLut(palette) {
     const lut = new Uint8ClampedArray(256 * 4)
     for (let byte = 0; byte < 256; byte++) {
         const value = byte > 127 ? byte - 256 : byte
-        const rgba = value < 0
-            ? palette.unknown
-            : value === 0
-            ? palette.free
-            : value >= LETHAL
-            ? palette.lethal
-            : mix(palette.low, palette.high, Math.sqrt(value / LETHAL))
+        const rgba =
+            value < 0
+                ? palette.unknown
+                : value === 0
+                  ? palette.free
+                  : value >= LETHAL
+                    ? palette.lethal
+                    : mix(palette.low, palette.high, Math.sqrt(value / LETHAL))
         lut.set(rgba, byte * 4)
     }
     return lut
@@ -158,7 +163,7 @@ export function gridPixels(data, width, height, lut, out) {
     const pixels = out && out.length === width * height * 4 ? out : new Uint8ClampedArray(width * height * 4)
     const bytes = data instanceof Int8Array ? new Uint8Array(data.buffer, data.byteOffset, width * height) : null
     for (let index = 0; index < width * height; index++) {
-        const at = (bytes ? bytes[index] : (data[index] & 0xff)) * 4
+        const at = (bytes ? bytes[index] : data[index] & 0xff) * 4
         const to = index * 4
         pixels[to] = lut[at]
         pixels[to + 1] = lut[at + 1]
@@ -170,17 +175,20 @@ export function gridPixels(data, width, height, lut, out) {
 /** the projected image's longest side, at most */
 const MAX_CLOUD_PIXELS = 1600
 /** a heat ramp (inferno's upper part: no near-black, so the floor still shows on a dark background) */
-const HEAT_STOPS = [[60, 18, 110, 255], [120, 28, 109, 255], [187, 55, 84, 255], [237, 105, 37, 255], [
-    251,
-    180,
-    26,
-    255,
-], [252, 255, 164, 255]]
+const HEAT_STOPS = [
+    [60, 18, 110, 255],
+    [120, 28, 109, 255],
+    [187, 55, 84, 255],
+    [237, 105, 37, 255],
+    [251, 180, 26, 255],
+    [252, 255, 164, 255],
+]
 /** 256 heat colors, cold (0) to hot (255), as RGBA bytes. */
 export function heatLut(stops = HEAT_STOPS) {
     const lut = new Uint8ClampedArray(256 * 4)
     for (let index = 0; index < 256; index++) {
-        const at = (index / 255) * (stops.length - 1), below = Math.min(stops.length - 2, Math.floor(at))
+        const at = (index / 255) * (stops.length - 1),
+            below = Math.min(stops.length - 2, Math.floor(at))
         lut.set(mix(stops[below], stops[below + 1], at - below), index * 4)
     }
     return lut
@@ -196,11 +204,18 @@ export function projectCloud(positions, elements, lut, cell = 0.05) {
         return null
     }
     const e = elements
-    const xs = new Float32Array(count), ys = new Float32Array(count), zs = new Float32Array(count)
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    const xs = new Float32Array(count),
+        ys = new Float32Array(count),
+        zs = new Float32Array(count)
+    let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity
     let kept = 0
     for (let index = 0; index < count; index++) {
-        const px = positions[index * 3], py = positions[index * 3 + 1], pz = positions[index * 3 + 2]
+        const px = positions[index * 3],
+            py = positions[index * 3 + 1],
+            pz = positions[index * 3 + 2]
         if (!Number.isFinite(px) || !Number.isFinite(py) || !Number.isFinite(pz)) {
             continue
         }
@@ -220,13 +235,16 @@ export function projectCloud(positions, elements, lut, cell = 0.05) {
         return null
     }
     cell = Math.max(cell, (maxX - minX) / MAX_CLOUD_PIXELS, (maxY - minY) / MAX_CLOUD_PIXELS)
-    const width = Math.floor((maxX - minX) / cell) + 1, height = Math.floor((maxY - minY) / cell) + 1
+    const width = Math.floor((maxX - minX) / cell) + 1,
+        height = Math.floor((maxY - minY) / cell) + 1
     // the height range from the 2nd..98th percentile, so a few stray points don't wash the colors out
     const sorted = zs.slice(0, kept).sort()
-    const zLow = sorted[Math.floor(kept * 0.02)], zHigh = sorted[Math.min(kept - 1, Math.floor(kept * 0.98))]
+    const zLow = sorted[Math.floor(kept * 0.02)],
+        zHigh = sorted[Math.min(kept - 1, Math.floor(kept * 0.98))]
     const top = new Float32Array(width * height).fill(-Infinity)
     for (let index = 0; index < kept; index++) {
-        const column = Math.floor((xs[index] - minX) / cell), row = Math.floor((ys[index] - minY) / cell)
+        const column = Math.floor((xs[index] - minX) / cell),
+            row = Math.floor((ys[index] - minY) / cell)
         const at = row * width + column
         if (zs[index] > top[at]) {
             top[at] = zs[index]
@@ -286,13 +304,17 @@ export const isCloudTopic = (topic) => topic.type === "sensor_msgs.PointCloud2"
 /** an accumulated cloud map (the 3D view's global map) first, other map clouds, single scans, then occupancy grids */
 const rank = (topic) =>
     isCloudTopic(topic)
-        ? (/^\/global_map$/.test(topic.name) ? 0 : /map|global|voxel/i.test(topic.name) ? 1 : 2)
+        ? /^\/global_map$/.test(topic.name)
+            ? 0
+            : /map|global|voxel/i.test(topic.name)
+              ? 1
+              : 2
         : 10 + (/^\/map$/.test(topic.name) ? 0 : /global/.test(topic.name) ? 1 : /map/.test(topic.name) ? 2 : 3)
 /** The topics the panel can draw as its base, best first: point clouds (as a top-down heatmap), then occupancy grids. */
 export function mapCandidates(topics) {
-    return topics.filter((topic) => isGridTopic(topic) || isCloudTopic(topic)).sort((a, b) =>
-        rank(a) - rank(b) || a.name.localeCompare(b.name)
-    )
+    return topics
+        .filter((topic) => isGridTopic(topic) || isCloudTopic(topic))
+        .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
 }
 /** The picked topic when it's on the bus, else the best candidate ("" picks automatically). */
 export function chooseMapTopic(topics, picked) {
@@ -304,6 +326,6 @@ export const overlayCandidates = (topics) => mapCandidates(topics).filter(isGrid
 /** The overlay grid: the picked one when it's on the bus and isn't the base; "" (the default) is none. */
 export function chooseOverlay(topics, picked, base) {
     return picked && picked !== base?.key
-        ? overlayCandidates(topics).find((topic) => topic.key === picked) ?? null
+        ? (overlayCandidates(topics).find((topic) => topic.key === picked) ?? null)
         : null
 }

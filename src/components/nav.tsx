@@ -2,33 +2,35 @@
 // rail, a stepper, breadcrumbs and a command palette.
 import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { cx, h } from "../h.js"
-import { Icon } from "./icon.js"
-import { useEscape, useHotkeys } from "../hooks.js"
+import { cx } from "../cx"
+import { Icon } from "./icon"
+import { useEscape, useHotkeys } from "../hooks"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
 function useControllable(value, initial, onChange) {
     const [inner, setInner] = useState(initial)
     const controlled = value !== undefined
-    const set = useCallback((next) => {
-        if (!controlled) {
-            setInner(next)
-        }
-        onChange?.(next)
-    }, [controlled, onChange])
+    const set = useCallback(
+        (next) => {
+            if (!controlled) {
+                setInner(next)
+            }
+            onChange?.(next)
+        },
+        [controlled, onChange],
+    )
     return [controlled ? value : inner, set]
 }
 
 /** [[value, label]] or [{ value, label, … }] → [{ value, label, … }] */
 const normalizeItems = (items = []) =>
-    items.map((
-        item,
-    ) => (Array.isArray(item)
-        ? { value: item[0], label: item[1] }
-        : typeof item === "string"
-        ? { value: item, label: item }
-        : item)
+    items.map((item) =>
+        Array.isArray(item)
+            ? { value: item[0], label: item[1] }
+            : typeof item === "string"
+              ? { value: item, label: item }
+              : item,
     )
 
 /** Renders into document.body (nothing during server rendering). */
@@ -63,46 +65,46 @@ function choiceGroup(
             }
         }
     }
-    return h(
-        "div",
-        {
-            className: cx(
+    return (
+        <div
+            className={cx(
                 baseClass,
                 variant && `${baseClass}--${variant}`,
                 size === "sm" && `${baseClass}--sm`,
                 vertical && `${baseClass}--vertical`,
                 className,
-            ),
-            role: "tablist",
-            "aria-label": label,
-            "aria-orientation": vertical ? "vertical" : undefined,
-            onKeyDown,
-            ...rest,
-        },
-        list.map((item) => {
-            const active = item.value === value
-            return h(
-                "button",
-                {
-                    key: item.value,
-                    type: "button",
-                    role: "tab",
-                    "data-value": item.value,
-                    "aria-selected": active,
-                    tabIndex: active ? 0 : -1,
-                    disabled: item.disabled,
-                    title: item.title,
-                    className: cx(`${baseClass}__item`, active && `${baseClass}__item--active`),
-                    onClick: () => onChange?.(item.value),
-                    ...item.props,
-                },
-                item.icon ? h(Icon, { name: item.icon, size: 15 }) : null,
-                item.label !== undefined ? h("span", null, item.label) : null,
-                item.badge !== undefined && item.badge !== null
-                    ? h("span", { className: `${baseClass}__badge` }, item.badge)
-                    : null,
-            )
-        }),
+            )}
+            role="tablist"
+            aria-label={label}
+            aria-orientation={vertical ? "vertical" : undefined}
+            onKeyDown={onKeyDown}
+            {...rest}
+        >
+            {list.map((item) => {
+                const active = item.value === value
+                return (
+                    <button
+                        key={item.value}
+                        type="button"
+                        role="tab"
+                        data-value={item.value}
+                        aria-selected={active}
+                        tabIndex={active ? 0 : -1}
+                        disabled={item.disabled}
+                        title={item.title}
+                        className={cx(`${baseClass}__item`, active && `${baseClass}__item--active`)}
+                        onClick={() => onChange?.(item.value)}
+                        {...item.props}
+                    >
+                        {item.icon ? <Icon name={item.icon} size={15} /> : null}
+                        {item.label !== undefined ? <span>{item.label}</span> : null}
+                        {item.badge !== undefined && item.badge !== null ? (
+                            <span className={`${baseClass}__badge`}>{item.badge}</span>
+                        ) : null}
+                    </button>
+                )
+            })}
+        </div>
     )
 }
 
@@ -130,11 +132,8 @@ export function placeFloating(anchor, size, placement = "bottom-start", gap = 6)
     let y = 0
     const vw = globalThis.innerWidth ?? 1024
     const vh = globalThis.innerHeight ?? 768
-    const along = (
-        start,
-        length,
-        own,
-    ) => (align === "start" ? start : align === "end" ? start + length - own : start + (length - own) / 2)
+    const along = (start, length, own) =>
+        align === "start" ? start : align === "end" ? start + length - own : start + (length - own) / 2
     let actualSide = side
     if (side === "bottom" && anchor.bottom + gap + size.height > vh && anchor.top - gap - size.height > 0) {
         actualSide = "top"
@@ -208,16 +207,18 @@ function Floating({ anchor, point, placement, onClose, className, children, role
         }
     }, [anchor, onClose])
     useEscape(() => onClose?.(), true)
-    return h(
-        Portal,
-        null,
-        h("div", {
-            ref: setBox,
-            role,
-            className: cx("dr-floating", className),
-            style: { left: position.x, top: position.y, ...style },
-            ...rest,
-        }, children),
+    return (
+        <Portal>
+            <div
+                ref={setBox}
+                role={role}
+                className={cx("dr-floating", className)}
+                style={{ left: position.x, top: position.y, ...style }}
+                {...rest}
+            >
+                {children}
+            </div>
+        </Portal>
     )
 }
 
@@ -227,9 +228,16 @@ function Floating({ anchor, point, placement, onClose, className, children, role
  *   placement?: string, className?: string, style?: object }} props
  *   `trigger`: an element (gets onClick + ref) or `(props) => element`
  */
-export function Popover(
-    { trigger, children, open, onOpenChange, defaultOpen = false, placement = "bottom-start", className, style },
-) {
+export function Popover({
+    trigger,
+    children,
+    open,
+    onOpenChange,
+    defaultOpen = false,
+    placement = "bottom-start",
+    className,
+    style,
+}) {
     const [isOpen, setOpen] = useControllable(open, defaultOpen, onOpenChange)
     const [anchor, setAnchor] = useState(null)
     const triggerProps = {
@@ -238,22 +246,29 @@ export function Popover(
         "aria-expanded": isOpen,
         "aria-haspopup": "dialog",
     }
-    const triggerElement = typeof trigger === "function"
-        ? trigger({ ...triggerProps, open: isOpen })
-        : isValidElement(trigger)
-        ? cloneElement(trigger, triggerProps)
-        : h("span", triggerProps, trigger)
-    return h(
-        "span",
-        { className: "dr-popover-anchor" },
-        triggerElement,
-        isOpen && anchor
-            ? h(
-                Floating,
-                { anchor, placement, onClose: () => setOpen(false), className: cx("dr-popover", className), style },
-                typeof children === "function" ? children({ close: () => setOpen(false) }) : children,
-            )
-            : null,
+    const triggerElement =
+        typeof trigger === "function" ? (
+            trigger({ ...triggerProps, open: isOpen })
+        ) : isValidElement(trigger) ? (
+            cloneElement(trigger, triggerProps)
+        ) : (
+            <span {...triggerProps}>{trigger}</span>
+        )
+    return (
+        <span className="dr-popover-anchor">
+            {triggerElement}
+            {isOpen && anchor ? (
+                <Floating
+                    anchor={anchor}
+                    placement={placement}
+                    onClose={() => setOpen(false)}
+                    className={cx("dr-popover", className)}
+                    style={style}
+                >
+                    {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
+                </Floating>
+            ) : null}
+        </span>
     )
 }
 
@@ -294,47 +309,51 @@ export function MenuList({ items, onClose, autoFocus = true }) {
             onClose?.()
         }
     }
-    return h(
-        "div",
-        { className: "dr-menu", role: "menu", ref: list, onKeyDown },
-        items.map((item, index) => {
-            if (item === "-" || item?.separator) {
-                return h("div", { key: index, className: "dr-menu__sep", role: "separator" })
-            }
-            if (item.heading) {
-                return h("div", { key: index, className: "dr-menu__heading" }, item.heading)
-            }
-            return h(
-                "button",
-                {
-                    key: item.key ?? index,
-                    type: "button",
-                    role: item.checked !== undefined ? "menuitemcheckbox" : "menuitem",
-                    "aria-checked": item.checked,
-                    disabled: item.disabled,
-                    title: item.title,
-                    className: cx("dr-menu__item", item.danger && "dr-menu__item--danger"),
-                    ...domProps(item),
-                    onClick: () => {
-                        item.onSelect?.()
-                        if (!item.keepOpen) {
-                            onClose?.()
-                        }
-                    },
-                },
-                h(
-                    "span",
-                    { className: "dr-menu__icon" },
-                    item.checked !== undefined
-                        ? (item.checked ? h(Icon, { name: "check", size: 14 }) : null)
-                        : item.icon
-                        ? h(Icon, { name: item.icon, size: 14 })
-                        : null,
-                ),
-                h("span", { className: "dr-menu__label" }, item.label),
-                item.shortcut ? h("span", { className: "dr-menu__shortcut" }, item.shortcut) : null,
-            )
-        }),
+    return (
+        <div className="dr-menu" role="menu" ref={list} onKeyDown={onKeyDown}>
+            {items.map((item, index) => {
+                if (item === "-" || item?.separator) {
+                    return <div key={index} className="dr-menu__sep" role="separator" />
+                }
+                if (item.heading) {
+                    return (
+                        <div key={index} className="dr-menu__heading">
+                            {item.heading}
+                        </div>
+                    )
+                }
+                return (
+                    <button
+                        key={item.key ?? index}
+                        type="button"
+                        role={item.checked !== undefined ? "menuitemcheckbox" : "menuitem"}
+                        aria-checked={item.checked}
+                        disabled={item.disabled}
+                        title={item.title}
+                        className={cx("dr-menu__item", item.danger && "dr-menu__item--danger")}
+                        {...domProps(item)}
+                        onClick={() => {
+                            item.onSelect?.()
+                            if (!item.keepOpen) {
+                                onClose?.()
+                            }
+                        }}
+                    >
+                        <span className="dr-menu__icon">
+                            {item.checked !== undefined ? (
+                                item.checked ? (
+                                    <Icon name="check" size={14} />
+                                ) : null
+                            ) : item.icon ? (
+                                <Icon name={item.icon} size={14} />
+                            ) : null}
+                        </span>
+                        <span className="dr-menu__label">{item.label}</span>
+                        {item.shortcut ? <span className="dr-menu__shortcut">{item.shortcut}</span> : null}
+                    </button>
+                )
+            })}
+        </div>
     )
 }
 
@@ -360,30 +379,35 @@ export function Menu({ items, trigger, placement = "bottom-start", open, onOpenC
             }
         },
     }
-    const triggerElement = typeof trigger === "function"
-        ? trigger({ ...triggerProps, open: isOpen })
-        : isValidElement(trigger)
-        ? cloneElement(trigger, triggerProps)
-        : h(
-            "button",
-            { type: "button", className: "dr-menu-trigger", ...triggerProps },
-            trigger ?? h(Icon, { name: "more-horizontal" }),
+    const triggerElement =
+        typeof trigger === "function" ? (
+            trigger({ ...triggerProps, open: isOpen })
+        ) : isValidElement(trigger) ? (
+            cloneElement(trigger, triggerProps)
+        ) : (
+            <button type="button" className="dr-menu-trigger" {...triggerProps}>
+                {trigger ?? <Icon name="more-horizontal" />}
+            </button>
         )
     const close = () => {
         setOpen(false)
         anchor?.focus?.()
     }
-    return h(
-        "span",
-        { className: "dr-popover-anchor" },
-        triggerElement,
-        isOpen && anchor
-            ? h(
-                Floating,
-                { anchor, placement, onClose: close, role: "presentation", className },
-                h(MenuList, { items, onClose: close }),
-            )
-            : null,
+    return (
+        <span className="dr-popover-anchor">
+            {triggerElement}
+            {isOpen && anchor ? (
+                <Floating
+                    anchor={anchor}
+                    placement={placement}
+                    onClose={close}
+                    role="presentation"
+                    className={className}
+                >
+                    <MenuList items={items} onClose={close} />
+                </Floating>
+            ) : null}
+        </span>
     )
 }
 
@@ -400,34 +424,40 @@ export function ContextMenu({ items, children, disabled, className, ...rest }) {
             setMenu({ x, y, items: list })
         }
     }
-    return h(
-        "div",
-        {
-            className: cx("dr-context-menu", className),
-            onContextMenu: disabled ? undefined : (event) => {
-                event.preventDefault()
-                openAt(event, event.clientX, event.clientY)
-            },
-            onPointerDown: disabled ? undefined : (event) => {
-                if (event.pointerType !== "touch") {
-                    return
-                }
-                const { clientX, clientY } = event
-                press.current = setTimeout(() => openAt(event, clientX, clientY), 550)
-            },
-            onPointerUp: () => clearTimeout(press.current),
-            onPointerMove: () => clearTimeout(press.current),
-            onPointerCancel: () => clearTimeout(press.current),
-            ...rest,
-        },
-        children,
-        menu
-            ? h(
-                Floating,
-                { point: { x: menu.x, y: menu.y }, onClose: () => setMenu(null), role: "presentation" },
-                h(MenuList, { items: menu.items, onClose: () => setMenu(null) }),
-            )
-            : null,
+    return (
+        <div
+            className={cx("dr-context-menu", className)}
+            onContextMenu={
+                disabled
+                    ? undefined
+                    : (event) => {
+                          event.preventDefault()
+                          openAt(event, event.clientX, event.clientY)
+                      }
+            }
+            onPointerDown={
+                disabled
+                    ? undefined
+                    : (event) => {
+                          if (event.pointerType !== "touch") {
+                              return
+                          }
+                          const { clientX, clientY } = event
+                          press.current = setTimeout(() => openAt(event, clientX, clientY), 550)
+                      }
+            }
+            onPointerUp={() => clearTimeout(press.current)}
+            onPointerMove={() => clearTimeout(press.current)}
+            onPointerCancel={() => clearTimeout(press.current)}
+            {...rest}
+        >
+            {children}
+            {menu ? (
+                <Floating point={{ x: menu.x, y: menu.y }} onClose={() => setMenu(null)} role="presentation">
+                    <MenuList items={menu.items} onClose={() => setMenu(null)} />
+                </Floating>
+            ) : null}
+        </div>
     )
 }
 
@@ -437,11 +467,11 @@ export function ContextMenu({ items, children, disabled, className, ...rest }) {
  * @param {{ x: number, y: number, items?: any[], onClose: () => void, children?: any, className?: string } & Record<string, any>} props
  */
 export function MenuAt({ x, y, items = [], onClose, children, className, ...rest }) {
-    return h(
-        Floating,
-        { point: { x, y }, onClose, role: "presentation", className, ...rest },
-        children,
-        items.length ? h(MenuList, { items, onClose, autoFocus: !children }) : null,
+    return (
+        <Floating point={{ x, y }} onClose={onClose} role="presentation" className={className} {...rest}>
+            {children}
+            {items.length ? <MenuList items={items} onClose={onClose} autoFocus={!children} /> : null}
+        </Floating>
     )
 }
 
@@ -465,14 +495,22 @@ export function Tooltip({ content, children, delay = 350, placement = "top", dis
         setOpen(false)
     }
     const handlers = { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide }
-    const child = isValidElement(children)
-        ? cloneElement(children, { ref: setAnchor, ...handlers })
-        : h("span", { ref: setAnchor, ...handlers }, children)
-    return h(
-        "span",
-        { className: "dr-popover-anchor" },
-        child,
-        open && anchor && !disabled && content ? h(TooltipBox, { anchor, placement }, content) : null,
+    const child = isValidElement(children) ? (
+        cloneElement(children, { ref: setAnchor, ...handlers })
+    ) : (
+        <span ref={setAnchor} {...handlers}>
+            {children}
+        </span>
+    )
+    return (
+        <span className="dr-popover-anchor">
+            {child}
+            {open && anchor && !disabled && content ? (
+                <TooltipBox anchor={anchor} placement={placement}>
+                    {content}
+                </TooltipBox>
+            ) : null}
+        </span>
     )
 }
 
@@ -491,14 +529,12 @@ function TooltipBox({ anchor, placement, children }) {
             )
         }
     }, [anchor, placement])
-    return h(
-        Portal,
-        null,
-        h(
-            "div",
-            { ref: box, role: "tooltip", className: "dr-tooltip", style: { left: position.x, top: position.y } },
-            children,
-        ),
+    return (
+        <Portal>
+            <div ref={box} role="tooltip" className="dr-tooltip" style={{ left: position.x, top: position.y }}>
+                {children}
+            </div>
+        </Portal>
     )
 }
 
@@ -510,59 +546,53 @@ function TooltipBox({ anchor, placement, children }) {
  *   onCollapsedChange?: (collapsed: boolean) => void, side?: "left" | "right", width?: number | string,
  *   footer?: any, className?: string, style?: object }} props
  */
-export function Sidebar(
-    {
-        title,
-        sections,
-        children,
-        collapsed,
-        onCollapsedChange,
-        side = "left",
-        width = 260,
-        footer,
-        className,
-        style,
-        ...rest
-    },
-) {
+export function Sidebar({
+    title,
+    sections,
+    children,
+    collapsed,
+    onCollapsedChange,
+    side = "left",
+    width = 260,
+    footer,
+    className,
+    style,
+    ...rest
+}) {
     const [isCollapsed, setCollapsed] = useControllable(collapsed, false, onCollapsedChange)
-    return h(
-        "aside",
-        {
-            className: cx("dr-sidebar", `dr-sidebar--${side}`, isCollapsed && "dr-sidebar--collapsed", className),
-            style: { width: isCollapsed ? undefined : width, ...style },
-            ...rest,
-        },
-        h(
-            "div",
-            { className: "dr-sidebar__head" },
-            !isCollapsed && title ? h("div", { className: "dr-sidebar__title dr-h3" }, title) : null,
-            h(
-                "button",
-                {
-                    type: "button",
-                    className: "dr-sidebar__toggle",
-                    onClick: () => setCollapsed(!isCollapsed),
-                    "aria-label": isCollapsed ? "Expand sidebar" : "Collapse sidebar",
-                    "aria-expanded": !isCollapsed,
-                },
-                h(Icon, { name: (side === "left") === isCollapsed ? "chevron-right" : "chevron-left", size: 14 }),
-            ),
-        ),
-        isCollapsed ? null : h(
-            "div",
-            { className: "dr-sidebar__body dr-scroll" },
-            sections?.map((section, index) =>
-                h(
-                    "section",
-                    { key: section.key ?? index, className: "dr-sidebar__section" },
-                    section.title ? h("div", { className: "dr-sidebar__section-title dr-label" }, section.title) : null,
-                    section.content,
-                )
-            ),
-            children,
-        ),
-        !isCollapsed && footer ? h("div", { className: "dr-sidebar__foot" }, footer) : null,
+    return (
+        <aside
+            className={cx("dr-sidebar", `dr-sidebar--${side}`, isCollapsed && "dr-sidebar--collapsed", className)}
+            style={{ width: isCollapsed ? undefined : width, ...style }}
+            {...rest}
+        >
+            <div className="dr-sidebar__head">
+                {!isCollapsed && title ? <div className="dr-sidebar__title dr-h3">{title}</div> : null}
+                <button
+                    type="button"
+                    className="dr-sidebar__toggle"
+                    onClick={() => setCollapsed(!isCollapsed)}
+                    aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    aria-expanded={!isCollapsed}
+                >
+                    <Icon name={(side === "left") === isCollapsed ? "chevron-right" : "chevron-left"} size={14} />
+                </button>
+            </div>
+            {isCollapsed ? null : (
+                <div className="dr-sidebar__body dr-scroll">
+                    {sections?.map((section, index) => (
+                        <section key={section.key ?? index} className="dr-sidebar__section">
+                            {section.title ? (
+                                <div className="dr-sidebar__section-title dr-label">{section.title}</div>
+                            ) : null}
+                            {section.content}
+                        </section>
+                    ))}
+                    {children}
+                </div>
+            )}
+            {!isCollapsed && footer ? <div className="dr-sidebar__foot">{footer}</div> : null}
+        </aside>
     )
 }
 
@@ -572,35 +602,33 @@ export function Sidebar(
  *   onChange?: (value: any) => void, showLabels?: boolean, footer?: any, className?: string }} props
  */
 export function NavRail({ items = [], value, onChange, showLabels = false, footer, className, ...rest }) {
-    return h(
-        "nav",
-        { className: cx("dr-navrail", showLabels && "dr-navrail--labels", className), ...rest },
-        h(
-            "div",
-            { className: "dr-navrail__items" },
-            items.map((item) => {
-                const active = item.value === value
-                return h(
-                    "button",
-                    {
-                        key: item.value,
-                        type: "button",
-                        title: item.label,
-                        "aria-label": item.label,
-                        "aria-current": active ? "page" : undefined,
-                        disabled: item.disabled,
-                        className: cx("dr-navrail__item", active && "dr-navrail__item--active"),
-                        onClick: () => onChange?.(item.value),
-                    },
-                    h(Icon, { name: item.icon, size: 20 }),
-                    showLabels ? h("span", { className: "dr-navrail__label" }, item.label) : null,
-                    item.badge !== undefined && item.badge !== null
-                        ? h("span", { className: "dr-navrail__badge" }, item.badge)
-                        : null,
-                )
-            }),
-        ),
-        footer ? h("div", { className: "dr-navrail__foot" }, footer) : null,
+    return (
+        <nav className={cx("dr-navrail", showLabels && "dr-navrail--labels", className)} {...rest}>
+            <div className="dr-navrail__items">
+                {items.map((item) => {
+                    const active = item.value === value
+                    return (
+                        <button
+                            key={item.value}
+                            type="button"
+                            title={item.label}
+                            aria-label={item.label}
+                            aria-current={active ? "page" : undefined}
+                            disabled={item.disabled}
+                            className={cx("dr-navrail__item", active && "dr-navrail__item--active")}
+                            onClick={() => onChange?.(item.value)}
+                        >
+                            <Icon name={item.icon} size={20} />
+                            {showLabels ? <span className="dr-navrail__label">{item.label}</span> : null}
+                            {item.badge !== undefined && item.badge !== null ? (
+                                <span className="dr-navrail__badge">{item.badge}</span>
+                            ) : null}
+                        </button>
+                    )
+                })}
+            </div>
+            {footer ? <div className="dr-navrail__foot">{footer}</div> : null}
+        </nav>
     )
 }
 
@@ -614,37 +642,42 @@ export function NavRail({ items = [], value, onChange, showLabels = false, foote
  *   reports each step, one of which may have failed).
  */
 export function Stepper({ steps = [], current = 0, onStep, vertical = false, className, ...rest }) {
-    return h(
-        "ol",
-        { className: cx("dr-stepper", vertical && "dr-stepper--vertical", className), ...rest },
-        steps.map((step, index) => {
-            const state = step.state ?? (index < current ? "done" : index === current ? "current" : "todo")
-            const clickable = onStep && index < current
-            return h(
-                "li",
-                {
-                    key: step.key ?? index,
-                    className: cx("dr-stepper__step", `dr-stepper__step--${state}`),
-                    "data-state": state,
-                    "aria-current": state === "current" ? "step" : undefined,
-                },
-                h(
-                    clickable ? "button" : "span",
-                    {
-                        className: "dr-stepper__mark",
-                        type: clickable ? "button" : undefined,
-                        onClick: clickable ? () => onStep(index) : undefined,
-                    },
-                    state === "done" ? h(Icon, { name: "check", size: 12 }) : state === "failed" ? "!" : index + 1,
-                ),
-                h(
-                    "span",
-                    { className: "dr-stepper__text" },
-                    h("span", { className: "dr-stepper__label" }, step.label),
-                    step.description ? h("span", { className: "dr-stepper__desc" }, step.description) : null,
-                ),
-            )
-        }),
+    return (
+        <ol className={cx("dr-stepper", vertical && "dr-stepper--vertical", className)} {...rest}>
+            {steps.map((step, index) => {
+                const state = step.state ?? (index < current ? "done" : index === current ? "current" : "todo")
+                const clickable = onStep && index < current
+                const Mark = clickable ? "button" : "span"
+                return (
+                    <li
+                        key={step.key ?? index}
+                        className={cx("dr-stepper__step", `dr-stepper__step--${state}`)}
+                        data-state={state}
+                        aria-current={state === "current" ? "step" : undefined}
+                    >
+                        {
+                            <Mark
+                                className="dr-stepper__mark"
+                                type={clickable ? "button" : undefined}
+                                onClick={clickable ? () => onStep(index) : undefined}
+                            >
+                                {state === "done" ? (
+                                    <Icon name="check" size={12} />
+                                ) : state === "failed" ? (
+                                    "!"
+                                ) : (
+                                    index + 1
+                                )}
+                            </Mark>
+                        }
+                        <span className="dr-stepper__text">
+                            <span className="dr-stepper__label">{step.label}</span>
+                            {step.description ? <span className="dr-stepper__desc">{step.description}</span> : null}
+                        </span>
+                    </li>
+                )
+            })}
+        </ol>
     )
 }
 
@@ -654,32 +687,40 @@ export function Stepper({ steps = [], current = 0, onStep, vertical = false, cla
  * @param {{ items: { label: any, onClick?: () => void, href?: string }[], className?: string }} props
  */
 export function Breadcrumbs({ items = [], className, ...rest }) {
-    return h(
-        "nav",
-        { className: cx("dr-breadcrumbs", className), "aria-label": "Breadcrumb", ...rest },
-        items.map((item, index) => {
-            const last = index === items.length - 1
-            const label = last
-                ? h("span", { className: "dr-breadcrumbs__current", "aria-current": "page" }, item.label)
-                : item.href || item.onClick
-                ? h("a", {
-                    className: "dr-breadcrumbs__link",
-                    href: item.href ?? "#",
-                    onClick: item.onClick
-                        ? (event) => {
-                            event.preventDefault()
-                            item.onClick()
+    return (
+        <nav className={cx("dr-breadcrumbs", className)} aria-label="Breadcrumb" {...rest}>
+            {items.map((item, index) => {
+                const last = index === items.length - 1
+                const label = last ? (
+                    <span className="dr-breadcrumbs__current" aria-current="page">
+                        {item.label}
+                    </span>
+                ) : item.href || item.onClick ? (
+                    <a
+                        className="dr-breadcrumbs__link"
+                        href={item.href ?? "#"}
+                        onClick={
+                            item.onClick
+                                ? (event) => {
+                                      event.preventDefault()
+                                      item.onClick()
+                                  }
+                                : undefined
                         }
-                        : undefined,
-                }, item.label)
-                : h("span", null, item.label)
-            return h(
-                "span",
-                { key: index, className: "dr-breadcrumbs__item" },
-                label,
-                last ? null : h(Icon, { name: "chevron-right", size: 12, className: "dr-breadcrumbs__sep" }),
-            )
-        }),
+                    >
+                        {item.label}
+                    </a>
+                ) : (
+                    <span>{item.label}</span>
+                )
+                return (
+                    <span key={index} className="dr-breadcrumbs__item">
+                        {label}
+                        {last ? null : <Icon name="chevron-right" size={12} className="dr-breadcrumbs__sep" />}
+                    </span>
+                )
+            })}
+        </nav>
     )
 }
 
@@ -728,15 +769,18 @@ export function CommandPalette({ open, onClose, commands = [], placeholder = "Ty
         }
     }, [open])
     useEscape(() => onClose?.(), !!open)
-    const matches = useMemo(() =>
-        commands
-            .map((command) => ({
-                command,
-                score: fuzzyScore(query, `${command.label} ${command.group ?? ""} ${command.keywords ?? ""}`),
-            }))
-            .filter((item) => item.score >= 0)
-            .sort((a, b) => (query ? b.score - a.score : 0))
-            .map((item) => item.command), [commands, query])
+    const matches = useMemo(
+        () =>
+            commands
+                .map((command) => ({
+                    command,
+                    score: fuzzyScore(query, `${command.label} ${command.group ?? ""} ${command.keywords ?? ""}`),
+                }))
+                .filter((item) => item.score >= 0)
+                .sort((a, b) => (query ? b.score - a.score : 0))
+                .map((item) => item.command),
+        [commands, query],
+    )
     if (!open) {
         return null
     }
@@ -757,70 +801,65 @@ export function CommandPalette({ open, onClose, commands = [], placeholder = "Ty
         }
     }
     let lastGroup = null
-    return h(
-        Portal,
-        null,
-        h(
-            "div",
-            {
-                className: "dr-palette-scrim",
-                onPointerDown: (event) => event.target === event.currentTarget && onClose?.(),
-            },
-            h(
-                "div",
-                { className: "dr-palette", role: "dialog", "aria-label": "Command palette" },
-                h(
-                    "div",
-                    { className: "dr-palette__search" },
-                    h(Icon, { name: "search", size: 16 }),
-                    h("input", {
-                        ref: input,
-                        className: "dr-palette__input",
-                        value: query,
-                        placeholder,
-                        onChange: (event) => {
-                            setQuery(event.target.value)
-                            setActive(0)
-                        },
-                        onKeyDown,
-                        "aria-activedescendant": matches[active] ? `dr-cmd-${matches[active].id}` : undefined,
-                    }),
-                ),
-                h(
-                    "div",
-                    { className: "dr-palette__list dr-scroll", role: "listbox" },
-                    matches.length === 0 ? h("div", { className: "dr-palette__empty" }, "No matching commands") : null,
-                    matches.map((command, index) => {
-                        const heading = !query && command.group && command.group !== lastGroup
-                            ? h("div", { key: `g-${command.group}`, className: "dr-palette__group" }, command.group)
-                            : null
-                        lastGroup = command.group
-                        return [
-                            heading,
-                            h(
-                                "div",
-                                {
-                                    key: command.id,
-                                    id: `dr-cmd-${command.id}`,
-                                    role: "option",
-                                    "aria-selected": index === active,
-                                    className: cx("dr-palette__item", index === active && "dr-palette__item--active"),
-                                    onPointerMove: () => setActive(index),
-                                    onClick: () => run(command),
-                                },
-                                command.icon
-                                    ? h(Icon, { name: command.icon, size: 15 })
-                                    : h("span", { className: "dr-palette__noicon" }),
-                                h("span", { className: "dr-palette__label" }, command.label),
-                                command.shortcut
-                                    ? h("span", { className: "dr-palette__shortcut" }, command.shortcut)
-                                    : null,
-                            ),
-                        ]
-                    }),
-                ),
-            ),
-        ),
+    return (
+        <Portal>
+            <div
+                className="dr-palette-scrim"
+                onPointerDown={(event) => event.target === event.currentTarget && onClose?.()}
+            >
+                <div className="dr-palette" role="dialog" aria-label="Command palette">
+                    <div className="dr-palette__search">
+                        <Icon name="search" size={16} />
+                        <input
+                            ref={input}
+                            className="dr-palette__input"
+                            value={query}
+                            placeholder={placeholder}
+                            onChange={(event) => {
+                                setQuery(event.target.value)
+                                setActive(0)
+                            }}
+                            onKeyDown={onKeyDown}
+                            aria-activedescendant={matches[active] ? `dr-cmd-${matches[active].id}` : undefined}
+                        />
+                    </div>
+                    <div className="dr-palette__list dr-scroll" role="listbox">
+                        {matches.length === 0 ? <div className="dr-palette__empty">No matching commands</div> : null}
+                        {matches.map((command, index) => {
+                            const heading =
+                                !query && command.group && command.group !== lastGroup ? (
+                                    <div key={`g-${command.group}`} className="dr-palette__group">
+                                        {command.group}
+                                    </div>
+                                ) : null
+                            lastGroup = command.group
+                            return [
+                                heading,
+                                <div
+                                    key={command.id}
+                                    id={`dr-cmd-${command.id}`}
+                                    role="option"
+                                    aria-selected={index === active}
+                                    className={cx("dr-palette__item", index === active && "dr-palette__item--active")}
+                                    onPointerMove={() => setActive(index)}
+                                    onClick={() => run(command)}
+                                >
+                                    {command.icon ? (
+                                        <Icon name={command.icon} size={15} />
+                                    ) : (
+                                        <span className="dr-palette__noicon" />
+                                    )}
+                                    <span className="dr-palette__label">{command.label}</span>
+                                    {command.shortcut ? (
+                                        <span className="dr-palette__shortcut">{command.shortcut}</span>
+                                    ) : null}
+                                </div>,
+                            ]
+                        })}
+                    </div>
+                </div>
+            </div>
+        </Portal>
     )
 }
 

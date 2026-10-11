@@ -1,13 +1,13 @@
 // Media: a camera / image view (any image topic, or frames you pass) and a playback bar for recordings (play, speed,
 // loop, a zoomable scrubber, and a lane per stream with a tick per message).
 import { useEffect, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { Icon } from "./icon.js"
-import { IconButton, Select } from "./controls.js"
-import { Menu } from "./nav.js"
-import { decodeMessage, parseKey, useDataSource } from "../data.js"
-import { sampleGradient } from "../colormaps.js"
-import { themeColors } from "../theme/theme.js"
+import { cx } from "../cx"
+import { Icon } from "./icon"
+import { IconButton, Select } from "./controls"
+import { Menu } from "./nav"
+import { decodeMessage, parseKey, useDataSource } from "../data"
+import { sampleGradient } from "../colormaps"
+import { themeColors } from "../theme/theme"
 
 // ── ImageView ──
 
@@ -110,10 +110,9 @@ export function colorizeDepth(frame, { colormap = "turbo", near = null, far = nu
             samples.sort((a, b) => a - b)
             const low = samples[Math.floor(samples.length * 0.02)]
             const high = samples[Math.floor(samples.length * 0.98)]
-            range = previous ? [previous[0] + (low - previous[0]) * 0.2, previous[1] + (high - previous[1]) * 0.2] : [
-                low,
-                high,
-            ]
+            range = previous
+                ? [previous[0] + (low - previous[0]) * 0.2, previous[1] + (high - previous[1]) * 0.2]
+                : [low, high]
         }
         range = [near ?? range[0], far ?? range[1]]
     }
@@ -165,17 +164,16 @@ export function drawDetections2D(context, message) {
         const center = box.center?.position ?? box.center ?? { x: 0, y: 0 }
         const left = center.x - (box.size_x ?? 0) / 2
         const top = center.y - (box.size_y ?? 0) / 2
-        const best = [...(detection?.results ?? [])].sort((a, b) =>
-            (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0)
+        const best = [...(detection?.results ?? [])].sort(
+            (a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
         )[0]
         const name = best?.hypothesis?.class_id || detection?.id || ""
         const color = nameColor(name || "box")
         context.strokeStyle = color
         context.strokeRect(left, top, box.size_x ?? 0, box.size_y ?? 0)
         if (name) {
-            const text = best?.hypothesis?.score !== undefined
-                ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%`
-                : name
+            const text =
+                best?.hypothesis?.score !== undefined ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%` : name
             const width = context.measureText(text).width + 8
             const height = parseFloat(context.font) + 4
             context.fillStyle = color
@@ -364,13 +362,21 @@ export function ImageView({
         }
     }, [source, overlayTopic])
 
-    return h(
-        "div",
-        { className: cx("dr-image", `dr-image--${fit}`, empty && "dr-image--empty", className), style, ...rest },
-        h("canvas", { ref: canvas, className: "dr-image__media" }),
-        h("canvas", { ref: overlay, className: "dr-image__media dr-image__overlay" }),
-        empty ? h("div", { className: "dr-image__waiting" }, h(Icon, { name: "camera", size: 22 })) : null,
-        children,
+    return (
+        <div
+            className={cx("dr-image", `dr-image--${fit}`, empty && "dr-image--empty", className)}
+            style={style}
+            {...rest}
+        >
+            <canvas ref={canvas} className="dr-image__media" />
+            <canvas ref={overlay} className="dr-image__media dr-image__overlay" />
+            {empty ? (
+                <div className="dr-image__waiting">
+                    <Icon name="camera" size={22} />
+                </div>
+            ) : null}
+            {children}
+        </div>
     )
 }
 
@@ -444,7 +450,7 @@ function LaneTicks({ ticks, view }) {
         observer.observe(element)
         return () => observer.disconnect()
     }, [ticks, view.from, view.to])
-    return h("canvas", { ref: canvas, className: "dr-playback__ticks" })
+    return <canvas ref={canvas} className="dr-playback__ticks" />
 }
 
 /**
@@ -610,158 +616,148 @@ export function PlaybackBar({
     const inView = value >= view.from && value <= view.to
     const hasLanes = !!lanes?.length || !!onExpandedChange
 
-    return h(
-        "section",
-        {
-            className: cx("dr-playback", expanded && "dr-playback--expanded", className),
-            style,
-            "aria-label": "Playback",
-            ...rest,
-        },
-        h(
-            "div",
-            { className: "dr-playback__bar" },
-            h(
-                "div",
-                { className: "dr-playback__controls" },
-                onPlayPause
-                    ? h(
-                        "button",
-                        {
-                            type: "button",
-                            className: "dr-timeline__play",
-                            title: playing ? "Pause (space)" : "Play (space)",
-                            "aria-label": playing ? "Pause" : "Play",
-                            "data-testid": "play",
-                            onClick: () => onPlayPause(!playing),
-                        },
-                        h(Icon, { name: playing ? "pause" : "play", size: 16 }),
-                    )
-                    : null,
-                h(
-                    "span",
-                    { className: "dr-playback__time", "data-testid": "time", title: "position / length" },
-                    h("span", { className: "dr-playback__now" }, show(value)),
-                    h("span", { className: "dr-playback__length" }, ` / ${show(end)}`),
-                ),
-                onSpeedChange
-                    ? h(Select, {
-                        size: "sm",
-                        className: "dr-playback__speed",
-                        "aria-label": "Speed",
-                        title: "Playback speed",
-                        value: speed,
-                        options: speeds.map((option) => [option, `${option}×`]),
-                        onChange: onSpeedChange,
-                    })
-                    : null,
-                onLoopChange
-                    ? h(IconButton, {
-                        icon: "refresh",
-                        size: "sm",
-                        label: "Loop: start over at the end",
-                        "aria-pressed": !!loop,
-                        className: cx(loop && "dr-playback__on"),
-                        onClick: () => onLoopChange(!loop),
-                    })
-                    : null,
-                hasLanes && onExpandedChange
-                    ? h(
-                        "button",
-                        {
-                            type: "button",
-                            className: cx("dr-playback__expand", expanded && "dr-playback__on"),
-                            "aria-expanded": expanded,
-                            title: expanded
-                                ? `Hide the ${lanesLabel.toLowerCase()}`
-                                : `Show a row per ${lanesLabel.toLowerCase().replace(/s$/, "")}`,
-                            "data-testid": "expand",
-                            onClick: () => onExpandedChange(!expanded),
-                        },
-                        h(Icon, { name: expanded ? "chevron-down" : "chevron-up", size: 14 }),
-                        h("span", null, lanesLabel),
-                    )
-                    : null,
-                zoomed
-                    ? h(
-                        "button",
-                        {
-                            type: "button",
-                            className: "dr-playback__expand",
-                            title: "Show the whole recording",
-                            onClick: () => setView({ from: start, to: end }),
-                        },
-                        "Fit",
-                    )
-                    : null,
-                controls,
-            ),
-            h(
-                "div",
-                { className: "dr-playback__lane dr-playback__track", "data-testid": "scrubber", ...axis(false) },
-                h("div", { className: "dr-timeline__rail" }),
-                inView ? h("div", { className: "dr-timeline__done", style: { width: percent(value) } }) : null,
-                inView
-                    ? h("div", {
-                        className: cx("dr-timeline__thumb", scrubbing && "dr-playback__thumb--active"),
-                        style: { left: percent(value) },
-                    })
-                    : null,
-                hover ? h("span", { className: "dr-playback__hover", style: { left: hover.x } }, show(hover.t)) : null,
-                zoomed
-                    ? h("span", { className: "dr-playback__window" }, `${show(view.from)} – ${show(view.to)}`)
-                    : null,
-            ),
-        ),
-        expanded && lanes?.length
-            ? h(
-                "div",
-                { className: "dr-playback__rows", "data-testid": "stream-rows" },
-                lanes.map((lane) =>
-                    h(
-                        "div",
-                        {
-                            key: lane.id,
-                            className: cx(
+    return (
+        <section
+            className={cx("dr-playback", expanded && "dr-playback--expanded", className)}
+            style={style}
+            aria-label="Playback"
+            {...rest}
+        >
+            <div className="dr-playback__bar">
+                <div className="dr-playback__controls">
+                    {onPlayPause ? (
+                        <button
+                            type="button"
+                            className="dr-timeline__play"
+                            title={playing ? "Pause (space)" : "Play (space)"}
+                            aria-label={playing ? "Pause" : "Play"}
+                            data-testid="play"
+                            onClick={() => onPlayPause(!playing)}
+                        >
+                            <Icon name={playing ? "pause" : "play"} size={16} />
+                        </button>
+                    ) : null}
+                    <span className="dr-playback__time" data-testid="time" title="position / length">
+                        <span className="dr-playback__now">{show(value)}</span>
+                        <span className="dr-playback__length">{` / ${show(end)}`}</span>
+                    </span>
+                    {onSpeedChange ? (
+                        <Select
+                            size="sm"
+                            className="dr-playback__speed"
+                            aria-label="Speed"
+                            title="Playback speed"
+                            value={speed}
+                            options={speeds.map((option) => [option, `${option}×`])}
+                            onChange={onSpeedChange}
+                        />
+                    ) : null}
+                    {onLoopChange ? (
+                        <IconButton
+                            icon="refresh"
+                            size="sm"
+                            label="Loop: start over at the end"
+                            aria-pressed={!!loop}
+                            className={cx(loop && "dr-playback__on")}
+                            onClick={() => onLoopChange(!loop)}
+                        />
+                    ) : null}
+                    {hasLanes && onExpandedChange ? (
+                        <button
+                            type="button"
+                            className={cx("dr-playback__expand", expanded && "dr-playback__on")}
+                            aria-expanded={expanded}
+                            title={
+                                expanded
+                                    ? `Hide the ${lanesLabel.toLowerCase()}`
+                                    : `Show a row per ${lanesLabel.toLowerCase().replace(/s$/, "")}`
+                            }
+                            data-testid="expand"
+                            onClick={() => onExpandedChange(!expanded)}
+                        >
+                            <Icon name={expanded ? "chevron-down" : "chevron-up"} size={14} />
+                            <span>{lanesLabel}</span>
+                        </button>
+                    ) : null}
+                    {zoomed ? (
+                        <button
+                            type="button"
+                            className="dr-playback__expand"
+                            title="Show the whole recording"
+                            onClick={() => setView({ from: start, to: end })}
+                        >
+                            Fit
+                        </button>
+                    ) : null}
+                    {controls}
+                </div>
+                <div className="dr-playback__lane dr-playback__track" data-testid="scrubber" {...axis(false)}>
+                    <div className="dr-timeline__rail" />
+                    {inView ? <div className="dr-timeline__done" style={{ width: percent(value) }} /> : null}
+                    {inView ? (
+                        <div
+                            className={cx("dr-timeline__thumb", scrubbing && "dr-playback__thumb--active")}
+                            style={{ left: percent(value) }}
+                        />
+                    ) : null}
+                    {hover ? (
+                        <span className="dr-playback__hover" style={{ left: hover.x }}>
+                            {show(hover.t)}
+                        </span>
+                    ) : null}
+                    {zoomed ? (
+                        <span className="dr-playback__window">{`${show(view.from)} – ${show(view.to)}`}</span>
+                    ) : null}
+                </div>
+            </div>
+            {expanded && lanes?.length ? (
+                <div className="dr-playback__rows" data-testid="stream-rows">
+                    {lanes.map((lane) => (
+                        <div
+                            key={lane.id}
+                            className={cx(
                                 "dr-playback__row",
                                 lane.active && "dr-playback__row--active",
                                 lane.busy && "dr-playback__row--busy",
-                            ),
-                            "data-lane": lane.id,
-                        },
-                        h(
-                            "div",
-                            { className: "dr-playback__name" },
-                            lane.leading ?? h("span", { className: "dr-playback__leading" }),
-                            h("span", { className: "dr-playback__label", title: lane.title }, lane.label),
-                            lane.meta !== undefined ? h("span", { className: "dr-playback__meta" }, lane.meta) : null,
-                            lane.count !== undefined
-                                ? h("span", { className: "dr-playback__count" }, lane.count)
-                                : null,
-                            lane.menu?.length
-                                ? h(Menu, {
-                                    placement: "top-end",
-                                    items: lane.menu,
-                                    trigger: h(IconButton, {
-                                        icon: "more-horizontal",
-                                        size: "sm",
-                                        label: `${lane.id} actions`,
-                                        "data-testid": `stream-menu-${lane.id}`,
-                                    }),
-                                })
-                                : null,
-                        ),
-                        h(
-                            "div",
-                            { className: "dr-playback__lane", ...axis(true) },
-                            h(LaneTicks, { ticks: lane.ticks, view }),
-                            inView
-                                ? h("div", { className: "dr-playback__cursor", style: { left: percent(value) } })
-                                : null,
-                        ),
-                    )
-                ),
-            )
-            : null,
+                            )}
+                            data-lane={lane.id}
+                        >
+                            <div className="dr-playback__name">
+                                {lane.leading ?? <span className="dr-playback__leading" />}
+                                <span className="dr-playback__label" title={lane.title}>
+                                    {lane.label}
+                                </span>
+                                {lane.meta !== undefined ? (
+                                    <span className="dr-playback__meta">{lane.meta}</span>
+                                ) : null}
+                                {lane.count !== undefined ? (
+                                    <span className="dr-playback__count">{lane.count}</span>
+                                ) : null}
+                                {lane.menu?.length ? (
+                                    <Menu
+                                        placement="top-end"
+                                        items={lane.menu}
+                                        trigger={
+                                            <IconButton
+                                                icon="more-horizontal"
+                                                size="sm"
+                                                label={`${lane.id} actions`}
+                                                data-testid={`stream-menu-${lane.id}`}
+                                            />
+                                        }
+                                    />
+                                ) : null}
+                            </div>
+                            <div className="dr-playback__lane" {...axis(true)}>
+                                <LaneTicks ticks={lane.ticks} view={view} />
+                                {inView ? (
+                                    <div className="dr-playback__cursor" style={{ left: percent(value) }} />
+                                ) : null}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : null}
+        </section>
     )
 }

@@ -38,7 +38,11 @@ export class Store {
  * @returns {T}
  */
 export function useStore(store) {
-    return useSyncExternalStore(store.subscribe, () => store.get(), () => store.get())
+    return useSyncExternalStore(
+        store.subscribe,
+        () => store.get(),
+        () => store.get(),
+    )
 }
 
 /** localStorage JSON, or the fallback (private windows and blocked storage throw or return nothing). */

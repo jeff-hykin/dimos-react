@@ -1,7 +1,6 @@
 // Demo: an image view (a moving color frame, a depth frame through a colormap) and a recording's playback bar.
 import { useEffect, useMemo, useState } from "react"
-import { h } from "../../src/h.js"
-import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../mod.js"
+import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../mod"
 
 function colorFrame(phase) {
     const [width, height] = [160, 100]
@@ -64,61 +63,69 @@ export function MediaSection() {
     }, [playing, speed, loop])
     const color = useMemo(() => colorFrame(phase), [phase])
     const depth = useMemo(() => depthFrame(), [])
-    const lanes = useMemo(() =>
-        [
-            ["lidar", "point cloud", 10, [[60, 75]]],
-            ["odom", "pose", 4, []],
-            ["tf", "tf", 2, [[120, 184]]],
-        ].map(([id, meta, rate, gaps]) => ({ id, meta, rate, times: ticks(rate, gaps) })), [])
-    return h(
-        "div",
-        { className: "demo-grid" },
-        h(Card, { title: "ImageView (raw rgb8 frames)" }, h(ImageView, { frame: color, style: { height: 160 } })),
-        h(
-            Card,
-            {
-                title: "ImageView (16UC1 depth)",
-                actions: h(Select, { size: "sm", value: colormap, options: DEPTH_COLORMAPS, onChange: setColormap }),
-            },
-            h(ImageView, { frame: depth, colormap, style: { height: 160 } }),
-        ),
-        h(
-            Card,
-            { title: "PlaybackBar (recording player)", className: "demo-wide", padded: false },
-            h(PlaybackBar, {
-                start: 0,
-                end: 184,
-                value: t,
-                playing,
-                onPlayPause: setPlaying,
-                onSeek: setT,
-                speed,
-                onSpeedChange: setSpeed,
-                loop,
-                onLoopChange: setLoop,
-                expanded,
-                onExpandedChange: setExpanded,
-                lanes: lanes.map((lane) => ({
-                    id: lane.id,
-                    label: `/${lane.id}`,
-                    meta: lane.meta,
-                    count: lane.times.length.toLocaleString(),
-                    active: shown[lane.id],
-                    ticks: { times: lane.times },
-                    leading: h(Toggle, {
-                        size: "sm",
-                        value: shown[lane.id],
-                        label: null,
-                        "aria-label": `draw /${lane.id}`,
-                        onChange: (on) => setShown((old) => ({ ...old, [lane.id]: on })),
-                    }),
-                    menu: [{ heading: `/${lane.id}` }, { label: "Rename…", onSelect: () => {} }, "-", {
-                        label: "Delete…",
-                        danger: true,
-                        onSelect: () => {},
-                    }],
-                })),
-            }),
-        ),
+    const lanes = useMemo(
+        () =>
+            [
+                ["lidar", "point cloud", 10, [[60, 75]]],
+                ["odom", "pose", 4, []],
+                ["tf", "tf", 2, [[120, 184]]],
+            ].map(([id, meta, rate, gaps]) => ({ id, meta, rate, times: ticks(rate, gaps) })),
+        [],
+    )
+    return (
+        <div className="demo-grid">
+            <Card title="ImageView (raw rgb8 frames)">
+                <ImageView frame={color} style={{ height: 160 }} />
+            </Card>
+            <Card
+                title="ImageView (16UC1 depth)"
+                actions={<Select size="sm" value={colormap} options={DEPTH_COLORMAPS} onChange={setColormap} />}
+            >
+                <ImageView frame={depth} colormap={colormap} style={{ height: 160 }} />
+            </Card>
+            <Card title="PlaybackBar (recording player)" className="demo-wide" padded={false}>
+                <PlaybackBar
+                    start={0}
+                    end={184}
+                    value={t}
+                    playing={playing}
+                    onPlayPause={setPlaying}
+                    onSeek={setT}
+                    speed={speed}
+                    onSpeedChange={setSpeed}
+                    loop={loop}
+                    onLoopChange={setLoop}
+                    expanded={expanded}
+                    onExpandedChange={setExpanded}
+                    lanes={lanes.map((lane) => ({
+                        id: lane.id,
+                        label: `/${lane.id}`,
+                        meta: lane.meta,
+                        count: lane.times.length.toLocaleString(),
+                        active: shown[lane.id],
+                        ticks: { times: lane.times },
+                        leading: (
+                            <Toggle
+                                size="sm"
+                                value={shown[lane.id]}
+                                label={null}
+                                aria-label={`draw /${lane.id}`}
+                                onChange={(on) => setShown((old) => ({ ...old, [lane.id]: on }))}
+                            />
+                        ),
+                        menu: [
+                            { heading: `/${lane.id}` },
+                            { label: "Rename…", onSelect: () => {} },
+                            "-",
+                            {
+                                label: "Delete…",
+                                danger: true,
+                                onSelect: () => {},
+                            },
+                        ],
+                    }))}
+                />
+            </Card>
+        </div>
     )
 }

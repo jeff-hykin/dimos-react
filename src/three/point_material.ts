@@ -4,8 +4,8 @@
 // soft blended gaussian fading into the background with distance. Coloring (gradient by height / intensity / range,
 // or solid) happens on the GPU, so restyling costs nothing.
 import * as THREE from "three"
-import { gradientTexture } from "./gradients.js"
-import { DEFAULT_PERIOD, isPalette } from "../colormaps.js"
+import { gradientTexture } from "./gradients"
+import { DEFAULT_PERIOD, isPalette } from "../colormaps"
 
 /** What glow splats fade into: the page behind the canvas (Viewer.setTheme keeps it on --scene-bg). */
 export const splatBackground = new THREE.Color().setRGB(0, 0, 0, THREE.NoColorSpace)
@@ -293,9 +293,8 @@ export function applyLook(material, partial, range) {
     uniforms.uSolid.value.setStyle(look.solid, THREE.NoColorSpace)
     uniforms.uOpacity.value = look.opacity
     uniforms.uGradient.value = gradientTexture(look.gradient)
-    uniforms.uPeriod.value = look.colorMode === "height" && isPalette(look.gradient)
-        ? Math.max(0.05, look.period ?? DEFAULT_PERIOD)
-        : 0
+    uniforms.uPeriod.value =
+        look.colorMode === "height" && isPalette(look.gradient) ? Math.max(0.05, look.period ?? DEFAULT_PERIOD) : 0
     const splat = look.style === "splat"
     material.transparent = splat || look.opacity < 1
     material.depthWrite = !splat && look.opacity >= 1

@@ -1,7 +1,7 @@
 // Text display: a safe Markdown renderer (docs from manifests / OpenAPI) and a live number that flashes on change.
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { Table } from "./data.js"
+import { cx } from "../cx"
+import { Table } from "./data"
 
 const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*)|(\[[^\]]+\]\([^)\s]+\))/g
 const LIST_ITEM = /^\s*([-*]|\d+\.)\s/
@@ -19,23 +19,23 @@ export function markdownInline(text, key = 0) {
         const token = match[0]
         const k = `${key}-${match.index}`
         if (match[1]) {
-            out.push(h("code", { key: k, className: "dr-code-inline" }, token.slice(1, -1)))
+            out.push(
+                <code key={k} className="dr-code-inline">
+                    {token.slice(1, -1)}
+                </code>,
+            )
         } else if (match[2]) {
-            out.push(h("strong", { key: k }, markdownInline(token.slice(2, -2), key + 1)))
+            out.push(<strong key={k}>{markdownInline(token.slice(2, -2), key + 1)}</strong>)
         } else if (match[3]) {
-            out.push(h("em", { key: k }, markdownInline(token.slice(1, -1), key + 1)))
+            out.push(<em key={k}>{markdownInline(token.slice(1, -1), key + 1)}</em>)
         } else {
             const [, label, href] = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)
             const safe = /^(https?:|\/|#|\.)/.test(href) ? href : "#"
             const external = safe.startsWith("http")
             out.push(
-                h("a", {
-                    key: k,
-                    className: "dr-link",
-                    href: safe,
-                    target: external ? "_blank" : undefined,
-                    rel: "noreferrer",
-                }, label),
+                <a key={k} className="dr-link" href={safe} target={external ? "_blank" : undefined} rel="noreferrer">
+                    {label}
+                </a>,
             )
         }
         last = match.index + token.length
@@ -67,15 +67,18 @@ export function Markdown({ text, inline = false, className, ...rest }) {
                 body.push(lines[i++])
             }
             i++
-            blocks.push(h("pre", { key: i, className: "dr-md__pre dr-scroll" }, body.join("\n")))
+            blocks.push(
+                <pre key={i} className="dr-md__pre dr-scroll">
+                    {body.join("\n")}
+                </pre>,
+            )
         } else if (/^#{1,6}\s/.test(line)) {
             const level = line.match(/^#+/)[0].length
+            const Tag = level <= 2 ? "h4" : "h5"
             blocks.push(
-                h(
-                    level <= 2 ? "h4" : "h5",
-                    { key: i, className: "dr-md__h" },
-                    markdownInline(line.replace(/^#+\s*/, ""), i),
-                ),
+                <Tag key={i} className="dr-md__h">
+                    {markdownInline(line.replace(/^#+\s*/, ""), i)}
+                </Tag>,
             )
             i++
         } else if (LIST_ITEM.test(line)) {
@@ -89,14 +92,21 @@ export function Markdown({ text, inline = false, className, ...rest }) {
                     item += " " + lines[i++].trim()
                 }
                 items.push(
-                    h("li", { key: i, className: indent >= 2 ? "dr-md__sub" : undefined }, markdownInline(item, i)),
+                    <li key={i} className={indent >= 2 ? "dr-md__sub" : undefined}>
+                        {markdownInline(item, i)}
+                    </li>,
                 )
             }
-            blocks.push(h(ordered ? "ol" : "ul", { key: i }, items))
+            const Tag = ordered ? "ol" : "ul"
+            blocks.push(<Tag key={i}>{items}</Tag>)
         } else if (/^\s*\|/.test(line)) {
             const rows = []
             while (i < lines.length && /^\s*\|/.test(lines[i])) {
-                const cells = lines[i].trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim())
+                const cells = lines[i]
+                    .trim()
+                    .replace(/^\||\|$/g, "")
+                    .split("|")
+                    .map((cell) => cell.trim())
                 if (!cells.every((cell) => /^:?-{2,}:?$/.test(cell))) {
                     rows.push(cells)
                 }
@@ -104,35 +114,39 @@ export function Markdown({ text, inline = false, className, ...rest }) {
             }
             const [head = [], ...body] = rows
             blocks.push(
-                h(Table, {
-                    key: i,
-                    compact: true,
-                    className: "dr-md__table",
-                    columns: head.map((cell, column) => ({
+                <Table
+                    key={i}
+                    compact={true}
+                    className="dr-md__table"
+                    columns={head.map((cell, column) => ({
                         key: String(column),
                         label: markdownInline(cell, column),
                         render: (row) => markdownInline(row[column] ?? "", column),
-                    })),
-                    rows: body,
-                    rowKey: (_row, index) => index,
-                }),
+                    }))}
+                    rows={body}
+                    rowKey={(_row, index) => index}
+                />,
             )
         } else if (line.trim() === "") {
             i++
         } else {
             const paragraph = []
             while (
-                i < lines.length && lines[i].trim() !== "" && !/^(```|#{1,6}\s|\s*([-*]|\d+\.)\s|\s*\|)/.test(lines[i])
+                i < lines.length &&
+                lines[i].trim() !== "" &&
+                !/^(```|#{1,6}\s|\s*([-*]|\d+\.)\s|\s*\|)/.test(lines[i])
             ) {
                 paragraph.push(lines[i++].trim())
             }
-            blocks.push(h("p", { key: i }, markdownInline(paragraph.join(" "), i)))
+            blocks.push(<p key={i}>{markdownInline(paragraph.join(" "), i)}</p>)
         }
     }
-    return h(
-        "div",
-        { className: cx("dr-md", inline && "dr-md--inline", className), ...rest },
-        blocks.map((block, index) => h(Fragment, { key: index }, block)),
+    return (
+        <div className={cx("dr-md", inline && "dr-md--inline", className)} {...rest}>
+            {blocks.map((block, index) => (
+                <Fragment key={index}>{block}</Fragment>
+            ))}
+        </div>
     )
 }
 
@@ -149,11 +163,11 @@ export function LiveValue({ value, format = String, className, ...rest }) {
             setFlash((count) => count + 1)
         }
     }, [value])
-    return h("span", {
-        key: flash,
-        className: cx("dr-live-value", flash && "dr-live-value--flash", className),
-        ...rest,
-    }, format(value))
+    return (
+        <span key={flash} className={cx("dr-live-value", flash && "dr-live-value--flash", className)} {...rest}>
+            {format(value)}
+        </span>
+    )
 }
 
 /** Box-drawing characters as ASCII: the themes' mono faces have no box-drawing glyphs (they'd fall back to a system
@@ -205,9 +219,5 @@ export function sanitizeHtml(html) {
  */
 export function SafeHtml({ html, className, ...rest }) {
     const clean = useMemo(() => (html ? sanitizeHtml(html) : ""), [html])
-    return h("div", {
-        className: cx("dr-md", "dr-prose", className),
-        dangerouslySetInnerHTML: { __html: clean },
-        ...rest,
-    })
+    return <div className={cx("dr-md", "dr-prose", className)} dangerouslySetInnerHTML={{ __html: clean }} {...rest} />
 }

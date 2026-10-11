@@ -4,7 +4,7 @@
 // capture, another app or tab, the page hiding, a rotation, releaseAllThumbSticks()) zeroes the stick at once, never
 // eased.
 import { useEffect, useRef, useState } from "react"
-import { cx, h } from "../h.js"
+import { cx } from "../cx"
 
 /** below this share of the radius a resting thumb sends nothing */
 export const STICK_DEAD_ZONE = 0.12
@@ -76,9 +76,16 @@ export function releaseAllThumbSticks() {
  *   `onMove(x, y)`: shaped -1..1 values (y up), eased while held, zero at once on release; `shape(dx, dy, radius, axes)`
  *   and `smooth(current, target, dtMs)` replace the built-in dead zone + expo and easing
  */
-export function ThumbStick(
-    { onMove, axes = "xy", label, shape = shapeStick, smooth = smoothToward, className, style, ...rest },
-) {
+export function ThumbStick({
+    onMove,
+    axes = "xy",
+    label,
+    shape = shapeStick,
+    smooth = smoothToward,
+    className,
+    style,
+    ...rest
+}) {
     const zone = useRef(null)
     const base = useRef(null)
     const onMoveRef = useRef(onMove)
@@ -212,32 +219,30 @@ export function ThumbStick(
         }
     }, [])
     const { active, origin, knob } = view
-    return h(
-        "div",
-        {
-            ref: zone,
-            className: cx("dr-thumbstick", active && "dr-thumbstick--active", className),
-            style,
-            "aria-label": label,
-            onPointerDown: down,
-            onPointerMove: move,
-            onPointerUp: up,
-            onPointerCancel: up,
-            onLostPointerCapture: up,
-            onContextMenu: (event) => event.preventDefault(),
-            ...rest,
-        },
-        h(
-            "div",
-            {
-                ref: base,
-                className: "dr-thumbstick-base",
-                style: origin ? { left: origin.x, top: origin.y } : undefined,
-            },
-            label ? h("span", { className: "dr-thumbstick-label" }, label) : null,
-            h("span", { className: cx("dr-thumbstick-guide", `dr-thumbstick-guide--${axes}`) }),
-            h("div", { className: "dr-thumbstick-knob", style: { transform: `translate(${knob.x}px, ${knob.y}px)` } }),
-        ),
+    return (
+        <div
+            ref={zone}
+            className={cx("dr-thumbstick", active && "dr-thumbstick--active", className)}
+            style={style}
+            aria-label={label}
+            onPointerDown={down}
+            onPointerMove={move}
+            onPointerUp={up}
+            onPointerCancel={up}
+            onLostPointerCapture={up}
+            onContextMenu={(event) => event.preventDefault()}
+            {...rest}
+        >
+            <div
+                ref={base}
+                className="dr-thumbstick-base"
+                style={origin ? { left: origin.x, top: origin.y } : undefined}
+            >
+                {label ? <span className="dr-thumbstick-label">{label}</span> : null}
+                <span className={cx("dr-thumbstick-guide", `dr-thumbstick-guide--${axes}`)} />
+                <div className="dr-thumbstick-knob" style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }} />
+            </div>
+        </div>
     )
 }
 
@@ -246,27 +251,29 @@ export function ThumbStick(
  * @param {{ rows: ({ label: any, down?: boolean, wide?: boolean, title?: string } | null)[][], className?: string }} props
  */
 export function KeyPad({ rows = [], className, ...rest }) {
-    return h(
-        "div",
-        { className: cx("dr-keypad", className), ...rest },
-        rows.map((row, index) =>
-            h(
-                "div",
-                { key: index, className: "dr-keypad-row" },
-                row.map((key, column) =>
-                    h(KeyCap, key ? { key: column, ...key } : { key: column, label: "", empty: true })
-                ),
-            )
-        ),
+    return (
+        <div className={cx("dr-keypad", className)} {...rest}>
+            {rows.map((row, index) => (
+                <div key={index} className="dr-keypad-row">
+                    {row.map((key, column) => (
+                        <KeyCap {...(key ? { key: column, ...key } : { key: column, label: "", empty: true })} />
+                    ))}
+                </div>
+            ))}
+        </div>
     )
 }
 
 /** One key: `label`, `down` lights it; `empty` keeps its place invisible. */
 export function KeyCap({ label, down = false, empty = false, title, className, ...rest }) {
-    return h("span", {
-        className: cx("dr-keycap", down && "dr-keycap--down", empty && "dr-keycap--empty", className),
-        title,
-        "aria-pressed": empty ? undefined : down,
-        ...rest,
-    }, label)
+    return (
+        <span
+            className={cx("dr-keycap", down && "dr-keycap--down", empty && "dr-keycap--empty", className)}
+            title={title}
+            aria-pressed={empty ? undefined : down}
+            {...rest}
+        >
+            {label}
+        </span>
+    )
 }

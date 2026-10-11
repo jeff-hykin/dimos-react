@@ -38,9 +38,9 @@ export function checkTf({ snapshot, fixedFrame, layers = [], placed }) {
         issues.push({
             kind: "twoParents",
             summary: `"${child}" has ${parents.length} parents`,
-            detail: `"${child}" is published under ${
-                parents.join(" and ")
-            }: tf allows one, so its pose flips between them`,
+            detail: `"${child}" is published under ${parents.join(
+                " and ",
+            )}: tf allows one, so its pose flips between them`,
             frames: [child, ...parents],
         })
     }
@@ -60,7 +60,8 @@ export function checkTf({ snapshot, fixedFrame, layers = [], placed }) {
         issues.push({
             kind: "separateTrees",
             summary: `${roots.length} separate trees (${list(roots)})`,
-            detail: `roots ${sizes.join(", ")}: frames in different trees can't be placed relative to each other` +
+            detail:
+                `roots ${sizes.join(", ")}: frames in different trees can't be placed relative to each other` +
                 (fixedRoot ? `, so only ${fixedRoot}'s tree can be drawn in "${fixedFrame}"` : ""),
             frames: [...frames].filter((frame) => rootOf(frame) !== fixedRoot).sort(),
         })
@@ -86,7 +87,8 @@ export function checkTf({ snapshot, fixedFrame, layers = [], placed }) {
             summary: inTree
                 ? `"${frame}" isn't connected to "${fixedFrame}" (${list(names, 2)})`
                 : `"${frame}" isn't in the tree (${list(names, 2)})`,
-            detail: `${names.join(", ")} ${names.length === 1 ? "is" : "are"} in "${frame}", which ` +
+            detail:
+                `${names.join(", ")} ${names.length === 1 ? "is" : "are"} in "${frame}", which ` +
                 (inTree ? `has no tf path to "${fixedFrame}"` : "tf never publishes") +
                 ", so nothing places it in the view",
             frames: [frame],
@@ -95,18 +97,20 @@ export function checkTf({ snapshot, fixedFrame, layers = [], placed }) {
     const dynamic = edges.filter((edge) => !edge.isStatic)
     const freshest = Math.min(...dynamic.map((edge) => edge.ageMs))
     // only while others still update: when everything pauses (sim paused, connection gone) nothing in particular broke
-    const stale = dynamic.filter((edge) => edge.ageMs > TF_STALE_MS && edge.ageMs - freshest > TF_STALE_MS)
+    const stale = dynamic
+        .filter((edge) => edge.ageMs > TF_STALE_MS && edge.ageMs - freshest > TF_STALE_MS)
         .sort((a, b) => a.child.localeCompare(b.child))
     if (stale.length) {
         const oldest = Math.max(...stale.map((edge) => edge.ageMs))
         issues.push({
             kind: "stale",
-            summary: stale.length === 1
-                ? `${stale[0].parent} → ${stale[0].child} stopped ${seconds(stale[0].ageMs)} ago`
-                : `${stale.length} transforms stopped updating`,
-            detail: `${stale.map((edge) => `${edge.parent} → ${edge.child}`).join(", ")}: no update for up to ${
-                seconds(oldest)
-            } while other transforms keep arriving`,
+            summary:
+                stale.length === 1
+                    ? `${stale[0].parent} → ${stale[0].child} stopped ${seconds(stale[0].ageMs)} ago`
+                    : `${stale.length} transforms stopped updating`,
+            detail: `${stale.map((edge) => `${edge.parent} → ${edge.child}`).join(", ")}: no update for up to ${seconds(
+                oldest,
+            )} while other transforms keep arriving`,
             frames: stale.map((edge) => edge.child),
         })
     }

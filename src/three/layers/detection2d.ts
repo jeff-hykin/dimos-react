@@ -1,9 +1,9 @@
 // vision_msgs.Detection2DArray / Detection2D / BoundingBox2DArray over a camera image: a box and "class score" per
 // detection, in the image's pixel coordinates (camera panels draw registered overlays on a canvas over the picture).
-import { cssColor } from "../robot_model.js"
-import { themeColors } from "../../theme/theme.js"
-import { registerOverlay } from "./registry.js"
-import { colorFor } from "./path.js"
+import { cssColor } from "../robot_model"
+import { themeColors } from "../../theme/theme"
+import { registerOverlay } from "./registry"
+import { colorFor } from "./path"
 
 registerOverlay({
     id: "detection2d",
@@ -20,16 +20,18 @@ registerOverlay({
             const center = box.center?.position ?? { x: 0, y: 0 }
             const left = center.x - (box.size_x ?? 0) / 2
             const top = center.y - (box.size_y ?? 0) / 2
-            const best = [...(detection.results ?? [])]
-                .sort((a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0))[0]
+            const best = [...(detection.results ?? [])].sort(
+                (a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
+            )[0]
             const name = best?.hypothesis?.class_id || detection.id || ""
             const color = `#${colorFor(name || "box").getHexString()}`
             context.strokeStyle = color
             context.strokeRect(left, top, box.size_x ?? 0, box.size_y ?? 0)
             if (name) {
-                const text = best?.hypothesis?.score !== undefined
-                    ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%`
-                    : name
+                const text =
+                    best?.hypothesis?.score !== undefined
+                        ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%`
+                        : name
                 const width = context.measureText(text).width + 8
                 const height = parseFloat(context.font) + 4
                 context.fillStyle = color

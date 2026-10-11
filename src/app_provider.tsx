@@ -2,11 +2,10 @@
 // unless `source` is given), URL state driven by the backend's url events, toasts and confirm/prompt dialogs.
 //
 //     createRoot(document.getElementById("root")).render(h(AppProvider, null, h(App)))
-import { h } from "./h.js"
-import { DimThemeProvider } from "./theme/provider.js"
-import { DataSourceProvider } from "./data.js"
-import { UrlStateProvider } from "./url_state.js"
-import { DialogProvider, ToastProvider } from "./components/feedback.js"
+import { DimThemeProvider } from "./theme/provider"
+import { DataSourceProvider } from "./data"
+import { UrlStateProvider } from "./url_state"
+import { DialogProvider, ToastProvider } from "./components/feedback"
 
 /**
  * @param {{ theme?: object, source?: any, url?: object | false, toastPosition?: string, children?: any }} props
@@ -14,12 +13,16 @@ import { DialogProvider, ToastProvider } from "./components/feedback.js"
  *   the page's zenoh-gateway connection); `url`: UrlStateProvider props, or false for none
  */
 export function AppProvider({ theme = {}, source, url = {}, toastPosition, children }) {
-    let tree = h(DialogProvider, null, h(ToastProvider, { position: toastPosition }, children))
+    let tree = (
+        <DialogProvider>
+            <ToastProvider position={toastPosition}>{children}</ToastProvider>
+        </DialogProvider>
+    )
     if (url !== false) {
-        tree = h(UrlStateProvider, url, tree)
+        tree = <UrlStateProvider {...url}>{tree}</UrlStateProvider>
     }
     if (source) {
-        tree = h(DataSourceProvider, { source }, tree)
+        tree = <DataSourceProvider source={source}>{tree}</DataSourceProvider>
     }
-    return h(DimThemeProvider, theme, tree)
+    return <DimThemeProvider {...theme}>{tree}</DimThemeProvider>
 }

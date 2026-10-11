@@ -72,7 +72,7 @@ export class TfTree {
      * @param {boolean} [isStatic]
      */
     setMessage(message, isStatic = false) {
-        const transforms = Array.isArray(message) ? message : message?.transforms ?? []
+        const transforms = Array.isArray(message) ? message : (message?.transforms ?? [])
         for (const stamped of transforms) {
             const { translation, rotation } = stamped?.transform ?? {}
             if (!translation || !rotation) {
@@ -159,7 +159,10 @@ export class TfTree {
             if (from && to && from.root === to.root) {
                 result = to.matrix.clone().invert().multiply(from.matrix)
             } else if (
-                from && !this.has(fixed) && from.root === frame && WORLD_NAMES.includes(frame) &&
+                from &&
+                !this.has(fixed) &&
+                from.root === frame &&
+                WORLD_NAMES.includes(frame) &&
                 WORLD_NAMES.includes(fixed)
             ) {
                 // no tf for either world-ish name (a map in "world" while nothing publishes tf): the same frame
@@ -227,7 +230,8 @@ export class TfTree {
             frames: this.frames(),
             edges,
             problems: {
-                doubleParent: [...this.#parentsSeen].filter(([, parents]) => parents.size > 1)
+                doubleParent: [...this.#parentsSeen]
+                    .filter(([, parents]) => parents.size > 1)
                     .map(([child, parents]) => [child, [...parents]]),
                 roots: this.#roots(),
                 cycle: [...this.#edges.keys()].filter((child) => this.#toRoot(child) === null),

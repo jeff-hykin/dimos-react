@@ -4,7 +4,12 @@
 /** Stops as [position 0..1, "#rrggbb"]; piecewise-linear in sRGB. */
 export const RAMPS = {
     // MemWorld's height ramp: purple, blue, cyan, mint
-    memworld: [[0, "#6f15b3"], [1 / 3, "#1b54f8"], [2 / 3, "#1cd0f2"], [1, "#90f690"]],
+    memworld: [
+        [0, "#6f15b3"],
+        [1 / 3, "#1b54f8"],
+        [2 / 3, "#1cd0f2"],
+        [1, "#90f690"],
+    ],
     // Turbo, starting at its blue (the floor is usually the lowest band)
     turbo: [
         [0, "#3e5fd8"],
@@ -18,12 +23,44 @@ export const RAMPS = {
         [0.9, "#f3c63a"],
         [1, "#fe9b2d"],
     ],
-    viridis: [[0, "#440154"], [0.25, "#3b528b"], [0.5, "#21918c"], [0.75, "#5ec962"], [1, "#fde725"]],
-    magma: [[0, "#000004"], [0.25, "#51127c"], [0.5, "#b73779"], [0.75, "#fc8961"], [1, "#fcfdbf"]],
-    plasma: [[0, "#0d0887"], [0.25, "#7e03a8"], [0.5, "#cc4778"], [0.75, "#f89540"], [1, "#f0f921"]],
-    ice: [[0, "#0b1d3a"], [0.35, "#1f5f9e"], [0.7, "#7fc8f8"], [1, "#f4fbff"]],
-    sunset: [[0, "#1a1046"], [0.3, "#7b2d7a"], [0.6, "#e0565b"], [0.85, "#f6a04d"], [1, "#fde39b"]],
-    grayscale: [[0, "#1a1a1a"], [1, "#f2f2f2"]],
+    viridis: [
+        [0, "#440154"],
+        [0.25, "#3b528b"],
+        [0.5, "#21918c"],
+        [0.75, "#5ec962"],
+        [1, "#fde725"],
+    ],
+    magma: [
+        [0, "#000004"],
+        [0.25, "#51127c"],
+        [0.5, "#b73779"],
+        [0.75, "#fc8961"],
+        [1, "#fcfdbf"],
+    ],
+    plasma: [
+        [0, "#0d0887"],
+        [0.25, "#7e03a8"],
+        [0.5, "#cc4778"],
+        [0.75, "#f89540"],
+        [1, "#f0f921"],
+    ],
+    ice: [
+        [0, "#0b1d3a"],
+        [0.35, "#1f5f9e"],
+        [0.7, "#7fc8f8"],
+        [1, "#f4fbff"],
+    ],
+    sunset: [
+        [0, "#1a1046"],
+        [0.3, "#7b2d7a"],
+        [0.6, "#e0565b"],
+        [0.85, "#f6a04d"],
+        [1, "#fde39b"],
+    ],
+    grayscale: [
+        [0, "#1a1a1a"],
+        [1, "#f2f2f2"],
+    ],
 }
 
 export const GRADIENTS = Object.keys(RAMPS)

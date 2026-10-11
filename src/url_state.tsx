@@ -11,8 +11,7 @@
 // the current params (null removes one), `clear` drops the others first, `replace` uses replaceState (no new history
 // entry). Params live in the query string (mode "search", default) or in the hash (mode "hash": #a=1&b=2).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react"
-import { h } from "./h.js"
-import { useDataSource } from "./data.js"
+import { useDataSource } from "./data"
 
 /** The params of `href` as a plain object of strings. */
 export function parseUrlState(href, { mode = "search" } = {}) {
@@ -204,14 +203,18 @@ const getDefaultStore = () => (defaultStore ??= createUrlStore())
  * `mode` ("search" | "hash") pick where the params live; `store` passes a ready-made one.
  * @param {Record<string, any>} props
  */
-export function UrlStateProvider(
-    { mode = "search", window: win, store: givenStore, events = "events", eventType = "url", children },
-) {
-    const store = useMemo(() => givenStore ?? createUrlStore({ window: win ?? globalThis.window, mode }), [
-        givenStore,
-        win,
-        mode,
-    ])
+export function UrlStateProvider({
+    mode = "search",
+    window: win,
+    store: givenStore,
+    events = "events",
+    eventType = "url",
+    children,
+}) {
+    const store = useMemo(
+        () => givenStore ?? createUrlStore({ window: win ?? globalThis.window, mode }),
+        [givenStore, win, mode],
+    )
     const source = useDataSource()
     useEffect(() => {
         if (!events) {
@@ -219,7 +222,7 @@ export function UrlStateProvider(
         }
         return bindUrlEvents(source, store, { topic: typeof events === "string" ? events : "events", eventType })
     }, [source, store, events, eventType])
-    return h(UrlStateContext.Provider, { value: store }, children)
+    return <UrlStateContext.Provider value={store}>{children}</UrlStateContext.Provider>
 }
 
 /** The URL store in effect (the provider's, else one over the real window). */
@@ -265,14 +268,21 @@ const CODECS = {
 export function useUrlState(key, defaultValue, { codec = "string", replace = false } = {}) {
     const store = useUrlStore()
     const { parse, format } = typeof codec === "string" ? CODECS[codec] : codec
-    const raw = useSyncExternalStore(store.subscribe, () => store.get()[key], () => store.get()[key])
-    const value = raw === undefined ? defaultValue : parse(raw) ?? defaultValue
+    const raw = useSyncExternalStore(
+        store.subscribe,
+        () => store.get()[key],
+        () => store.get()[key],
+    )
+    const value = raw === undefined ? defaultValue : (parse(raw) ?? defaultValue)
     const latest = useRef(value)
     latest.current = value
-    const set = useCallback((next, options = {}) => {
-        const resolved = typeof next === "function" ? next(latest.current) : next
-        const same = JSON.stringify(resolved) === JSON.stringify(defaultValue)
-        store.set({ [key]: same ? null : format(resolved) }, { replace, ...options })
-    }, [store, key, replace, format, JSON.stringify(defaultValue)])
+    const set = useCallback(
+        (next, options = {}) => {
+            const resolved = typeof next === "function" ? next(latest.current) : next
+            const same = JSON.stringify(resolved) === JSON.stringify(defaultValue)
+            store.set({ [key]: same ? null : format(resolved) }, { replace, ...options })
+        },
+        [store, key, replace, format, JSON.stringify(defaultValue)],
+    )
     return [value, set]
 }

@@ -64,14 +64,14 @@ import {
     useToast,
     useUrlParams,
     useUrlState,
-} from "../mod.js"
+} from "../src/index"
 import { useState } from "react"
-import { DataSection } from "./sections/data.js"
-import { NavSection } from "./sections/nav.js"
-import { InputDevicesSection } from "./sections/input_devices.js"
-import { SceneSection } from "./sections/scene.js"
-import { MediaSection } from "./sections/media.js"
-import { ViewsSection } from "./sections/views.js"
+import { DataSection } from "./sections/data"
+import { NavSection } from "./sections/nav"
+import { InputDevicesSection } from "./sections/input_devices"
+import { SceneSection } from "./sections/scene"
+import { MediaSection } from "./sections/media"
+import { ViewsSection } from "./sections/views"
 
 const source = memorySource({
     topics: ["dimos/odom/nav_msgs.Odometry", "dimos/lidar/sensor_msgs.PointCloud2", "dimos/tf/tf2_msgs.TFMessage"],
@@ -94,224 +94,223 @@ function ControlsSection() {
     const [yaw, setYaw] = useState(0.4)
     const [floor, setFloor] = useState(1)
     const [editOpen, setEditOpen] = useState(true)
-    return h(
-        Column,
-        { gap: 16 },
-        h(
-            Card,
-            { title: "Buttons" },
-            h(
-                Row,
-                { wrap: true },
-                h(Button, null, "Default"),
-                h(Button, { variant: "primary", icon: "play" }, "Start replay"),
-                h(Button, { variant: "ghost", icon: "refresh" }, "Reload"),
-                h(Button, { variant: "danger", icon: "trash" }, "Delete"),
-                h(Button, { variant: "ok", icon: "check" }, "Stand up"),
-                h(Button, { variant: "warn", icon: "warn" }, "Take over"),
-                h(Button, { pressed: true, icon: "target" }, "Following"),
-                h(Button, { loading: true }, "Saving"),
-                h(Button, { disabled: true }, "Disabled"),
-                h(Button, { size: "sm", icon: "download" }, "Small"),
-                h(Button, { size: "lg", variant: "primary" }, "Large"),
-            ),
-            h(
-                Row,
-                { wrap: true },
-                h(IconButton, { icon: "settings", label: "Settings" }),
-                h(IconButton, { icon: "fullscreen", label: "Fullscreen", variant: "default" }),
-                h(IconButton, { icon: "close", label: "Close", round: true }),
-                h(
-                    ButtonGroup,
-                    null,
-                    h(Button, { size: "sm", pressed: true }, "3D"),
-                    h(Button, { size: "sm" }, "Top"),
-                    h(Button, { size: "sm" }, "Map"),
-                ),
-                h(Kbd, { keys: ["mod", "K"] }),
-                h(Kbd, null, "W"),
-                h(
-                    Button,
-                    { size: "sm", icon: "download", href: "data:text/plain,hello", download: "hello.txt" },
-                    "A link",
-                ),
-                h(CopyButton, { text: "ABCD-1234", label: "Copy the code" }),
-            ),
-            h(
-                Row,
-                { wrap: true, gap: 14 },
-                h(Fab, { icon: "edit", label: "Edit tools", active: editOpen, onClick: () => setEditOpen(!editOpen) }),
-                h(Fab, { icon: "refresh", label: "Generate (next step)", tone: "info", attention: "pulse" }),
-                h(Fab, { icon: "layers", label: "Slicer (recommended)", tone: "warn", attention: "glow" }),
-                h(Fab, { icon: "zap", label: "Working", tone: "ok", attention: "spin", size: 40 }),
-                h(Fab, { icon: "edit", label: "Disabled", disabled: true }),
-                h(AngleDial, { value: yaw, onChange: setYaw, tone: "warn", title: "drag around to turn" }),
-                h(Text, { mono: true, small: true }, `${((yaw * 180) / Math.PI).toFixed(1)}°`),
-                h(Segmented, {
-                    vertical: true,
-                    size: "sm",
-                    value: floor,
-                    onChange: setFloor,
-                    items: [[2, "F3"], [1, "F2"], [0, "F1"]],
-                    label: "floor",
-                }),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Form fields" },
-            h(
-                "div",
-                { className: "demo-grid" },
-                h(
-                    Field,
-                    { label: "Robot name", hint: "shown in Desktop's dock" },
-                    h(TextInput, { value: text, onChange: setText }),
-                ),
-                h(Field, { label: "Search topics" }, h(SearchInput, { value: search, onChange: setSearch })),
-                h(
-                    Field,
-                    { label: "Label (commits on Enter / blur)", hint: `saved: ${label}` },
-                    h(TextInput, { value: label, onCommit: setLabel }),
-                ),
-                h(
-                    Field,
-                    { label: "Max points", error: count > 100 ? "too many" : null },
-                    h(NumberInput, { value: count, onChange: setCount, min: 0, step: 1, unit: "k" }),
-                ),
-                h(
-                    Field,
-                    { label: "Range max (nullable)", hint: "empty = auto" },
-                    h(NumberInput, {
-                        value: rangeMax,
-                        onChange: setRangeMax,
-                        nullable: true,
-                        placeholder: "auto",
-                        step: 0.5,
-                    }),
-                ),
-                h(
-                    Field,
-                    { label: "Keep" },
-                    h(Select, {
-                        value: mode,
-                        onChange: setMode,
-                        options: [["latest", "latest scan"], ["accumulate", "accumulate"]],
-                    }),
-                ),
-                h(
-                    Field,
-                    { label: "Speed" },
-                    h(Slider, {
-                        value: speed,
-                        onChange: setSpeed,
-                        min: 0,
-                        max: 1.5,
-                        step: 0.05,
-                        format: (value) => `${value.toFixed(2)} m/s`,
-                    }),
-                ),
-                h(
-                    Field,
-                    { label: "Height band" },
-                    h(RangeSlider, {
-                        value: range,
-                        onChange: setRange,
-                        min: -1,
-                        max: 3,
-                        step: 0.1,
-                        format: (value) => `${value.toFixed(1)} m`,
-                    }),
-                ),
-                h(Field, { label: "Notes" }, h(TextArea, { value: notes, onChange: setNotes, rows: 2 })),
-                h(Field, { label: "Frame id" }, h(TextInput, { value: "base_link", mono: true, icon: "target" })),
-            ),
-            h(Separator),
-            h(
-                Row,
-                { gap: 24, wrap: true, align: "flex-start" },
-                h(
-                    Column,
-                    null,
-                    h(Checkbox, {
-                        value: checks.grid,
-                        onChange: (grid) => setChecks({ ...checks, grid }),
-                        label: "Grid",
-                    }),
-                    h(Checkbox, {
-                        value: checks.labels,
-                        onChange: (labels) => setChecks({ ...checks, labels }),
-                        label: "Frame labels",
-                    }),
-                    h(Checkbox, { value: false, indeterminate: true, label: "Some layers" }),
-                ),
-                h(
-                    Column,
-                    null,
-                    h(Toggle, { value: follow, onChange: setFollow, label: "Follow robot" }),
-                    h(Toggle, { value: false, label: "Record", size: "sm" }),
-                ),
-                h(RadioGroup, {
-                    value: style,
-                    onChange: setStyle,
-                    options: [["voxel", "Cubes"], ["splat", "Glow"], ["disc", "Spheres"]],
-                }),
-                h(Field, { label: "Inline field", inline: true }, h(Toggle, { value: true })),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Badges, chips, status" },
-            h(
-                Row,
-                { wrap: true },
-                h(Badge, null, "sensor_msgs.PointCloud2"),
-                h(Badge, { tone: "info" }, "10 Hz"),
-                h(Badge, { tone: "ok", dot: true }, "live"),
-                h(Badge, { tone: "warn" }, "stale 3 s"),
-                h(Badge, { tone: "danger" }, "no TF"),
-                h(Badge, { solid: true }, "NEW"),
-                h(Badge, { solid: true, tone: "ok" }, "3"),
-            ),
-            h(
-                Row,
-                { wrap: true },
-                Object.entries(chips).map(([name, on]) =>
-                    h(
-                        Chip,
-                        { key: name, selected: on, onChange: (value) => setChips({ ...chips, [name]: value }) },
-                        `/${name}`,
-                    )
-                ),
-                h(Chip, { icon: "robot", onRemove: () => {} }, "go2"),
-            ),
-            h(
-                Row,
-                { wrap: true, gap: 16 },
-                h(StatusDot, { tone: "ok", label: "ok" }),
-                h(StatusDot, { tone: "warn", label: "warn" }),
-                h(StatusDot, { tone: "danger", label: "danger" }),
-                h(StatusDot, { tone: "off", label: "off" }),
-                h(ConnectionStatus, { state: "connected", detail: "14 ms" }),
-                h(ConnectionStatus, { state: "connecting" }),
-                h(ConnectionStatus, { state: "lost", label: "robot offline" }),
-            ),
-            h(Label, null, "TagList (oneLine: as many as fit, then +N)"),
-            h(TagList, {
-                oneLine: true,
-                items: [
-                    "GO2Connection",
-                    "VoxelGridMapper",
-                    "CostMapper",
-                    "ReplanningAStarPlanner",
-                    "WavefrontFrontierExplorer",
-                    "Rerun",
-                    "WebsocketVis",
-                ],
-                extra: h(Badge, { tone: "warn" }, "hidden"),
-            }),
-            h(TagList, { items: [{ label: "Doesn't load (yet)", tone: "danger", title: "No module named 'mujoco'" }] }),
-        ),
+    return (
+        <Column gap={16}>
+            <Card title="Buttons">
+                <Row wrap={true}>
+                    <Button>Default</Button>
+                    <Button variant="primary" icon="play">
+                        Start replay
+                    </Button>
+                    <Button variant="ghost" icon="refresh">
+                        Reload
+                    </Button>
+                    <Button variant="danger" icon="trash">
+                        Delete
+                    </Button>
+                    <Button variant="ok" icon="check">
+                        Stand up
+                    </Button>
+                    <Button variant="warn" icon="warn">
+                        Take over
+                    </Button>
+                    <Button pressed={true} icon="target">
+                        Following
+                    </Button>
+                    <Button loading={true}>Saving</Button>
+                    <Button disabled={true}>Disabled</Button>
+                    <Button size="sm" icon="download">
+                        Small
+                    </Button>
+                    <Button size="lg" variant="primary">
+                        Large
+                    </Button>
+                </Row>
+                <Row wrap={true}>
+                    <IconButton icon="settings" label="Settings" />
+                    <IconButton icon="fullscreen" label="Fullscreen" variant="default" />
+                    <IconButton icon="close" label="Close" round={true} />
+                    <ButtonGroup>
+                        <Button size="sm" pressed={true}>
+                            3D
+                        </Button>
+                        <Button size="sm">Top</Button>
+                        <Button size="sm">Map</Button>
+                    </ButtonGroup>
+                    <Kbd keys={["mod", "K"]} />
+                    <Kbd>W</Kbd>
+                    <Button size="sm" icon="download" href="data:text/plain,hello" download="hello.txt">
+                        A link
+                    </Button>
+                    <CopyButton text="ABCD-1234" label="Copy the code" />
+                </Row>
+                <Row wrap={true} gap={14}>
+                    <Fab icon="edit" label="Edit tools" active={editOpen} onClick={() => setEditOpen(!editOpen)} />
+                    <Fab icon="refresh" label="Generate (next step)" tone="info" attention="pulse" />
+                    <Fab icon="layers" label="Slicer (recommended)" tone="warn" attention="glow" />
+                    <Fab icon="zap" label="Working" tone="ok" attention="spin" size={40} />
+                    <Fab icon="edit" label="Disabled" disabled={true} />
+                    <AngleDial value={yaw} onChange={setYaw} tone="warn" title="drag around to turn" />
+                    <Text mono={true} small={true}>{`${((yaw * 180) / Math.PI).toFixed(1)}°`}</Text>
+                    <Segmented
+                        vertical={true}
+                        size="sm"
+                        value={floor}
+                        onChange={setFloor}
+                        items={[
+                            [2, "F3"],
+                            [1, "F2"],
+                            [0, "F1"],
+                        ]}
+                        label="floor"
+                    />
+                </Row>
+            </Card>
+            <Card title="Form fields">
+                <div className="demo-grid">
+                    <Field label="Robot name" hint="shown in Desktop's dock">
+                        <TextInput value={text} onChange={setText} />
+                    </Field>
+                    <Field label="Search topics">
+                        <SearchInput value={search} onChange={setSearch} />
+                    </Field>
+                    <Field label="Label (commits on Enter / blur)" hint={`saved: ${label}`}>
+                        <TextInput value={label} onCommit={setLabel} />
+                    </Field>
+                    <Field label="Max points" error={count > 100 ? "too many" : null}>
+                        <NumberInput value={count} onChange={setCount} min={0} step={1} unit="k" />
+                    </Field>
+                    <Field label="Range max (nullable)" hint="empty = auto">
+                        <NumberInput
+                            value={rangeMax}
+                            onChange={setRangeMax}
+                            nullable={true}
+                            placeholder="auto"
+                            step={0.5}
+                        />
+                    </Field>
+                    <Field label="Keep">
+                        <Select
+                            value={mode}
+                            onChange={setMode}
+                            options={[
+                                ["latest", "latest scan"],
+                                ["accumulate", "accumulate"],
+                            ]}
+                        />
+                    </Field>
+                    <Field label="Speed">
+                        <Slider
+                            value={speed}
+                            onChange={setSpeed}
+                            min={0}
+                            max={1.5}
+                            step={0.05}
+                            format={(value) => `${value.toFixed(2)} m/s`}
+                        />
+                    </Field>
+                    <Field label="Height band">
+                        <RangeSlider
+                            value={range}
+                            onChange={setRange}
+                            min={-1}
+                            max={3}
+                            step={0.1}
+                            format={(value) => `${value.toFixed(1)} m`}
+                        />
+                    </Field>
+                    <Field label="Notes">
+                        <TextArea value={notes} onChange={setNotes} rows={2} />
+                    </Field>
+                    <Field label="Frame id">
+                        <TextInput value="base_link" mono={true} icon="target" />
+                    </Field>
+                </div>
+                <Separator />
+                <Row gap={24} wrap={true} align="flex-start">
+                    <Column>
+                        <Checkbox
+                            value={checks.grid}
+                            onChange={(grid) => setChecks({ ...checks, grid })}
+                            label="Grid"
+                        />
+                        <Checkbox
+                            value={checks.labels}
+                            onChange={(labels) => setChecks({ ...checks, labels })}
+                            label="Frame labels"
+                        />
+                        <Checkbox value={false} indeterminate={true} label="Some layers" />
+                    </Column>
+                    <Column>
+                        <Toggle value={follow} onChange={setFollow} label="Follow robot" />
+                        <Toggle value={false} label="Record" size="sm" />
+                    </Column>
+                    <RadioGroup
+                        value={style}
+                        onChange={setStyle}
+                        options={[
+                            ["voxel", "Cubes"],
+                            ["splat", "Glow"],
+                            ["disc", "Spheres"],
+                        ]}
+                    />
+                    <Field label="Inline field" inline={true}>
+                        <Toggle value={true} />
+                    </Field>
+                </Row>
+            </Card>
+            <Card title="Badges, chips, status">
+                <Row wrap={true}>
+                    <Badge>sensor_msgs.PointCloud2</Badge>
+                    <Badge tone="info">10 Hz</Badge>
+                    <Badge tone="ok" dot={true}>
+                        live
+                    </Badge>
+                    <Badge tone="warn">stale 3 s</Badge>
+                    <Badge tone="danger">no TF</Badge>
+                    <Badge solid={true}>NEW</Badge>
+                    <Badge solid={true} tone="ok">
+                        3
+                    </Badge>
+                </Row>
+                <Row wrap={true}>
+                    {Object.entries(chips).map(([name, on]) => (
+                        <Chip
+                            key={name}
+                            selected={on}
+                            onChange={(value) => setChips({ ...chips, [name]: value })}
+                        >{`/${name}`}</Chip>
+                    ))}
+                    <Chip icon="robot" onRemove={() => {}}>
+                        go2
+                    </Chip>
+                </Row>
+                <Row wrap={true} gap={16}>
+                    <StatusDot tone="ok" label="ok" />
+                    <StatusDot tone="warn" label="warn" />
+                    <StatusDot tone="danger" label="danger" />
+                    <StatusDot tone="off" label="off" />
+                    <ConnectionStatus state="connected" detail="14 ms" />
+                    <ConnectionStatus state="connecting" />
+                    <ConnectionStatus state="lost" label="robot offline" />
+                </Row>
+                <Label>TagList (oneLine: as many as fit, then +N)</Label>
+                <TagList
+                    oneLine={true}
+                    items={[
+                        "GO2Connection",
+                        "VoxelGridMapper",
+                        "CostMapper",
+                        "ReplanningAStarPlanner",
+                        "WavefrontFrontierExplorer",
+                        "Rerun",
+                        "WebsocketVis",
+                    ]}
+                    extra={<Badge tone="warn">hidden</Badge>}
+                />
+                <TagList items={[{ label: "Doesn't load (yet)", tone: "danger", title: "No module named 'mujoco'" }]} />
+            </Card>
+        </Column>
     )
 }
 
@@ -321,269 +320,249 @@ function FeedbackSection() {
     const prompt = usePrompt()
     const [open, setOpen] = useState(false)
     const [answer, setAnswer] = useState("")
-    return h(
-        Column,
-        { gap: 16 },
-        h(
-            Card,
-            { title: "Alerts" },
-            h(Alert, { tone: "info", title: "Replay loaded" }, "2026-10-11_run3 · 4 min 12 s · 18 topics"),
-            h(Alert, { tone: "ok" }, "Map saved to ~/maps/office.pcd"),
-            h(
-                Alert,
-                { tone: "warn", title: "TF problem", actions: h(Button, { size: "sm" }, "Open TF tree") },
-                "lidar_link has two parents: base_link, body",
-            ),
-            h(
-                Alert,
-                { tone: "danger", title: "Robot unreachable", onClose: () => {} },
-                "No heartbeat from 192.168.12.1 for 8 s",
-            ),
-        ),
-        h(
-            Card,
-            { title: "Toasts, modals, confirm, prompt" },
-            h(
-                Row,
-                { wrap: true },
-                h(Button, { onClick: () => toast("Recording started") }, "Toast"),
-                h(Button, { onClick: () => toast.ok("Uploaded 3 files") }, "OK toast"),
-                h(
-                    Button,
-                    { onClick: () => toast.error("Upload failed: disk full", { title: "Upload" }) },
-                    "Error toast",
-                ),
-                h(Button, {
-                    onClick: () => toast({ message: "Layer hidden", action: { label: "Undo", onClick: () => {} } }),
-                }, "Toast with action"),
-                h(Button, { onClick: () => setOpen(true) }, "Modal"),
-                h(Button, {
-                    variant: "danger",
-                    onClick: async () =>
-                        setAnswer(
-                            String(
-                                await confirm({
-                                    title: "Delete recording?",
-                                    message: "2026-10-11_run3 will be gone for good.",
-                                    danger: true,
-                                    confirmLabel: "Delete",
-                                }),
-                            ),
-                        ),
-                }, "Confirm"),
-                h(Button, {
-                    onClick: async () => setAnswer(String(await prompt({ title: "Rename", defaultValue: "run3" }))),
-                }, "Prompt"),
-                answer ? h(Text, { muted: true, mono: true }, `→ ${answer}`) : null,
-            ),
-            h(
-                Modal,
-                {
-                    open,
-                    onClose: () => setOpen(false),
-                    title: "Export map",
-                    footer: [
-                        h(Button, { key: "c", onClick: () => setOpen(false) }, "Cancel"),
-                        h(Button, { key: "e", variant: "primary", onClick: () => setOpen(false) }, "Export"),
-                    ],
-                },
-                h(Field, { label: "File name" }, h(TextInput, { value: "office.pcd", mono: true })),
-                h(Field, { label: "Format" }, h(Select, { value: "pcd", options: ["pcd", "ply", "las"] })),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Progress" },
-            h(
-                Row,
-                { gap: 16 },
-                h(Spinner),
-                h(ProgressRing, { value: 0.68 }),
-                h(ProgressRing, { value: 1, tone: "ok", size: 36 }),
-                h(
-                    Column,
-                    { grow: true },
-                    h(Progress, { value: 0.42 }),
-                    h(Progress, { value: 0.9, tone: "warn" }),
-                    h(Progress),
-                ),
-            ),
-            h(Column, { gap: 6 }, h(Skeleton, { width: "60%" }), h(Skeleton, { width: "85%" })),
-        ),
-        h(
-            Card,
-            { title: "Empty state", padded: false },
-            h(EmptyState, {
-                icon: "robot",
-                title: "No robot connected",
-                message: "Start a blueprint in Desktop, or open a recording.",
-                actions: [
-                    h(Button, { key: "a", variant: "primary" }, "Open recording"),
-                    h(Button, { key: "b" }, "Docs"),
-                ],
-            }),
-        ),
+    return (
+        <Column gap={16}>
+            <Card title="Alerts">
+                <Alert tone="info" title="Replay loaded">
+                    2026-10-11_run3 · 4 min 12 s · 18 topics
+                </Alert>
+                <Alert tone="ok">Map saved to ~/maps/office.pcd</Alert>
+                <Alert tone="warn" title="TF problem" actions={<Button size="sm">Open TF tree</Button>}>
+                    lidar_link has two parents: base_link, body
+                </Alert>
+                <Alert tone="danger" title="Robot unreachable" onClose={() => {}}>
+                    No heartbeat from 192.168.12.1 for 8 s
+                </Alert>
+            </Card>
+            <Card title="Toasts, modals, confirm, prompt">
+                <Row wrap={true}>
+                    <Button onClick={() => toast("Recording started")}>Toast</Button>
+                    <Button onClick={() => toast.ok("Uploaded 3 files")}>OK toast</Button>
+                    <Button onClick={() => toast.error("Upload failed: disk full", { title: "Upload" })}>
+                        Error toast
+                    </Button>
+                    <Button
+                        onClick={() => toast({ message: "Layer hidden", action: { label: "Undo", onClick: () => {} } })}
+                    >
+                        Toast with action
+                    </Button>
+                    <Button onClick={() => setOpen(true)}>Modal</Button>
+                    <Button
+                        variant="danger"
+                        onClick={async () =>
+                            setAnswer(
+                                String(
+                                    await confirm({
+                                        title: "Delete recording?",
+                                        message: "2026-10-11_run3 will be gone for good.",
+                                        danger: true,
+                                        confirmLabel: "Delete",
+                                    }),
+                                ),
+                            )
+                        }
+                    >
+                        Confirm
+                    </Button>
+                    <Button
+                        onClick={async () => setAnswer(String(await prompt({ title: "Rename", defaultValue: "run3" })))}
+                    >
+                        Prompt
+                    </Button>
+                    {answer ? <Text muted={true} mono={true}>{`→ ${answer}`}</Text> : null}
+                </Row>
+                <Modal
+                    open={open}
+                    onClose={() => setOpen(false)}
+                    title="Export map"
+                    footer={[
+                        <Button key="c" onClick={() => setOpen(false)}>
+                            Cancel
+                        </Button>,
+                        <Button key="e" variant="primary" onClick={() => setOpen(false)}>
+                            Export
+                        </Button>,
+                    ]}
+                >
+                    <Field label="File name">
+                        <TextInput value="office.pcd" mono={true} />
+                    </Field>
+                    <Field label="Format">
+                        <Select value="pcd" options={["pcd", "ply", "las"]} />
+                    </Field>
+                </Modal>
+            </Card>
+            <Card title="Progress">
+                <Row gap={16}>
+                    <Spinner />
+                    <ProgressRing value={0.68} />
+                    <ProgressRing value={1} tone="ok" size={36} />
+                    <Column grow={true}>
+                        <Progress value={0.42} />
+                        <Progress value={0.9} tone="warn" />
+                        <Progress />
+                    </Column>
+                </Row>
+                <Column gap={6}>
+                    <Skeleton width="60%" />
+                    <Skeleton width="85%" />
+                </Column>
+            </Card>
+            <Card title="Empty state" padded={false}>
+                <EmptyState
+                    icon="robot"
+                    title="No robot connected"
+                    message="Start a blueprint in Desktop, or open a recording."
+                    actions={[
+                        <Button key="a" variant="primary">
+                            Open recording
+                        </Button>,
+                        <Button key="b">Docs</Button>,
+                    ]}
+                />
+            </Card>
+        </Column>
     )
 }
 
 function LayoutSection() {
     const [tile, setTile] = useState("Go2")
     const [floating, setFloating] = useState(false)
-    return h(
-        Column,
-        { gap: 16 },
-        h(
-            Card,
-            { title: "Top bar, toolbar, bottom bar", padded: false },
-            h(TopBar, {
-                title: "Recordings",
-                icon: "record",
-                right: [
-                    h(ConnectionStatus, { key: "c", state: "connected", detail: "9 ms" }),
-                    h(IconButton, { key: "s", icon: "settings", label: "Settings" }),
-                ],
-            }, h(SearchInput, { value: "", onChange: () => {}, placeholder: "Search recordings…" })),
-            h(
-                "div",
-                { style: { position: "relative", height: 150, background: "var(--scene-bg)" } },
-                h(
-                    Hud,
-                    { position: "top-left" },
-                    h(
-                        Toolbar,
-                        { floating: true },
-                        h(IconButton, { icon: "layers", label: "Layers", size: "sm" }),
-                        h(IconButton, { icon: "camera", label: "Cameras", size: "sm" }),
-                        h(Separator, { vertical: true }),
-                        h(IconButton, { icon: "target", label: "Follow", size: "sm" }),
-                    ),
-                ),
-                h(Hud, { position: "bottom-right" }, h(Badge, { tone: "info" }, "60 fps · 14 ms")),
-                h(Hud, { position: "center" }, h(Text, { muted: true }, "a HUD over a view")),
-            ),
-            h(
-                BottomBar,
-                null,
-                h(StatusDot, { tone: "ok" }),
-                "go2 · 3 topics · 2.1 MB/s",
-                h("span", { className: "dr-spacer" }),
-                h(Text, { mono: true, small: true }, "00:42 / 04:12"),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Embed (another page in this one)", padded: false },
-            h(
-                "div",
-                { style: { position: "relative", height: 90 } },
-                h(Embed, {
-                    title: "embedded page",
-                    srcDoc: "<p style='font:13px sans-serif;padding:8px'>an embedded page (iframe)</p>",
-                }),
-            ),
-        ),
-        h(
-            Row,
-            { gap: 16, align: "stretch", wrap: true },
-            h(
-                Panel,
-                {
-                    title: "Layers",
-                    icon: "layers",
-                    collapsible: true,
-                    style: { flex: 1, minWidth: 240 },
-                    actions: h(IconButton, { icon: "plus", label: "Add", size: "sm" }),
-                },
-                h(Toggle, { value: true, label: "/lidar" }),
-                h(Toggle, { value: false, label: "/global_map" }),
-            ),
-            h(
-                Panel,
-                { title: "Glass panel", glass: true, style: { flex: 1, minWidth: 240 } },
-                h(Text, { muted: true }, "for panels floating over a 3D or video view"),
-            ),
-            h(Card, {
-                title: "Card",
-                description: "with a description",
-                actions: h(Button, { size: "sm" }, "Action"),
-                style: { flex: 1, minWidth: 240 },
-            }, h(Text, null, "Body text")),
-        ),
-        h(
-            Card,
-            { title: "Split pane", padded: false },
-            h(
-                "div",
-                { style: { height: 140 } },
-                h(
-                    SplitPane,
-                    { defaultSize: 220 },
-                    h(
-                        "div",
-                        { style: { padding: 12 } },
-                        h(Label, null, "Left"),
-                        h(Text, { as: "p", muted: true }, "Drag the divider."),
-                    ),
-                    h("div", { style: { padding: 12 } }, h(Label, null, "Right")),
-                ),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Tile + TileGrid (a picker)", className: "demo-wide" },
-            h(
-                TileGrid,
-                { min: 140 },
-                h(Tile, { icon: "plus", title: "Custom / new robot", subtitle: "Bring your own hardware" }),
-                ["Go2", "G1", "xArm7"].map((name, index) =>
-                    h(Tile, {
-                        key: name,
-                        icon: "robot",
-                        title: name,
-                        subtitle: ["Unitree", "Unitree", "UFactory"][index],
-                        selected: tile === name,
-                        onClick: () => setTile(name),
-                    })
-                ),
-                h(Tile, { loading: true }),
-            ),
-        ),
-        h(
-            Card,
-            { title: "Type, links, icons" },
-            h(Heading, { level: 1 }, "Heading 1"),
-            h(Heading, { level: 2 }, "Heading 2 · section"),
-            h(Heading, { level: 3 }, "Heading 3 · micro label"),
-            h(
-                Text,
-                null,
-                "Body text, ",
-                h(Text, { muted: true }, "muted, "),
-                h(Text, { mono: true }, "mono /odom, "),
-                h(Text, { tone: "ok" }, "ok, "),
-                h(Text, { tone: "warn" }, "warn, "),
-                h(Text, { tone: "danger" }, "danger, "),
-                h(Link, { href: "#" }, "a link"),
-            ),
-            h(
-                Row,
-                { wrap: true, gap: 10, className: "demo-icons" },
-                Object.keys(ICONS).map((name) => h("span", { key: name, title: name }, h(Icon, { name }))),
-            ),
-            h(
-                Button,
-                { onClick: () => setFloating(!floating) },
-                floating ? "Hide floating panel" : "Show floating panel",
-            ),
-            floating
-                ? h(FloatingPanel, {
-                    title: "Floating",
-                    icon: "panels",
-                    onClose: () => setFloating(false),
-                    defaultPosition: { x: -24, y: 80 },
-                }, h(Text, { muted: true }, "Drag me by the header."))
-                : null,
-        ),
+    return (
+        <Column gap={16}>
+            <Card title="Top bar, toolbar, bottom bar" padded={false}>
+                <TopBar
+                    title="Recordings"
+                    icon="record"
+                    right={[
+                        <ConnectionStatus key="c" state="connected" detail="9 ms" />,
+                        <IconButton key="s" icon="settings" label="Settings" />,
+                    ]}
+                >
+                    <SearchInput value="" onChange={() => {}} placeholder="Search recordings…" />
+                </TopBar>
+                <div style={{ position: "relative", height: 150, background: "var(--scene-bg)" }}>
+                    <Hud position="top-left">
+                        <Toolbar floating={true}>
+                            <IconButton icon="layers" label="Layers" size="sm" />
+                            <IconButton icon="camera" label="Cameras" size="sm" />
+                            <Separator vertical={true} />
+                            <IconButton icon="target" label="Follow" size="sm" />
+                        </Toolbar>
+                    </Hud>
+                    <Hud position="bottom-right">
+                        <Badge tone="info">60 fps · 14 ms</Badge>
+                    </Hud>
+                    <Hud position="center">
+                        <Text muted={true}>a HUD over a view</Text>
+                    </Hud>
+                </div>
+                <BottomBar>
+                    <StatusDot tone="ok" />
+                    go2 · 3 topics · 2.1 MB/s
+                    <span className="dr-spacer" />
+                    <Text mono={true} small={true}>
+                        00:42 / 04:12
+                    </Text>
+                </BottomBar>
+            </Card>
+            <Card title="Embed (another page in this one)" padded={false}>
+                <div style={{ position: "relative", height: 90 }}>
+                    <Embed
+                        title="embedded page"
+                        srcDoc={"<p style='font:13px sans-serif;padding:8px'>an embedded page (iframe)</p>"}
+                    />
+                </div>
+            </Card>
+            <Row gap={16} align="stretch" wrap={true}>
+                <Panel
+                    title="Layers"
+                    icon="layers"
+                    collapsible={true}
+                    style={{ flex: 1, minWidth: 240 }}
+                    actions={<IconButton icon="plus" label="Add" size="sm" />}
+                >
+                    <Toggle value={true} label="/lidar" />
+                    <Toggle value={false} label="/global_map" />
+                </Panel>
+                <Panel title="Glass panel" glass={true} style={{ flex: 1, minWidth: 240 }}>
+                    <Text muted={true}>for panels floating over a 3D or video view</Text>
+                </Panel>
+                <Card
+                    title="Card"
+                    description="with a description"
+                    actions={<Button size="sm">Action</Button>}
+                    style={{ flex: 1, minWidth: 240 }}
+                >
+                    <Text>Body text</Text>
+                </Card>
+            </Row>
+            <Card title="Split pane" padded={false}>
+                <div style={{ height: 140 }}>
+                    <SplitPane defaultSize={220}>
+                        <div style={{ padding: 12 }}>
+                            <Label>Left</Label>
+                            <Text as="p" muted={true}>
+                                Drag the divider.
+                            </Text>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <Label>Right</Label>
+                        </div>
+                    </SplitPane>
+                </div>
+            </Card>
+            <Card title="Tile + TileGrid (a picker)" className="demo-wide">
+                <TileGrid min={140}>
+                    <Tile icon="plus" title="Custom / new robot" subtitle="Bring your own hardware" />
+                    {["Go2", "G1", "xArm7"].map((name, index) => (
+                        <Tile
+                            key={name}
+                            icon="robot"
+                            title={name}
+                            subtitle={["Unitree", "Unitree", "UFactory"][index]}
+                            selected={tile === name}
+                            onClick={() => setTile(name)}
+                        />
+                    ))}
+                    <Tile loading={true} />
+                </TileGrid>
+            </Card>
+            <Card title="Type, links, icons">
+                <Heading level={1}>Heading 1</Heading>
+                <Heading level={2}>Heading 2 · section</Heading>
+                <Heading level={3}>Heading 3 · micro label</Heading>
+                <Text>
+                    {"Body text, "}
+                    <Text muted={true}>{"muted, "}</Text>
+                    <Text mono={true}>{"mono /odom, "}</Text>
+                    <Text tone="ok">{"ok, "}</Text>
+                    <Text tone="warn">{"warn, "}</Text>
+                    <Text tone="danger">{"danger, "}</Text>
+                    <Link href="#">a link</Link>
+                </Text>
+                <Row wrap={true} gap={10} className="demo-icons">
+                    {Object.keys(ICONS).map((name) => (
+                        <span key={name} title={name}>
+                            <Icon name={name} />
+                        </span>
+                    ))}
+                </Row>
+                <Button onClick={() => setFloating(!floating)}>
+                    {floating ? "Hide floating panel" : "Show floating panel"}
+                </Button>
+                {floating ? (
+                    <FloatingPanel
+                        title="Floating"
+                        icon="panels"
+                        onClose={() => setFloating(false)}
+                        defaultPosition={{ x: -24, y: 80 }}
+                    >
+                        <Text muted={true}>Drag me by the header.</Text>
+                    </FloatingPanel>
+                ) : null}
+            </Card>
+        </Column>
     )
 }
 
@@ -604,51 +583,53 @@ function Demo() {
     const [params, setParams] = useUrlParams()
     const theme = useTheme()
     const shown = only === "all" ? SECTIONS : SECTIONS.filter(([id]) => id === only)
-    return h(
-        "div",
-        { className: "demo" },
-        h(
-            TopBar,
-            {
-                title: "dimos-react",
-                icon: "robot",
-                right: [
-                    h(Select, {
-                        key: "s",
-                        size: "sm",
-                        value: theme.skin,
-                        options: SKINS,
-                        onChange: (skin) => setParams({ skin: skin === "portal" ? null : skin }),
-                    }),
-                    h(Select, {
-                        key: "c",
-                        size: "sm",
-                        value: theme.corners,
-                        options: [["theme", "skin corners"], ["sharp", "sharp"], ["rounded", "rounded"]],
-                        onChange: (corners) => setParams({ corners: corners === "theme" ? null : corners }),
-                    }),
-                    h(Select, {
-                        key: "o",
-                        size: "sm",
-                        value: only,
-                        options: [["all", "all sections"], ...SECTIONS.map(([id, label]) => [id, label])],
-                        onChange: (section) => setParams({ section: section === "all" ? null : section }),
-                    }),
-                ],
-            },
-            h(
-                Text,
-                { muted: true, small: true },
-                `skin ${theme.skin} · ${theme.dark ? "dark" : "light"} · ${params.section ?? "all"}`,
-            ),
-        ),
-        h(
-            "main",
-            { className: "demo-main" },
-            shown.map(([id, label, Section]) =>
-                h("section", { key: id, id, className: "demo-section" }, h(Heading, { level: 2 }, label), h(Section))
-            ),
-        ),
+    return (
+        <div className="demo">
+            <TopBar
+                title="dimos-react"
+                icon="robot"
+                right={[
+                    <Select
+                        key="s"
+                        size="sm"
+                        value={theme.skin}
+                        options={SKINS}
+                        onChange={(skin) => setParams({ skin: skin === "portal" ? null : skin })}
+                    />,
+                    <Select
+                        key="c"
+                        size="sm"
+                        value={theme.corners}
+                        options={[
+                            ["theme", "skin corners"],
+                            ["sharp", "sharp"],
+                            ["rounded", "rounded"],
+                        ]}
+                        onChange={(corners) => setParams({ corners: corners === "theme" ? null : corners })}
+                    />,
+                    <Select
+                        key="o"
+                        size="sm"
+                        value={only}
+                        options={[["all", "all sections"], ...SECTIONS.map(([id, label]) => [id, label])]}
+                        onChange={(section) => setParams({ section: section === "all" ? null : section })}
+                    />,
+                ]}
+            >
+                <Text
+                    muted={true}
+                    small={true}
+                >{`skin ${theme.skin} · ${theme.dark ? "dark" : "light"} · ${params.section ?? "all"}`}</Text>
+            </TopBar>
+            <main className="demo-main">
+                {shown.map(([id, label, Section]) => (
+                    <section key={id} id={id} className="demo-section">
+                        <Heading level={2}>{label}</Heading>
+                        <Section />
+                    </section>
+                ))}
+            </main>
+        </div>
     )
 }
 
@@ -656,7 +637,11 @@ function Root() {
     // the skin comes from the URL (a link per skin); with no ?skin= it follows Desktop's saved choice, live
     const [skin] = useUrlState("skin")
     const [corners] = useUrlState("corners")
-    return h(AppProvider, { source, url: false, theme: { skin, corners } }, h(Demo))
+    return (
+        <AppProvider source={source} url={false} theme={{ skin, corners }}>
+            <Demo />
+        </AppProvider>
+    )
 }
 
 const style = document.createElement("style")
@@ -669,4 +654,8 @@ style.textContent = `
 .demo-target { display: flex; align-items: center; justify-content: center; height: 120px; border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--muted-fg); background: var(--scene-bg); }
 `
 document.head.append(style)
-createRoot(document.getElementById("root")).render(h(UrlStateProvider, { events: false }, h(Root)))
+createRoot(document.getElementById("root")).render(
+    <UrlStateProvider events={false}>
+        <Root />
+    </UrlStateProvider>,
+)

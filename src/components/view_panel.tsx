@@ -7,8 +7,8 @@
 //  - "main": fills its positioned parent behind everything (a fullscreen camera or map)
 // The caller owns where it is: `onMove(x, y)` / `onResize(box)` report the user's drag, the caller keeps the box.
 import { useRef } from "react"
-import { cx, h } from "../h.js"
-import { IconButton } from "./controls.js"
+import { cx } from "../cx"
+import { IconButton } from "./controls"
 
 /** every panel's header height (px): a panel is this plus its body */
 export const VIEW_PANEL_HEAD_PX = 33
@@ -141,7 +141,8 @@ function startTileSwap(event, region, tiles) {
     const startY = event.clientY
     let target = null
     const tileAt = (x, y) =>
-        document.elementsFromPoint(x, y)
+        document
+            .elementsFromPoint(x, y)
             .map((node) => node.closest?.("[data-region].dr-view-panel--tile"))
             .find((tile) => tile && tile.dataset.region !== region) ?? null
     const move = (moved) => {
@@ -226,32 +227,31 @@ export function ViewPanel({
     const docked = placement === "dock"
     const hidden = docked && !dock?.rect
     const placed = docked
-        ? dock?.rect ? { left: dock.rect.x, top: dock.rect.y, width: dock.rect.width, height: dock.rect.height } : {}
-        : style ?? {}
-    return h(
-        "div",
-        {
-            ref: setRef,
-            className: cx(
+        ? dock?.rect
+            ? { left: dock.rect.x, top: dock.rect.y, width: dock.rect.width, height: dock.rect.height }
+            : {}
+        : (style ?? {})
+    return (
+        <div
+            ref={setRef}
+            className={cx(
                 "dr-view-panel",
                 `dr-view-panel--${placement}`,
                 hidden && "dr-view-panel--hidden",
                 dock?.maximized && "dr-view-panel--maximized",
                 dock?.tiles && "dr-view-panel--tile",
                 className,
-            ),
-            style: placed,
-            "data-region": dock?.region,
-            "aria-hidden": hidden || undefined,
-            ...rest,
-        },
-        h(
-            "div",
-            {
-                className: cx("dr-view-panel-head", wrapHead && "dr-view-panel-head--wrap"),
-                title,
-                onPointerDown: startHeadDrag,
-                onDoubleClick: (event) => {
+            )}
+            style={placed}
+            data-region={dock?.region}
+            aria-hidden={hidden || undefined}
+            {...rest}
+        >
+            <div
+                className={cx("dr-view-panel-head", wrapHead && "dr-view-panel-head--wrap")}
+                title={title}
+                onPointerDown={startHeadDrag}
+                onDoubleClick={(event) => {
                     if (fromControl(event)) {
                         return
                     }
@@ -260,33 +260,40 @@ export function ViewPanel({
                     } else {
                         onHeadDoubleClick?.()
                     }
-                },
-            },
-            head,
-            docked && dock
-                ? h(IconButton, {
-                    size: "sm",
-                    className: "dr-view-panel-maximize",
-                    icon: dock.maximized ? "fullscreen-exit" : "fullscreen",
-                    label: dock.maximized ? "Back to the layout" : "Maximize (fill the page)",
-                    pressed: dock.maximized,
-                    onClick: dock.onMaximize,
-                })
-                : null,
-        ),
-        h("div", { className: cx("dr-view-panel-body", bodyClassName), onClick: bodyOnClick }, children),
-        placement === "float" && resize
-            ? h("div", {
-                className: cx("dr-view-panel-resize", `dr-view-panel-resize--${resize.corner}`),
-                title: "Drag to resize",
-                "aria-label": "Resize",
-                onPointerDown: (event) => startPanelResize(event, element.current, resize),
-            })
-            : null,
+                }}
+            >
+                {head}
+                {docked && dock ? (
+                    <IconButton
+                        size="sm"
+                        className="dr-view-panel-maximize"
+                        icon={dock.maximized ? "fullscreen-exit" : "fullscreen"}
+                        label={dock.maximized ? "Back to the layout" : "Maximize (fill the page)"}
+                        pressed={dock.maximized}
+                        onClick={dock.onMaximize}
+                    />
+                ) : null}
+            </div>
+            <div className={cx("dr-view-panel-body", bodyClassName)} onClick={bodyOnClick}>
+                {children}
+            </div>
+            {placement === "float" && resize ? (
+                <div
+                    className={cx("dr-view-panel-resize", `dr-view-panel-resize--${resize.corner}`)}
+                    title="Drag to resize"
+                    aria-label="Resize"
+                    onPointerDown={(event) => startPanelResize(event, element.current, resize)}
+                />
+            ) : null}
+        </div>
     )
 }
 
 /** A short live readout in a panel header ("640×480 · 30 fps"): muted, mono, truncated. */
 export function PanelInfo({ className, children, ...rest }) {
-    return h("span", { className: cx("dr-view-panel-info", className), ...rest }, children)
+    return (
+        <span className={cx("dr-view-panel-info", className)} {...rest}>
+            {children}
+        </span>
+    )
 }

@@ -2,13 +2,13 @@
 // live instance inside <TopicLayers> (subscribed), a disabled one has none (unsubscribed, so it costs no bandwidth).
 // Which topics are on and each topic's settings persist through `persist(key, defaults)` (localStorage by default;
 // an app that keeps settings in its backend passes its own).
-import { parseKey } from "../../data.js"
-import { localStore, Store } from "../store.js"
-import { defaultSettings, layerTypeFor } from "./registry.js"
+import { parseKey } from "../../data"
+import { localStore, Store } from "../store"
+import { defaultSettings, layerTypeFor } from "./registry"
 
 /**
- * @typedef {{ topic: import("./registry.js").Topic, type: import("./registry.js").LayerType, enabled: boolean,
- *   status: import("./registry.js").LayerStatus, settings: Store<any> }} LayerEntry
+ * @typedef {{ topic: import("./registry").Topic, type: import("./registry").LayerType, enabled: boolean,
+ *   status: import("./registry").LayerStatus, settings: Store<any> }} LayerEntry
  */
 
 export class LayerManager {
@@ -84,7 +84,8 @@ export class LayerManager {
                 this.#lastSeen.delete(key)
             }
         }
-        const all = [...this.#lastSeen.values()].map((seen) => seen.topic)
+        const all = [...this.#lastSeen.values()]
+            .map((seen) => seen.topic)
             .sort((a, b) => a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
         const old = this.topics.get().list
         if (old.length !== all.length || old.some((topic, index) => topic.key !== all[index].key)) {
@@ -103,7 +104,7 @@ export class LayerManager {
                 continue
             }
             const saved = this.#enabled.get()[topic.key]
-            const enabled = saved ?? (type.enabledByDefault?.(topic) ?? true)
+            const enabled = saved ?? type.enabledByDefault?.(topic) ?? true
             const settings = this.#persist(`${this.#prefix}.${type.id}.${topic.key}`, defaultSettings(type, topic))
             added.push({ topic, type, enabled, status: {}, settings })
         }
@@ -127,13 +128,17 @@ export class LayerManager {
 
     /** Topics of these types being drawn (e.g. to pick a robot pose source). */
     enabledOfType(...types) {
-        return this.entries.get().list.filter((entry) => entry.enabled && types.includes(entry.topic.type))
+        return this.entries
+            .get()
+            .list.filter((entry) => entry.enabled && types.includes(entry.topic.type))
             .map((entry) => entry.topic)
     }
 
     /** The drawn layers' data frames (for the TF check). */
     layerFrames() {
-        return this.entries.get().list.filter((entry) => entry.enabled && entry.status.frame)
+        return this.entries
+            .get()
+            .list.filter((entry) => entry.enabled && entry.status.frame)
             .map((entry) => ({ name: entry.topic.name, frame: entry.status.frame }))
     }
 

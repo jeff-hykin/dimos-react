@@ -5,11 +5,11 @@
 //
 //     h(CameraView, { topic: { key, name, type }, overlay: detectionsTopic, onInfo: (info) => … })
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { cx, h } from "../h.js"
-import { useDataSource } from "../data.js"
-import { decode as decodeLcm } from "../lcm.js"
-import { Store, useStore } from "../three/store.js"
-import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawToImageData } from "./media.js"
+import { cx } from "../cx"
+import { useDataSource } from "../data"
+import { decode as decodeLcm } from "../lcm"
+import { Store, useStore } from "../three/store"
+import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawToImageData } from "./media"
 
 // ── latency ↔ quality presets (zenoh-gateway's video policy) ──
 
@@ -21,8 +21,7 @@ export const VIDEO_PRESETS = [
     {
         id: "latency",
         label: "Low latency",
-        about:
-            "fits 640×360 at the gateway's default bits per pixel; small frames arrive and decode soonest, the rate kept when the link is squeezed",
+        about: "fits 640×360 at the gateway's default bits per pixel; small frames arrive and decode soonest, the rate kept when the link is squeezed",
         options: { maxResolution: [640, 360], qualityToHzTradeoff: 1 },
     },
     {
@@ -34,8 +33,7 @@ export const VIDEO_PRESETS = [
     {
         id: "quality",
         label: "High quality",
-        about:
-            "full size, never shrunk, up to 6 Mbit/s (at least 30% of it); drops frames before detail when the link is squeezed, and the browser buffers 100-400 ms to play frames out evenly",
+        about: "full size, never shrunk, up to 6 Mbit/s (at least 30% of it); drops frames before detail when the link is squeezed, and the browser buffers 100-400 ms to play frames out evenly",
         options: {
             minResolutionScale: 1,
             maxBitrate: 6_000_000,
@@ -120,10 +118,14 @@ export function retargetCameras(panels, topics, preferred) {
 
 /** Every image topic as a tab (`{ topic, label, depth }`), color first then depth, labeled by what tells them apart. */
 export function cameraTabs(topics) {
-    const images = topics.filter(isImageTopic).sort((a, b) =>
-        Number(isDepthTopic(a)) - Number(isDepthTopic(b)) || a.name.localeCompare(b.name) ||
-        a.type.localeCompare(b.type)
-    )
+    const images = topics
+        .filter(isImageTopic)
+        .sort(
+            (a, b) =>
+                Number(isDepthTopic(a)) - Number(isDepthTopic(b)) ||
+                a.name.localeCompare(b.name) ||
+                a.type.localeCompare(b.type),
+        )
     const split = images.map((topic) => topic.name.split("/").filter(Boolean))
     let shared = 0
     if (split.length > 1) {
@@ -266,8 +268,8 @@ export class CameraStreams {
             topic.key,
             { delivery: "latest", ...videoPreset(handle.quality.get().quality).options, encoding: `${prefix}image` },
             async (message) => {
-                let decoded = message.decoded ?? message.value ??
-                    (message.mediaStream ? null : lcmValue(message, topic.type))
+                let decoded =
+                    message.decoded ?? message.value ?? (message.mediaStream ? null : lcmValue(message, topic.type))
                 if (!message.mediaStream && decoded && !decoded.bitmap && !decoded.image) {
                     // a replay's frame: decoded here, and a slower older one must not replace a newer one
                     const mine = ++handle.ticket
@@ -285,8 +287,11 @@ export class CameraStreams {
                 const fps = fpsNow(state)
                 const stream = message.mediaStream ?? state.stream
                 if (
-                    stream !== state.stream || picture !== state.image || width !== state.width ||
-                    height !== state.height || fps !== state.fps
+                    stream !== state.stream ||
+                    picture !== state.image ||
+                    width !== state.width ||
+                    height !== state.height ||
+                    fps !== state.fps
                 ) {
                     video.set({ stream, image: picture, width, height, fps })
                 }
@@ -406,7 +411,7 @@ export function cameraStreamsFor(source) {
 
 /** Makes `streams` (a CameraStreams, e.g. with the app's own storageKey) the one every CameraView below uses. */
 export function CameraStreamsProvider({ streams, children }) {
-    return h(StreamsContext.Provider, { value: streams }, children)
+    return <StreamsContext.Provider value={streams}>{children}</StreamsContext.Provider>
 }
 
 /** The page's CameraStreams for the current data source (the nearest CameraStreamsProvider's, else one per source). */
@@ -459,33 +464,43 @@ export function CameraView({ topic, overlay, fill = false, depthLook = {}, onInf
     const depth = topic ? isDepthTopic(topic) : false
     const video = source.kind === "zenoh" && topic && !depth
     if (!topic) {
-        return h(
-            "div",
-            { className: cx("dr-camera", className) },
-            h("div", { className: "dr-camera-empty" }, "no camera"),
-            children,
+        return (
+            <div className={cx("dr-camera", className)}>
+                <div className="dr-camera-empty">no camera</div>
+                {children}
+            </div>
         )
     }
     if (!video) {
         const prefix = topic.type === "sensor_msgs.CompressedImage" ? "dimos_lcm_compressed_" : "dimos_lcm_"
-        return h(ImageView, {
-            key: topic.key,
-            topic: topic.key,
-            encoding: source.kind === "zenoh" ? `${prefix}depth` : undefined,
-            maxHz: depth ? 15 : 30,
-            depth: depth || undefined,
-            colormap: depthLook.colormap ?? "turbo",
-            near: depthLook.near ?? null,
-            far: depthLook.far ?? null,
-            fit: fill ? "cover" : "contain",
-            overlayTopic: overlay && IMAGE_OVERLAY_TYPES.includes(overlay.type) ? overlay.key : null,
-            onInfo: onInfo
-                ? (info) => onInfo({ width: info.width, height: info.height, fps: info.fps, range: info.range })
-                : undefined,
-            className: cx("dr-camera", className),
-        }, children)
+        return (
+            <ImageView
+                key={topic.key}
+                topic={topic.key}
+                encoding={source.kind === "zenoh" ? `${prefix}depth` : undefined}
+                maxHz={depth ? 15 : 30}
+                depth={depth || undefined}
+                colormap={depthLook.colormap ?? "turbo"}
+                near={depthLook.near ?? null}
+                far={depthLook.far ?? null}
+                fit={fill ? "cover" : "contain"}
+                overlayTopic={overlay && IMAGE_OVERLAY_TYPES.includes(overlay.type) ? overlay.key : null}
+                onInfo={
+                    onInfo
+                        ? (info) => onInfo({ width: info.width, height: info.height, fps: info.fps, range: info.range })
+                        : undefined
+                }
+                className={cx("dr-camera", className)}
+            >
+                {children}
+            </ImageView>
+        )
     }
-    return h(VideoView, { topic, overlay, fill, onInfo, className }, children)
+    return (
+        <VideoView topic={topic} overlay={overlay} fill={fill} onInfo={onInfo} className={className}>
+            {children}
+        </VideoView>
+    )
 }
 
 function VideoView({ topic, overlay, fill, onInfo, className, children }) {
@@ -541,20 +556,20 @@ function VideoView({ topic, overlay, fill, onInfo, className, children }) {
             clear()
         }
     }, [source, overlay?.key])
-    return h(
-        "div",
-        { className: cx("dr-camera", fill && "dr-camera--fill", className) },
-        h("video", {
-            ref: video,
-            className: "dr-camera-media",
-            muted: true,
-            playsInline: true,
-            autoPlay: true,
-            disablePictureInPicture: true,
-            disableRemotePlayback: true,
-        }),
-        h("canvas", { ref: overlayCanvas, className: "dr-camera-overlay" }),
-        children,
+    return (
+        <div className={cx("dr-camera", fill && "dr-camera--fill", className)}>
+            <video
+                ref={video}
+                className="dr-camera-media"
+                muted={true}
+                playsInline={true}
+                autoPlay={true}
+                disablePictureInPicture={true}
+                disableRemotePlayback={true}
+            />
+            <canvas ref={overlayCanvas} className="dr-camera-overlay" />
+            {children}
+        </div>
     )
 }
 
@@ -570,36 +585,43 @@ export function CameraTabs({ topics, value, onChange, gone, className }) {
         const tab = row.current?.querySelector("[aria-selected=true]")
         const element = row.current
         if (
-            tab && element &&
+            tab &&
+            element &&
             (tab.offsetLeft < element.scrollLeft ||
                 tab.offsetLeft + tab.offsetWidth > element.scrollLeft + element.clientWidth)
         ) {
             element.scrollLeft = tab.offsetLeft - 6
         }
     }, [value, topics.length])
-    return h(
-        "div",
-        {
-            ref: row,
-            className: cx("dr-camera-tabs", className),
-            role: "tablist",
-            "aria-label": "Cameras",
-            onWheel: (event) => (event.currentTarget.scrollLeft += event.deltaY),
-        },
-        gone ? h("span", { className: "dr-camera-tab dr-camera-tab--gone", title: gone }, gone) : null,
-        tabs.map((tab) =>
-            h("button", {
-                key: tab.topic.key,
-                type: "button",
-                role: "tab",
-                "aria-selected": tab.topic.key === value,
-                className: cx("dr-camera-tab", tab.depth && "dr-camera-tab--depth"),
-                title: `${tab.topic.name} (${tab.topic.type})`,
-                onClick: () => onChange(tab.topic),
-            }, tab.label)
-        ),
-        !tabs.length && !gone
-            ? h("span", { className: "dr-camera-tab dr-camera-tab--gone" }, "no camera on the bus")
-            : null,
+    return (
+        <div
+            ref={row}
+            className={cx("dr-camera-tabs", className)}
+            role="tablist"
+            aria-label="Cameras"
+            onWheel={(event) => (event.currentTarget.scrollLeft += event.deltaY)}
+        >
+            {gone ? (
+                <span className="dr-camera-tab dr-camera-tab--gone" title={gone}>
+                    {gone}
+                </span>
+            ) : null}
+            {tabs.map((tab) => (
+                <button
+                    key={tab.topic.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab.topic.key === value}
+                    className={cx("dr-camera-tab", tab.depth && "dr-camera-tab--depth")}
+                    title={`${tab.topic.name} (${tab.topic.type})`}
+                    onClick={() => onChange(tab.topic)}
+                >
+                    {tab.label}
+                </button>
+            ))}
+            {!tabs.length && !gone ? (
+                <span className="dr-camera-tab dr-camera-tab--gone">no camera on the bus</span>
+            ) : null}
+        </div>
     )
 }

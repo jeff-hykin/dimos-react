@@ -30,16 +30,10 @@ export {
     useTfFrames,
     useTfIssues,
     useViewer,
-} from "./src/three/react.js"
-export { LayersPanel, TfFootnote, TfPanel, useLayerManager } from "./src/three/panels.js"
-export {
-    CubeShadePicker,
-    PointLookEditor,
-    RangeInput,
-    RenderingSettings,
-    StylePicker,
-} from "./src/three/look_editor.js"
-export { LayerManager } from "./src/three/layers/manager.js"
+} from "./three/react"
+export { LayersPanel, TfFootnote, TfPanel, useLayerManager } from "./three/panels"
+export { CubeShadePicker, PointLookEditor, RangeInput, RenderingSettings, StylePicker } from "./three/look_editor"
+export { LayerManager } from "./three/layers/manager"
 export {
     allLayerTypes,
     allOverlayTypes,
@@ -53,21 +47,21 @@ export {
     rgba,
     RobotPose,
     subscribeDecoded,
-} from "./src/three/layers/registry.js"
-export { CloudLayer, CloudQualitySelect, CloudSettingsEditor, isMapTopic } from "./src/three/layers/pointcloud.js"
-export { ColorSetting, PoseLayer } from "./src/three/layers/pose.js"
-export { PathLayer, pathPoints } from "./src/three/layers/path.js"
-export { PoseArrayLayer } from "./src/three/layers/pose_array.js"
-export { GraphLayer } from "./src/three/layers/graph.js"
-export { MARKER_TYPE, MarkerLayer } from "./src/three/layers/marker.js"
-export { boxesOf, BoxLayer } from "./src/three/layers/boxes.js"
-export { entitiesOf, LabeledPoints } from "./src/three/layers/labeled_points.js"
-export { GridLayer } from "./src/three/layers/occupancy.js"
-export { TfFramesLayer } from "./src/three/layers/tf_frames.js"
-export { Camera3dLayer } from "./src/three/layers/camera3d.js"
-export { checkTf, confirmedIssues, TF_STALE_MS } from "./src/three/tf_check.js"
-export { FrameHighlighter } from "./src/three/frame_highlight.js"
-export { FRAME_BUDGET_MS, rendering, resolveLook, resolveStyle, splatFallback } from "./src/three/rendering.js"
+} from "./three/layers/registry"
+export { CloudLayer, CloudQualitySelect, CloudSettingsEditor, isMapTopic } from "./three/layers/pointcloud"
+export { ColorSetting, PoseLayer } from "./three/layers/pose"
+export { PathLayer, pathPoints } from "./three/layers/path"
+export { PoseArrayLayer } from "./three/layers/pose_array"
+export { GraphLayer } from "./three/layers/graph"
+export { MARKER_TYPE, MarkerLayer } from "./three/layers/marker"
+export { boxesOf, BoxLayer } from "./three/layers/boxes"
+export { entitiesOf, LabeledPoints } from "./three/layers/labeled_points"
+export { GridLayer } from "./three/layers/occupancy"
+export { TfFramesLayer } from "./three/layers/tf_frames"
+export { Camera3dLayer } from "./three/layers/camera3d"
+export { checkTf, confirmedIssues, TF_STALE_MS } from "./three/tf_check"
+export { FrameHighlighter } from "./three/frame_highlight"
+export { FRAME_BUDGET_MS, rendering, resolveLook, resolveStyle, splatFallback } from "./three/rendering"
 export {
     CLOUD_PRESETS,
     cloudChanges,
@@ -81,19 +75,12 @@ export {
     formatCount,
     setCloudQuality,
     setCloudRate,
-} from "./src/three/cloud_quality.js"
-export { GradientPicker } from "./src/three/gradient_picker.js"
-export { Viewer } from "./src/three/viewer.js"
-export { STALE_MS, TfTree, WORLD_NAMES } from "./src/three/tf.js"
-export { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./src/three/follow.js"
-export {
-    DEFAULT_GRADIENT,
-    gradientCss,
-    GRADIENTS,
-    gradientTexture,
-    RAMPS,
-    sampleGradient,
-} from "./src/three/gradients.js"
+} from "./three/cloud_quality"
+export { GradientPicker } from "./three/gradient_picker"
+export { Viewer } from "./three/viewer"
+export { STALE_MS, TfTree, WORLD_NAMES } from "./three/tf"
+export { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./three/follow"
+export { DEFAULT_GRADIENT, gradientCss, GRADIENTS, gradientTexture, RAMPS, sampleGradient } from "./three/gradients"
 export {
     applyLook,
     CUBE_SHADES,
@@ -103,15 +90,15 @@ export {
     POINT_STYLES,
     setClipBox,
     splatBackground,
-} from "./src/three/point_material.js"
-export { FatLines, pushBox } from "./src/three/lines.js"
-export { LabelPool } from "./src/three/labels.js"
-export { cssColor, disposeTree, ROBOT_KINDS, robotModel } from "./src/three/robot_model.js"
-export { localStore, readLocal, Store, useStore, writeLocal } from "./src/three/store.js"
-export * from "./src/camera/depth.js"
-export { DEFAULT_DEPTH_LOOK } from "./src/three/layers/camera3d.js"
-export { Map2D } from "./src/map2d/react.js"
-export { Map2DRenderer } from "./src/map2d/renderer.js"
+} from "./three/point_material"
+export { FatLines, pushBox } from "./three/lines"
+export { LabelPool } from "./three/labels"
+export { cssColor, disposeTree, ROBOT_KINDS, robotModel } from "./three/robot_model"
+export { localStore, readLocal, Store, useStore, writeLocal } from "./three/store"
+export * from "./camera/depth"
+export { DEFAULT_DEPTH_LOOK } from "./three/layers/camera3d"
+export { Map2D } from "./map2d/react"
+export { Map2DRenderer } from "./map2d/renderer"
 export {
     chooseMapTopic,
     chooseOverlay,
@@ -123,4 +110,4 @@ export {
     screenToWorld as mapScreenToWorld,
     worldToScreen as mapWorldToScreen,
     zoomAt as mapZoomAt,
-} from "./src/map2d/math.js"
+} from "./map2d/math"

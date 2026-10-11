@@ -2,7 +2,7 @@
 // (zenoh-dimos-codecs' dimos_lcm_pointcloud2 thins to 1 point in round(1/quality), at most 1 in 16, and quantizes to
 // int16; `encodeOptions.quality` caps what the bandwidth allocator may pick, `minQuality` floors it). Per viewer (a
 // phone on cellular wants less than a desktop on the LAN): localStorage.
-import { readLocal, Store, writeLocal } from "./store.js"
+import { readLocal, Store, writeLocal } from "./store"
 
 /**
  * @typedef {"low" | "balanced" | "full"} CloudQuality
@@ -164,12 +164,12 @@ export const formatCount = (count) =>
     count >= 1e6
         ? `${(count / 1e6).toFixed(1)}M`
         : count >= 1000
-        ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`
-        : String(Math.round(count))
+          ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`
+          : String(Math.round(count))
 
 export const formatBytes = (bytes) =>
     bytes >= 1e6
         ? `${(bytes / 1e6).toFixed(1)} MB`
         : bytes >= 1000
-        ? `${Math.round(bytes / 1000)} kB`
-        : `${Math.round(bytes)} B`
+          ? `${Math.round(bytes / 1000)} kB`
+          : `${Math.round(bytes)} B`

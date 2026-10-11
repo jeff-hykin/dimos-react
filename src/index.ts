@@ -3,31 +3,31 @@
 //     import { h, AppProvider, Button, useUrlState } from "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/mod.js?external=react,react-dom,three"
 //
 // The 3D view (three.js) is its own entry, ./three.js, so apps without a 3D view never load three.
-export { cx, Fragment, h } from "./src/h.js"
-export * from "./src/theme/theme.js"
-export * from "./src/theme/provider.js"
-export { TOKENS_CSS } from "./src/theme/tokens.js"
-export { COMPONENT_CSS } from "./src/theme/css.js"
-export * from "./src/app_provider.js"
-export * from "./src/data.js"
-export * from "./src/url_state.js"
-export * from "./src/hooks.js"
+export { cx } from "./cx"
+export * from "./theme/theme"
+export * from "./theme/provider"
+export { TOKENS_CSS } from "./theme/tokens"
+export { COMPONENT_CSS } from "./theme/css"
+export * from "./app_provider"
+export * from "./data"
+export * from "./url_state"
+export * from "./hooks"
 export {
     decode as decodeLcm,
     encode as encodeLcm,
     fingerprint as lcmFingerprint,
     headerFrameId,
     schemas as lcmSchemas,
-} from "./src/lcm.js"
-export * from "./src/components/icon.js"
-export * from "./src/components/controls.js"
-export * from "./src/components/feedback.js"
-export * from "./src/components/layout.js"
-export * from "./src/components/data.js"
-export * from "./src/components/nav.js"
-export * from "./src/components/input_devices.js"
-export * from "./src/components/text.js"
-export * from "./src/components/media.js"
+} from "./lcm"
+export * from "./components/icon"
+export * from "./components/controls"
+export * from "./components/feedback"
+export * from "./components/layout"
+export * from "./components/data"
+export * from "./components/nav"
+export * from "./components/input_devices"
+export * from "./components/text"
+export * from "./components/media"
 export {
     cyclePhase,
     DEFAULT_GRADIENT,
@@ -42,8 +42,8 @@ export {
     PALETTES,
     RAMPS,
     sampleGradient,
-} from "./src/colormaps.js"
-export * from "./src/components/view_panel.js"
-export * from "./src/components/thumbstick.js"
-export * from "./src/components/camera.js"
-export { Store, useStore } from "./src/three/store.js"
+} from "./colormaps"
+export * from "./components/view_panel"
+export * from "./components/thumbstick"
+export * from "./components/camera"
+export { Store, useStore } from "./three/store"

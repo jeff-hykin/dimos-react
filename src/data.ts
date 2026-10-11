@@ -10,7 +10,7 @@
 // A source is `{ subscribe, subscribeFrontend, listTopics, state, onState, now }`; see zenohSource / memorySource.
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { getZenoh } from "./vendor/dim-app/zenoh.js"
-import { decode as decodeLcm } from "./lcm.js"
+import { decode as decodeLcm } from "./lcm"
 
 const decoder = new TextDecoder()
 const encoder = new TextEncoder()
@@ -173,9 +173,10 @@ export function memorySource({ topics = [], state = "connected", clock, route } 
                 known.set(key, { key })
                 topicListeners.forEach((listener) => listener())
             }
-            const message = payload instanceof Uint8Array
-                ? { key, bytes: payload, timestamp }
-                : { key, value: payload, bytes: encoder.encode(JSON.stringify(payload ?? null)), timestamp }
+            const message =
+                payload instanceof Uint8Array
+                    ? { key, bytes: payload, timestamp }
+                    : { key, value: payload, bytes: encoder.encode(JSON.stringify(payload ?? null)), timestamp }
             for (const entry of [...subscribers]) {
                 if (keyMatches(entry.key, key)) {
                     entry.onMessage(message)
@@ -272,9 +273,13 @@ export function useSubscription(key, onMessage, options = {}) {
 export function useTopic(key, options = {}) {
     const [latest, setLatest] = useState({ value: options.initial, message: null, timestamp: null, count: 0 })
     useEffect(() => setLatest({ value: options.initial, message: null, timestamp: null, count: 0 }), [key])
-    useSubscription(key, (value, message) => {
-        setLatest((old) => ({ value, message, timestamp: message.timestamp ?? Date.now(), count: old.count + 1 }))
-    }, options)
+    useSubscription(
+        key,
+        (value, message) => {
+            setLatest((old) => ({ value, message, timestamp: message.timestamp ?? Date.now(), count: old.count + 1 }))
+        },
+        options,
+    )
     return latest
 }
 
@@ -305,13 +310,14 @@ export function useTopicList({ filter = "dimos/**", intervalMs = 2000, forgetMs 
                         lastSeen.delete(key)
                     }
                 }
-                const next = [...lastSeen.values()].map((seen) => seen.topic)
+                const next = [...lastSeen.values()]
+                    .map((seen) => seen.topic)
                     .sort((a, b) => a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
                 if (live) {
                     setTopics((old) =>
                         old.length === next.length && old.every((topic, index) => topic.key === next[index].key)
                             ? old
-                            : next
+                            : next,
                     )
                 }
             } catch {

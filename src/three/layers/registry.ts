@@ -13,15 +13,15 @@
 //         Settings: ({ settings, topic }) => h(...),  // optional, built from dimos-react components
 //     })
 import * as THREE from "three"
-import { decodeMessage } from "../../data.js"
+import { decodeMessage } from "../../data"
 
 /**
  * @typedef {{ key: string, name: string, type: string }} Topic
  * @typedef {{ info?: string, problem?: string | null, frame?: string }} LayerStatus
  *   `info`: short live info ("84k pts · 10 Hz"); `problem`: why it isn't drawn as expected; `frame`: its data's frame_id
  * @typedef {{
- *   viewer: import("../viewer.js").Viewer, tf: import("../tf.js").TfTree, source: any,
- *   video: import("../../components/camera.js").CameraStreams, topics: () => Topic[], setStatus: (status: LayerStatus) => void,
+ *   viewer: import("../viewer").Viewer, tf: import("../tf").TfTree, source: any,
+ *   video: import("../../components/camera").CameraStreams, topics: () => Topic[], setStatus: (status: LayerStatus) => void,
  *   robotPose: RobotPose, options: { baseFrame?: string, cameraInfo?: Record<string, string> },
  * }} LayerContext
  * @typedef {{ root: THREE.Object3D, update?: (frame: any) => void, dispose: () => void, reset?: () => void,

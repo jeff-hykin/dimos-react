@@ -1,13 +1,12 @@
 // geometry_msgs.PoseArray (candidate poses, particle clouds, waypoints): an arrow per pose along its +x.
 import * as THREE from "three"
-import { h } from "../../h.js"
-import { useStore } from "../store.js"
-import { FatLines } from "../lines.js"
-import { cssColor } from "../robot_model.js"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry.js"
-import { ColorSetting, poseMatrix } from "./pose.js"
-import { colorFor } from "./path.js"
-import { Field, Slider } from "../../components/controls.js"
+import { useStore } from "../store"
+import { FatLines } from "../lines"
+import { cssColor } from "../robot_model"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
+import { ColorSetting, poseMatrix } from "./pose"
+import { colorFor } from "./path"
+import { Field, Slider } from "../../components/controls"
 
 /** @typedef {{ length: number, color: string, width?: number }} ArrowSettings */
 
@@ -86,26 +85,22 @@ export class PoseArrayLayer {
 
 export function ArrowSettingsEditor({ settings }) {
     const value = useStore(settings)
-    return h(
-        "div",
-        { className: "dr-layer-settings-grid" },
-        h(
-            Field,
-            { label: "Length" },
-            h(Slider, {
-                min: 0.05,
-                max: 2,
-                step: 0.05,
-                value: value.length,
-                format: (length) => `${length} m`,
-                onChange: (length) => settings.update({ length }),
-            }),
-        ),
-        h(
-            Field,
-            { label: "Color" },
-            h(ColorSetting, { value: value.color, onChange: (color) => settings.update({ color }) }),
-        ),
+    return (
+        <div className="dr-layer-settings-grid">
+            <Field label="Length">
+                <Slider
+                    min={0.05}
+                    max={2}
+                    step={0.05}
+                    value={value.length}
+                    format={(length) => `${length} m`}
+                    onChange={(length) => settings.update({ length })}
+                />
+            </Field>
+            <Field label="Color">
+                <ColorSetting value={value.color} onChange={(color) => settings.update({ color })} />
+            </Field>
+        </div>
     )
 }
 

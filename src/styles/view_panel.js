@@ -38,6 +38,8 @@ body.dr-tile-dragging, body.dr-tile-dragging * { cursor: grabbing !important; us
 .dr-view-panel--tile > .dr-view-panel-head { cursor: grab; }
 .dr-view-panel--tile.dr-view-panel--maximized > .dr-view-panel-head { cursor: default; }
 .dr-view-panel-head .dr-select { width: auto; flex: 0 1 auto; min-width: 64px; max-width: 60%; }
+.dr-view-panel-head--wrap { flex-wrap: wrap; row-gap: 4px; }
+.dr-view-panel-head--wrap .dr-select { max-width: 100%; flex: 0 0 auto; }
 .dr-view-panel-head > .dr-btn--icon, .dr-view-panel-head > .dr-btn-group { flex: none; }
 .dr-view-panel-maximize { margin-left: auto; }
 .dr-view-panel-title {

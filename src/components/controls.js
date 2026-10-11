@@ -340,6 +340,8 @@ export function Select({ value, onChange, options, placeholder, size = "md", cla
         "select",
         {
             className: cx("dr-select", size === "sm" && "dr-select--sm", className),
+            // the whole choice on hover, for a select narrower than its text
+            title: index >= 0 ? String(items[index].label) : undefined,
             value: index >= 0 ? String(index) : "",
             onChange: (event) => {
                 const item = items[Number(event.target.value)]

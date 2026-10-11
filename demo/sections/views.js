@@ -12,7 +12,7 @@ import {
     ThumbStick,
     ViewPanel,
 } from "../../mod.js"
-import { DataSourceProvider, memorySource } from "../../mod.js"
+import { DataSourceProvider, memorySource, Select } from "../../mod.js"
 import { Map2D, TfTree } from "../../three.js"
 
 export function ViewsSection() {
@@ -66,6 +66,7 @@ export function ViewsSection() {
                 { style: { position: "relative", height: 260, overflow: "hidden" } },
                 h(ViewPanel, {
                     placement: "float",
+                    wrapHead: true,
                     style: { left: box.x, top: box.y, width: box.width ?? 240, height: box.height ?? 170 },
                     onMove: (x, y) => setBox({ ...box, x: x - 0, y: y - 0 }),
                     resize: {
@@ -75,6 +76,18 @@ export function ViewsSection() {
                     },
                     head: [
                         h("span", { key: "t", className: "dr-view-panel-title" }, "Camera"),
+                        h(Select, {
+                            key: "s1",
+                            size: "sm",
+                            value: "auto",
+                            options: [["auto", "auto (/global_map (heatmap))"], ["lidar", "/lidar (heatmap)"]],
+                        }),
+                        h(Select, {
+                            key: "s2",
+                            size: "sm",
+                            value: "base_link",
+                            options: [["base_link", "follow base_link"], ["odom", "follow odom"]],
+                        }),
                         h(PanelInfo, { key: "i" }, "640×480 · 30 fps"),
                         h(IconButton, { key: "c", size: "sm", icon: "close", label: "Close" }),
                     ],

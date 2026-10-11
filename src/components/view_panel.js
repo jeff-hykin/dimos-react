@@ -180,8 +180,10 @@ function startTileSwap(event, region, tiles) {
  *   bodyClassName?: string, bodyOnClick?: () => void, onHeadDoubleClick?: () => void,
  *   onMove?: (x: number, y: number) => void, top?: number,
  *   resize?: { corner: "left" | "right", minimum: { width: number, height: number }, aspect?: number,
- *   onDone: (box: object) => void } | null, panelRef?: any, title?: string } & Record<string, any>} props
- *   `head`: the header's content (title, buttons); `top`: a float panel's header never goes above this (a top bar)
+ *   onDone: (box: object) => void } | null, panelRef?: any, title?: string, wrapHead?: boolean } & Record<string, any>} props
+ *   `head`: the header's content (title, buttons); `top`: a float panel's header never goes above this (a top bar);
+ *   `wrapHead`: a header with several selects wraps onto more lines, each select as wide as its text, instead of
+ *   squeezing them
  */
 export function ViewPanel({
     placement,
@@ -198,6 +200,7 @@ export function ViewPanel({
     resize,
     panelRef,
     title,
+    wrapHead = false,
     ...rest
 }) {
     const element = useRef(null)
@@ -245,7 +248,7 @@ export function ViewPanel({
         h(
             "div",
             {
-                className: "dr-view-panel-head",
+                className: cx("dr-view-panel-head", wrapHead && "dr-view-panel-head--wrap"),
                 title,
                 onPointerDown: startHeadDrag,
                 onDoubleClick: (event) => {

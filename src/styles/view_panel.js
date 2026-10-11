@@ -37,7 +37,8 @@ body.dr-tile-dragging, body.dr-tile-dragging * { cursor: grabbing !important; us
 .dr-view-panel--float > .dr-view-panel-head { cursor: move; }
 .dr-view-panel--tile > .dr-view-panel-head { cursor: grab; }
 .dr-view-panel--tile.dr-view-panel--maximized > .dr-view-panel-head { cursor: default; }
-.dr-view-panel-head .dr-select { width: auto; flex: 0 1 auto; min-width: 0; max-width: 60%; }
+.dr-view-panel-head .dr-select { width: auto; flex: 0 1 auto; min-width: 64px; max-width: 60%; }
+.dr-view-panel-head > .dr-btn--icon, .dr-view-panel-head > .dr-btn-group { flex: none; }
 .dr-view-panel-maximize { margin-left: auto; }
 .dr-view-panel-title {
     display: inline-flex;

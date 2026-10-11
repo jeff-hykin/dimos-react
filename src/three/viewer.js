@@ -10,11 +10,13 @@ import { focusDistance, splatBackground } from "./point_material.js"
 import { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./follow.js"
 import { themeColors } from "../theme/theme.js"
 import { cssColor } from "./robot_model.js"
+import { FRAME_BUDGET_MS, splatFallback } from "./rendering.js"
 
 /**
  * @typedef {{ fps: number, frameMs: number, latencyP50: number | null, latencyP95: number | null,
  *   arrivalToFrameMs: number | null, drawCalls: number, points: number }} RenderStats
- * @typedef {{ now: number, fixedFrame: string, camera: THREE.PerspectiveCamera }} FrameInfo
+ * @typedef {{ now: number, dataNow: number, fixedFrame: string, camera: THREE.PerspectiveCamera }} FrameInfo
+ *   `now`: performance.now() of the frame; `dataNow`: the data clock (a replay's playhead, else performance.now())
  */
 
 /** The canvas renders at the screen's resolution, up to 2× (beyond that the extra pixels cost more than they show). */
@@ -50,6 +52,11 @@ export class Viewer {
     paused = false
     /** following stopped because the user panned away; `resumeFollow()` ends it */
     followPaused = new Store({ paused: false })
+    /**
+     * The clock things age by (ms): point-cloud windows, marker lifetimes, rates. performance.now() live; a replay's
+     * playhead (Scene3D sets it from a replay source), so a paused replay doesn't age.
+     */
+    dataClock = () => performance.now()
 
     #host
     #dirty = true
@@ -79,6 +86,8 @@ export class Viewer {
     #frameRequest = 0
     #resizeObserver
     #disposed = false
+    #resetListeners = new Set()
+    #slowSeconds = 0
 
     /**
      * @param {HTMLElement} host the element the canvas fills (give it a size; it is watched for resizes)
@@ -234,6 +243,24 @@ export class Viewer {
         this.#dirty = true
     }
 
+    /** `listener()` when the data jumped (a replay's seek): layers drop what they gathered over time. */
+    onReset(listener) {
+        this.#resetListeners.add(listener)
+        return () => this.#resetListeners.delete(listener)
+    }
+
+    /** Tells every layer the data jumped (Scene3D calls it on the source's seek). */
+    reset() {
+        for (const listener of [...this.#resetListeners]) {
+            try {
+                listener()
+            } catch (error) {
+                console.error("[dimos-react] scene reset listener threw", error)
+            }
+        }
+        this.requestRender()
+    }
+
     /** `listener(frame)` every animation frame, before rendering. Returns unsubscribe. */
     onFrame(listener) {
         this.#listeners.add(listener)
@@ -322,6 +349,33 @@ export class Viewer {
         const size = box.getSize(new THREE.Vector3()).length()
         this.frame(box.getCenter(new THREE.Vector3()), Math.max(2, size * 0.9))
         return true
+    }
+
+    /**
+     * Straight down on the area around `center` (the drawn data within 15 m of it, 12-30 m across), or without one on
+     * everything drawn (or the origin).
+     */
+    topDownAround(center) {
+        const bounds = this.dataBounds()
+        if (center) {
+            let extent = 20
+            if (bounds) {
+                const near = bounds.clone().intersect(
+                    new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(30, 30, 1e6)),
+                )
+                if (!near.isEmpty()) {
+                    const size = near.getSize(new THREE.Vector3())
+                    extent = THREE.MathUtils.clamp(Math.max(size.x, size.y), 12, 30)
+                }
+            }
+            this.topDown(center.clone(), extent)
+        } else if (bounds) {
+            const size = bounds.getSize(new THREE.Vector3())
+            const middle = bounds.getCenter(new THREE.Vector3())
+            this.topDown(middle.setZ(bounds.min.z), THREE.MathUtils.clamp(Math.max(size.x, size.y), 6, 400))
+        } else {
+            this.topDown(new THREE.Vector3(), 20)
+        }
     }
 
     /** Straight down onto `target` from high enough that `extent` meters fit the shorter side of the view. */
@@ -502,7 +556,7 @@ export class Viewer {
             }
         }
         const started = performance.now()
-        const info = { now, fixedFrame: this.fixedFrame, camera: this.camera }
+        const info = { now, dataNow: this.dataClock(), fixedFrame: this.fixedFrame, camera: this.camera }
         for (const listener of this.#listeners) {
             try {
                 listener(info)
@@ -545,8 +599,10 @@ export class Viewer {
         }
         const span = (now - this.#lastStats) / 1000
         let points = 0
+        let splats = false
         this.scene.traverseVisible((object) => {
             if (object.isPoints) {
+                splats ||= "SPLAT" in (object.material.defines ?? {})
                 const geometry = object.geometry
                 points += Math.min(geometry.drawRange.count, geometry.getAttribute("position")?.count ?? 0)
             }
@@ -560,6 +616,13 @@ export class Viewer {
             drawCalls: this.renderer.info.render.calls,
             points,
         })
+        // splats that can't keep up for 3 s in a row are drawn as cubes instead (splatFallback; clear it to retry)
+        const times = this.#frameTimes
+        const frameMs = times.length > 1 ? (times[times.length - 1] - times[0]) / (times.length - 1) : 0
+        this.#slowSeconds = splats && frameMs > FRAME_BUDGET_MS * 1.25 ? this.#slowSeconds + 1 : 0
+        if (this.#slowSeconds >= 3 && !splatFallback.get().active) {
+            splatFallback.set({ active: true, frameMs })
+        }
         this.#frameTimes.length = 0
         this.#cpuTimes.length = 0
         this.#latencies.length = 0
@@ -580,5 +643,6 @@ export class Viewer {
         this.renderer.domElement.remove()
         this.labels.domElement.remove()
         this.#listeners.clear()
+        this.#resetListeners.clear()
     }
 }

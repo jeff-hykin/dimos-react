@@ -103,4 +103,250 @@ export const SCENE_CSS = /* css */ `
     border-radius: var(--radius-pill);
     pointer-events: none;
 }
+.dr-scene-stats--detailed {
+    border-radius: var(--radius);
+    display: grid;
+    gap: 1px;
+    left: auto;
+    right: 10px;
+    top: 10px;
+    bottom: auto;
+}
+/* point-style cards (StylePicker) */
+.dr-style-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 6px;
+}
+.dr-style-card {
+    appearance: none;
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 8px;
+    align-items: center;
+    text-align: left;
+    padding: 6px 8px;
+    cursor: pointer;
+    color: var(--fg);
+    font: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+.dr-style-card:hover {
+    background: var(--hover);
+}
+.dr-style-card--on {
+    border-color: var(--primary);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+.dr-style-card:focus-visible {
+    outline: none;
+    box-shadow: var(--dr-focus);
+}
+.dr-style-swatch {
+    grid-row: span 2;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    background: radial-gradient(circle at 35% 35%, var(--fg), var(--primary) 45%, transparent 70%);
+}
+.dr-style-swatch--voxel {
+    border-radius: 2px;
+    background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 45%, var(--bg)));
+}
+.dr-style-swatch--splat {
+    background: radial-gradient(circle, var(--primary), transparent 70%);
+}
+.dr-style-swatch--square {
+    border-radius: 0;
+    background: var(--primary);
+}
+.dr-style-swatch--default {
+    background: repeating-linear-gradient(45deg, var(--muted-fg) 0 3px, transparent 3px 6px);
+}
+.dr-style-name {
+    font-size: 12.5px;
+    font-weight: 600;
+}
+.dr-style-about {
+    font-size: 11px;
+    color: var(--muted-fg);
+    line-height: 1.3;
+}
+.dr-gradients {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.dr-gradient-swatch {
+    appearance: none;
+    width: 46px;
+    height: 14px;
+    padding: 0;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+.dr-gradient-swatch--on {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+.dr-range-inputs {
+    display: flex;
+    gap: 6px;
+}
+.dr-look-editor,
+.dr-layer-settings-grid {
+    display: grid;
+    gap: 8px;
+}
+/* LayersPanel */
+.dr-layers {
+    display: grid;
+    gap: 12px;
+}
+.dr-layer-group {
+    display: grid;
+    gap: 4px;
+}
+.dr-layer-group-title {
+    margin: 0;
+    font: 600 11px/1.3 var(--sans);
+    letter-spacing: 0.04em;
+    text-transform: var(--label-case, uppercase);
+    color: var(--muted-fg);
+}
+.dr-layer-row {
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 4px 6px;
+}
+.dr-layer-row--on {
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border-color: var(--border);
+}
+.dr-layer-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.dr-layer-name {
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 0;
+    font: inherit;
+    color: var(--fg);
+    text-align: left;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+.dr-layer-name:disabled {
+    cursor: default;
+}
+.dr-layer-topic {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 12.5px/1.3 var(--mono);
+}
+.dr-layer-type {
+    font-size: 11px;
+    color: var(--muted-fg);
+}
+.dr-layer-chevron {
+    margin-left: auto;
+    display: inline-flex;
+    color: var(--muted-fg);
+    transition: transform 0.15s;
+}
+.dr-layer-chevron--open {
+    transform: rotate(90deg);
+}
+.dr-layer-status {
+    margin: 2px 0 0 40px;
+    font: 11px/1.35 var(--mono);
+    color: var(--muted-fg);
+}
+.dr-layer-status--problem {
+    color: var(--warn);
+}
+.dr-layer-settings {
+    margin: 8px 0 4px;
+    padding: 8px;
+    border-top: 1px solid var(--border);
+}
+.dr-layer-other summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted-fg);
+}
+.dr-layer-other-topic {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font: 11.5px/1.5 var(--mono);
+}
+/* TfPanel */
+.dr-tf-panel {
+    display: grid;
+    gap: 8px;
+}
+.dr-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted-fg);
+}
+.dr-tf-tree {
+    font: 12px/1.6 var(--mono);
+}
+.dr-tf-frame {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: var(--radius-sm);
+    cursor: default;
+}
+.dr-tf-frame:hover,
+.dr-tf-frame--highlighted {
+    background: var(--hover);
+}
+.dr-tf-frame--stale {
+    color: var(--warn);
+}
+.dr-tf-frame--flagged {
+    box-shadow: inset 2px 0 0 var(--warn);
+}
+.dr-tf-age {
+    color: var(--muted-fg);
+}
+.dr-tf-footnote {
+    appearance: none;
+    position: absolute;
+    z-index: 2;
+    left: 10px;
+    top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 20px);
+    padding: 3px 8px;
+    font: 11.5px/1.4 var(--sans);
+    color: var(--warn);
+    cursor: pointer;
+    background: var(--glass, var(--surface));
+    border: 1px solid var(--warn-line, var(--border));
+    border-radius: var(--radius-pill);
+}
+.dr-tf-footnote span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 `

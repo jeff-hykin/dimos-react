@@ -114,16 +114,21 @@ export function zenohSource(options = {}) {
 /**
  * An in-page source: whatever calls `publish` is the data (tests, demos, a replay app feeding recorded messages).
  * `publish(key, payload)` takes bytes (LCM etc.), or any value (delivered as `message.value`, decoded as itself).
+ * A replay passes `clock` (the playhead, ms: `now()` returns it), calls `seek()` when the playhead jumps and may pass
+ * `route(key)` (a pose topic's whole recorded route) so the 3D view can draw it.
  */
-export function memorySource({ topics = [], state = "connected" } = {}) {
+export function memorySource({ topics = [], state = "connected", clock, route } = {}) {
     const subscribers = new Set()
     const frontend = new Set()
     const stateListeners = new Set()
     const topicListeners = new Set()
+    const seekListeners = new Set()
     let known = new Map(topics.map((key) => [key, { key }]))
     const source = {
         kind: "memory",
         state,
+        /** a replay: `now()` is the playhead, so staleness, fading and lifetimes follow it (not the wall clock) */
+        replay: !!clock,
         subscribe(key, _options, onMessage) {
             const entry = { key, onMessage }
             subscribers.add(entry)
@@ -148,9 +153,22 @@ export function memorySource({ topics = [], state = "connected" } = {}) {
             topicListeners.add(listener)
             return () => topicListeners.delete(listener)
         },
-        now: () => Date.now(),
+        now: clock ?? (() => Date.now()),
+        /** A replay's playhead jumped (seek, scrub, loop): layers drop what they gathered over time. */
+        seek() {
+            seekListeners.forEach((listener) => listener())
+        },
+        onSeek(listener) {
+            seekListeners.add(listener)
+            return () => seekListeners.delete(listener)
+        },
+        /**
+         * A pose topic's whole route, when the source knows it up front (a recording):
+         * `Promise<{ frame, points: [tSeconds, x, y, z][] } | null>`.
+         */
+        route: route ?? null,
         /** Delivers a message to every subscriber whose key expression matches `key`. */
-        publish(key, payload, { timestamp = Date.now() } = {}) {
+        publish(key, payload, { timestamp = source.now() } = {}) {
             if (!known.has(key)) {
                 known.set(key, { key })
                 topicListeners.forEach((listener) => listener())

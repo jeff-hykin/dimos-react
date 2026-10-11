@@ -9,7 +9,7 @@ import { cx, h } from "../h.js"
 import { useDataSource } from "../data.js"
 import { decode as decodeLcm } from "../lcm.js"
 import { Store, useStore } from "../three/store.js"
-import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView } from "./media.js"
+import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawToImageData } from "./media.js"
 
 // ── latency ↔ quality presets (zenoh-gateway's video policy) ──
 
@@ -196,8 +196,10 @@ const writeLocal = (key, value) => {
  * The page's camera subscriptions over a data source, shared and counted: `acquire(topic)` → `{ video, depth, quality }`
  * stores (video: `{ stream, width, height, fps }`, depth: `{ image }`), `release(topic)`, `setQuality(topic, id)`
  * (this viewer's preset per topic, in localStorage under `storageKey`), `element(handle)` (a playing <video> for
- * textures). A source that delivers images itself (a replay) sets `message.decoded` to
- * `{ width, height, encoding, data }` (depth) or `{ bitmap | image, width, height }` (color).
+ * textures). A source that delivers images itself (a replay) sends `{ width, height, encoding, data }` (depth),
+ * `{ bitmap | image, width, height }` (color), a frame (`{ kind, width, height, encoding, data }`, jpeg/png/webp or raw
+ * pixels), a decoded sensor_msgs.Image / CompressedImage, or the LCM bytes of one: frames are decoded here (newest wins)
+ * into `video.image` (an ImageBitmap or ImageData).
  */
 export class CameraStreams {
     #sources = new Map()
@@ -223,6 +225,8 @@ export class CameraStreams {
             depth: new Store({ image: null }),
             quality: new Store({ quality: isDepthTopic(topic) ? "balanced" : this.qualityOf(topic.key) }),
             element: null,
+            ticket: 0,
+            newest: 0,
         }
         this.#open(topic, handle)
         this.#sources.set(topic.key, handle)
@@ -250,7 +254,7 @@ export class CameraStreams {
                 topic.key,
                 { delivery: "latest", maxHz: 15, encoding: `${prefix}depth` },
                 (message) => {
-                    const image = message.decoded ?? message.value
+                    const image = message.decoded ?? message.value ?? lcmValue(message, topic.type)
                     if (image?.data) {
                         depth.set({ image })
                     }
@@ -261,9 +265,20 @@ export class CameraStreams {
         handle.stop = this.source.subscribe(
             topic.key,
             { delivery: "latest", ...videoPreset(handle.quality.get().quality).options, encoding: `${prefix}image` },
-            (message) => {
+            async (message) => {
+                let decoded = message.decoded ?? message.value ??
+                    (message.mediaStream ? null : lcmValue(message, topic.type))
+                if (!message.mediaStream && decoded && !decoded.bitmap && !decoded.image) {
+                    // a replay's frame: decoded here, and a slower older one must not replace a newer one
+                    const mine = ++handle.ticket
+                    const picture = await framePicture(decoded)
+                    if (!picture || mine < handle.newest) {
+                        return
+                    }
+                    handle.newest = mine
+                    decoded = { image: picture, width: picture.width, height: picture.height }
+                }
                 const state = video.get()
-                const decoded = message.decoded ?? message.value
                 const picture = decoded?.bitmap ?? decoded?.image ?? null
                 const width = message.video?.width ?? decoded?.width ?? state.width
                 const height = message.video?.height ?? decoded?.height ?? state.height
@@ -348,8 +363,46 @@ export class CameraStreams {
     }
 }
 
+/** A message's LCM payload decoded as `type` (null when it isn't one). */
+function lcmValue(message, type) {
+    if (!message.bytes || !type) {
+        return null
+    }
+    try {
+        return decodeLcm(type, message.bytes)
+    } catch {
+        return null
+    }
+}
+
+/** A frame → ImageBitmap (jpeg/png/webp) or ImageData (raw pixels), or null. */
+async function framePicture(value) {
+    const frame = normalizeFrame(value)
+    if (!frame || frame.kind === "depth") {
+        return null
+    }
+    if (frame.kind === "encoded") {
+        try {
+            return await createImageBitmap(new Blob([frame.data], { type: `image/${frame.format}` }))
+        } catch {
+            return null
+        }
+    }
+    return rawToImageData(frame)
+}
+
 const StreamsContext = createContext(null)
 const sharedStreams = new WeakMap()
+
+/** The shared CameraStreams of a data source (what useCameraStreams gives without a provider; the 3D view's too). */
+export function cameraStreamsFor(source) {
+    let streams = sharedStreams.get(source)
+    if (!streams) {
+        streams = new CameraStreams(source)
+        sharedStreams.set(source, streams)
+    }
+    return streams
+}
 
 /** Makes `streams` (a CameraStreams, e.g. with the app's own storageKey) the one every CameraView below uses. */
 export function CameraStreamsProvider({ streams, children }) {
@@ -361,15 +414,7 @@ export function useCameraStreams() {
     const given = useContext(StreamsContext)
     const source = useDataSource()
     return useMemo(() => {
-        if (given) {
-            return given
-        }
-        let streams = sharedStreams.get(source)
-        if (!streams) {
-            streams = new CameraStreams(source)
-            sharedStreams.set(source, streams)
-        }
-        return streams
+        return given ?? cameraStreamsFor(source)
     }, [given, source])
 }
 

@@ -1,24 +1,46 @@
 // Demo: the 3D view. A test data source plays a robot driving a loop (TF over LCM, a planned path, a lidar ring),
 // while a room-shaped point cloud and a pose array come in as props.
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { h } from "../../src/h.js"
 import { encode } from "../../src/lcm.js"
-import { Badge, Card, DataSourceProvider, Field, memorySource, Row, Select, Toggle } from "../../mod.js"
 import {
+    Badge,
+    Button,
+    Card,
+    Column,
+    DataSourceProvider,
+    Field,
+    memorySource,
+    Row,
+    Select,
+    Slider,
+    Tabs,
+    Toggle,
+} from "../../mod.js"
+import {
+    FrameHighlight,
     FramePicker,
     KeyboardFly,
+    LayersPanel,
     Path,
     PointCloud,
     Pose,
     PoseArray,
+    RenderingSettings,
     RobotModel,
     Scene3D,
     SceneControls,
     SceneStats,
     TfFeed,
+    TfFootnote,
     TfFrames,
+    TfPanel,
     TfTree,
+    TopicLayers,
+    useLayerManager,
+    useScene,
     useTfFrames,
+    useTfIssues,
 } from "../../three.js"
 
 const TF_KEY = "dimos/tf/tf2_msgs.TFMessage"
@@ -139,6 +161,10 @@ function FrameCount() {
 }
 
 export function SceneSection() {
+    return h(Column, { gap: 16 }, h(LiveDemo), h(ReplayDemo))
+}
+
+function LiveDemo() {
     const source = useMemo(() => memorySource(), [])
     // the scene's tree, made here so the frame picker below the scene can list its frames too
     const tf = useMemo(() => new TfTree(), [])
@@ -218,6 +244,298 @@ export function SceneSection() {
                 ),
                 h(Field, { label: "Frame names" }, h(Toggle, { value: names, onChange: setNames })),
             ),
+        ),
+    )
+}
+
+// ── a replay: the same robot as a recording with a playhead (play / pause / scrub), every topic drawn by its layer
+// type through TopicLayers, switched and tuned in LayersPanel, the TF tree in TfPanel ──
+
+const REPLAY_SECONDS = 60
+const loopPose = (seconds) => loopAt((seconds / REPLAY_SECONDS) % 1)
+
+/** Everything a recording of the demo robot holds at `seconds` (keys → values), for a replay to publish. */
+function replayFrame(seconds) {
+    const [x, y, yaw] = loopPose(seconds)
+    const out = {}
+    out[TF_KEY] = { transforms: [stamped("odom", "base_link", [x, y, 0.35], yaw)] }
+    out[TF_STATIC_KEY] = {
+        transforms: [
+            stamped("world", "map", [0, 0, 0]),
+            stamped("map", "odom", [0, 0, 0]),
+            stamped("base_link", "lidar_link", [0.2, 0, 0.3]),
+        ],
+    }
+    out[ODOM_KEY] = {
+        header: { frame_id: "odom" },
+        pose: { pose: { position: { x, y, z: 0.05 }, orientation: { z: Math.sin(yaw / 2), w: Math.cos(yaw / 2) } } },
+    }
+    const ring = new Float32Array(720 * 3)
+    for (let index = 0; index < 720; index++) {
+        const angle = (index / 720) * Math.PI * 2
+        // what the lidar sees of the 12 × 8 m room from where the robot is
+        const dx = Math.cos(angle + yaw), dy = Math.sin(angle + yaw)
+        const range = Math.min(
+            dx > 0 ? (6 - x) / dx : dx < 0 ? (-6 - x) / dx : 99,
+            dy > 0 ? (4 - y) / dy : dy < 0 ? (-4 - y) / dy : 99,
+        )
+        ring.set([Math.cos(angle) * range, Math.sin(angle) * range, (index % 8) * 0.25 - 0.3], index * 3)
+    }
+    out["dimos/lidar/sensor_msgs.PointCloud2"] = { positions: ring, frame: "lidar_link" }
+    return out
+}
+
+/** A costmap of the room: free floor, lethal walls and boxes, inflated costs around them. */
+function costmap() {
+    const resolution = 0.1, width = 130, height = 90
+    const data = new Int8Array(width * height)
+    const boxes = [[3.5, 2, 0.8], [-3, -2.5, 1.1], [-4, 2.5, 0.6]]
+    for (let row = 0; row < height; row++) {
+        for (let column = 0; column < width; column++) {
+            const px = -6.5 + column * resolution, py = -4.5 + row * resolution
+            let distance = Math.min(6 - Math.abs(px), 4 - Math.abs(py))
+            for (const [cx, cy, size] of boxes) {
+                distance = Math.min(distance, Math.max(Math.abs(px - cx), Math.abs(py - cy)) - size / 2)
+            }
+            data[row * width + column] = distance <= 0
+                ? 100
+                : distance < 0.6
+                ? Math.round(99 * (1 - distance / 0.6))
+                : 0
+        }
+    }
+    return {
+        header: { frame_id: "map" },
+        info: { width, height, resolution, origin: { position: { x: -6.5, y: -4.5, z: 0 }, orientation: { w: 1 } } },
+        data,
+    }
+}
+
+const color = (r, g, b, a = 1) => ({ r, g, b, a })
+const STATIC_TOPICS = {
+    "dimos/costmap/nav_msgs.OccupancyGrid": costmap,
+    "dimos/markers/visualization_msgs.MarkerArray": () => ({
+        markers: [
+            {
+                ns: "goal",
+                id: 0,
+                type: 2,
+                action: 0,
+                header: { frame_id: "map" },
+                pose: { position: { x: 4.6, y: -2.6, z: 0.3 }, orientation: { w: 1 } },
+                scale: { x: 0.4, y: 0.4, z: 0.4 },
+                color: color(0.2, 0.9, 0.5),
+            },
+            {
+                ns: "goal",
+                id: 1,
+                type: 9,
+                action: 0,
+                header: { frame_id: "map" },
+                pose: { position: { x: 4.6, y: -2.6, z: 0.8 }, orientation: { w: 1 } },
+                text: "goal",
+                color: color(0.2, 0.9, 0.5),
+            },
+            {
+                ns: "zone",
+                id: 2,
+                type: 4,
+                action: 0,
+                header: { frame_id: "map" },
+                pose: { orientation: { w: 1 } },
+                scale: { x: 0.05 },
+                color: color(1, 0.7, 0.2),
+                points: [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].map(([x, y]) => ({ x, y, z: 0.02 })),
+            },
+        ],
+    }),
+    "dimos/detections/vision_msgs.Detection3DArray": () => ({
+        header: { frame_id: "map" },
+        detections: [[3.5, 2, 0.8, "box", 0.93], [-3, -2.5, 1.1, "crate", 0.81], [-4, 2.5, 0.6, "box", 0.66]].map((
+            [x, y, size, class_id, score],
+        ) => ({
+            bbox: {
+                center: { position: { x, y, z: size / 2 }, orientation: { w: 1 } },
+                size: { x: size, y: size, z: size },
+            },
+            results: [{ hypothesis: { class_id, score } }],
+        })),
+    }),
+    "dimos/roadmap/nav_msgs.LineSegments3D": () => {
+        const nodes = [[-5, -3], [0, -3.2], [5, -3], [5, 0], [5, 3], [0, 3.2], [-5, 3], [-5, 0], [0, 0]]
+        const edges = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0], [1, 8], [8, 5], [7, 8], [8, 3]]
+        const pose = ([x, y], w = 1) => ({ pose: { position: { x, y, z: 0.05 }, orientation: { w } } })
+        return {
+            header: { frame_id: "map" },
+            poses: edges.flatMap(([a, b], index) => [pose(nodes[a], 1 + index * 3), pose(nodes[b])]),
+        }
+    },
+    "dimos/clicked_point/geometry_msgs.PointStamped": () => ({
+        header: { frame_id: "map" },
+        point: { x: -1.5, y: 1.2, z: 0 },
+    }),
+    "dimos/waypoints/geometry_msgs.PoseArray": () => ({
+        header: { frame_id: "map" },
+        poses: [[-5, -3, 0.4], [5, -3, 1.6], [5, 3, 2.8], [-5, 3, -1.6]].map(([x, y, yaw]) => ({
+            position: { x, y, z: 0 },
+            orientation: { z: Math.sin(yaw / 2), w: Math.cos(yaw / 2) },
+        })),
+    }),
+    "dimos/map/sensor_msgs.PointCloud2": () => ({ positions: roomCloud(), frame: "world" }),
+}
+
+/** The demo's replay: a playhead (ms) the scene's clock follows; each tick publishes the recording at it. */
+function useReplay() {
+    const playhead = useRef(0)
+    const source = useMemo(
+        () =>
+            memorySource({
+                clock: () => playhead.current,
+                // the whole odometry route up front, like a recording's index
+                route: (key) =>
+                    key === ODOM_KEY
+                        ? {
+                            frame: "odom",
+                            points: Array.from({ length: 600 }, (_, index) => {
+                                const t = (index / 600) * REPLAY_SECONDS
+                                const [x, y] = loopPose(t)
+                                return [t, x, y, 0.05]
+                            }),
+                        }
+                        : null,
+            }),
+        [],
+    )
+    const [state, setState] = useState({ seconds: 0, playing: true })
+    useEffect(() => {
+        const statics = Object.entries(STATIC_TOPICS).map(([key, make]) => [key, make()])
+        let last = performance.now()
+        const publish = () => {
+            for (const [key, value] of Object.entries(replayFrame(playhead.current / 1000))) {
+                source.publish(key, value)
+            }
+            for (const [key, value] of statics) {
+                source.publish(key, value)
+            }
+        }
+        const timer = setInterval(() => {
+            const now = performance.now()
+            setState((current) => {
+                if (current.playing) {
+                    playhead.current = (playhead.current + (now - last)) % (REPLAY_SECONDS * 1000)
+                }
+                return { ...current, seconds: playhead.current / 1000 }
+            })
+            last = now
+            publish()
+        }, 100)
+        return () => clearInterval(timer)
+    }, [source])
+    const seek = (seconds) => {
+        playhead.current = seconds * 1000
+        source.seek()
+        setState((current) => ({ ...current, seconds }))
+    }
+    return { source, state, setPlaying: (playing) => setState((current) => ({ ...current, playing })), seek }
+}
+
+/** The TF footnote over the replay's view, from the scene's own tree and the drawn layers' frames. */
+function ReplayFootnote({ manager, onOpen }) {
+    const issues = useTfIssues({ layers: () => manager.layerFrames() })
+    return h(TfFootnote, { issues, onOpen })
+}
+
+function SceneInfo({ onInfo }) {
+    const { frameInfo } = useScene()
+    useEffect(() => frameInfo.subscribe(() => onInfo(frameInfo.get())), [frameInfo])
+    return null
+}
+
+function ReplayDemo() {
+    const { source, state, setPlaying, seek } = useReplay()
+    return h(DataSourceProvider, { source }, h(ReplayView, { state, setPlaying, seek }))
+}
+
+function ReplayView({ state, setPlaying, seek }) {
+    const manager = useLayerManager({ storagePrefix: "dimos-react-demo.layers", intervalMs: 1000 })
+    const tf = useMemo(() => new TfTree(), [])
+    const [tab, setTab] = useState("layers")
+    const [hovered, setHovered] = useState(null)
+    const [placed, setPlaced] = useState(true)
+    const [fixedFrame, setFixedFrame] = useState("")
+    const [follow, setFollow] = useState(true)
+    const [info, setInfo] = useState({ fixedFrame: "", robotFound: false })
+    const issues = useTfIssues({ tf, layers: () => manager.layerFrames(), fixedFrame: info.fixedFrame || "world" })
+    return h(
+        Card,
+        {
+            title: "Topic layers (a replay)",
+            description:
+                "TopicLayers draws every topic by its layer type; LayersPanel switches and tunes them; the playhead is the data clock and a seek resets trails and maps",
+        },
+        h(
+            Row,
+            { gap: 12, align: "stretch", wrap: true },
+            h(
+                Scene3D,
+                {
+                    tf,
+                    fixedFrame: fixedFrame || undefined,
+                    followFrame: "base_link",
+                    follow,
+                    onFollowChange: setFollow,
+                    style: { height: 460, flex: "2 1 420px" },
+                },
+                h(TfFeed),
+                h(TopicLayers, { manager }),
+                h(RobotModel, { kind: "dog" }),
+                h(FrameHighlight, { frame: hovered, onPlaced: setPlaced }),
+                h(SceneInfo, { onInfo: setInfo }),
+                h(ReplayFootnote, { manager, onOpen: () => setTab("tf") }),
+                h(SceneStats),
+                h(SceneControls),
+            ),
+            h(
+                Column,
+                { gap: 8, style: { flex: "1 1 260px", maxHeight: 460, overflow: "auto" } },
+                h(Tabs, {
+                    value: tab,
+                    onChange: setTab,
+                    items: [["layers", "Layers"], ["tf", "TF"], ["rendering", "Rendering"]],
+                }),
+                tab === "layers" ? h(LayersPanel, { manager }) : tab === "tf"
+                    ? h(TfPanel, {
+                        tf,
+                        fixedFrame,
+                        activeFixedFrame: info.fixedFrame,
+                        onFixedFrame: setFixedFrame,
+                        issues,
+                        robotFrame: "base_link",
+                        robotFound: info.robotFound,
+                        hovered,
+                        hoveredPlaced: placed,
+                        onHover: setHovered,
+                    })
+                    : h(RenderingSettings),
+            ),
+        ),
+        h(
+            Row,
+            { gap: 12, align: "center", style: { marginTop: 12 } },
+            h(
+                Button,
+                { size: "sm", icon: state.playing ? "pause" : "play", onClick: () => setPlaying(!state.playing) },
+                state.playing ? "Pause" : "Play",
+            ),
+            h(Slider, {
+                min: 0,
+                max: REPLAY_SECONDS,
+                step: 0.1,
+                value: state.seconds,
+                format: (seconds) => `${seconds.toFixed(1)} s`,
+                onChange: seek,
+                style: { flex: 1 },
+            }),
         ),
     )
 }

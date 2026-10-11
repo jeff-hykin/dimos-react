@@ -288,10 +288,102 @@ materials of your own: `makePointMaterial(viewer.pixelsPerMeter)`, `applyLook(ma
 `defaultFixedFrame()`, `frames()`, `snapshot()` (with problems: double parents, several roots, cycles, stale edges),
 `onChange(fn)`.
 
+### Topic layers (every topic, by type)
+
+The Controller's layer list, generic: a `LayerManager` watches the data source's topics and makes an entry per topic
+some **layer type** draws; `<TopicLayers>` (in the scene) runs the switched-on ones, `<LayersPanel>` (anywhere) switches
+them and edits each one's settings. Built-in types: `pointcloud` (PointCloud2, with this viewer's bandwidth preset),
+`pose` (Odometry / PoseStamped / PoseWithCovarianceStamped + trail, and the whole route when the source knows it),
+`path`, `posearray`, `graph` (LineSegments3D), `marker` (Marker / MarkerArray: every RViz type but meshes), `boxes3d`
+(Detection3DArray / BoundingBox3DArray), `labeled-points` (EntityMarkers / PointStamped), `occupancy` (OccupancyGrid:
+costmap floor plan or gray map), `tf` (TFMessage) and `camera3d` (Image / CompressedImage frustum with the picture,
+depth as a heat map; off by default). A 2D overlay type, `detection2d`, draws Detection2DArray boxes over camera images
+(`overlayTypeFor(type).draw(ctx, message, image)`).
+
+```js
+import {
+    FrameHighlight,
+    LayersPanel,
+    RobotModel,
+    Scene3D,
+    SceneControls,
+    TfFeed,
+    TfFootnote,
+    TfPanel,
+    TfTree,
+    TopicLayers,
+    useLayerManager,
+    useTfIssues,
+} from "dimos-react/three"
+
+function View() {
+    const layers = useLayerManager() // which topics are on + each one's settings persist (localStorage, or `persist`)
+    const tf = useMemo(() => new TfTree(), []) // shared by the scene and the TF panel
+    const [hovered, setHovered] = useState(null)
+    const issues = useTfIssues({ tf, layers: () => layers.layerFrames() })
+    return h(
+        Row,
+        null,
+        h(
+            Scene3D,
+            { tf, followFrame: "base_link", style: { height: 600, flex: 1 } },
+            h(TfFeed),
+            h(TopicLayers, { manager: layers }),
+            h(RobotModel, { kind: "dog" }),
+            h(FrameHighlight, { frame: hovered }),
+            h(TfFootnote, { issues }),
+            h(SceneControls),
+        ),
+        h(Column, null, h(LayersPanel, { manager: layers }), h(TfPanel, { tf, issues, onHover: setHovered })),
+    )
+}
+```
+
+A single typed layer is `h(Layer, { type: "occupancy", topic: "dimos/costmap/nav_msgs.OccupancyGrid", settings })`. Your
+own type: `registerLayer({ id, label, types, defaults, create(context, topic, settings), Settings })` (see
+`src/three/layers/registry.js`; a later registration with the same id replaces a built-in one).
+
+**Replays.** `memorySource({ clock: () => playheadMs, route })` makes the playhead the data clock: point-cloud windows
+fade, marker lifetimes run and TF goes stale by it (a paused replay doesn't age). Call `source.seek()` when the playhead
+jumps (seek, scrub, loop): every layer resets (accumulated maps start over, markers clear, a pose trail is rebuilt from
+`route(key)` — `{ frame, points: [tSeconds, x, y, z][] }` — up to the playhead). Publish LCM bytes or decoded values;
+images may be `{ kind: "image" | "depth", width, height, encoding, data }` frames, a decoded Image / CompressedImage, or
+their LCM bytes.
+
+**Scene extras**: `Scene3D` also takes `follow` + `onFollowChange` (following on/off; `useSceneActions().recenter()`
+turns it back on), `robotFrame` (framed once on arrival; a Pose layer's pose stands in while it isn't in TF),
+`viewDistance`, `layerOptions: { baseFrame, cameraInfo: { [imageTopicName]: infoTopicName } }`. `useScene().frameInfo`
+is a store of `{ fixedFrame, robotFound, followFound, following }`. `SceneControls` = follow / top-down (around the
+robot) / frame-all; `SceneStats({ detailed: true, rttMs })` = the full numbers. `RenderingSettings`, `StylePicker`,
+`CubeShadePicker` and `PointLookEditor` edit point looks (the page-wide default style lives in the `rendering` store;
+splats that can't keep up fall back to cubes, `splatFallback`).
+
+**Cameras**: the `camera3d` layer shares CameraStreams (`dimos-react`'s cameras) with every CameraView of the same
+topic; a replay source may publish frames (`{ kind, width, height, encoding, data }`, jpeg/png/webp or raw), decoded
+Image / CompressedImage values or their LCM bytes, and CameraStreams decodes them.
+
+## Using from Vite / npm
+
+The repo is a plain npm package (no build). Pin a tag as a tarball dependency:
+
+```json
+"dependencies": { "dimos-react": "https://codeload.github.com/jeff-hykin/dimos-react/tar.gz/refs/tags/vX.Y.Z" }
+```
+
+then `import { AppProvider, Button } from "dimos-react"` and `import { Scene3D } from "dimos-react/three"`; react,
+react-dom and three are peer dependencies (your app's copies are used). There are no .d.ts files yet; a TypeScript app
+adds a shim:
+
+```ts
+// src/dimos-react.d.ts
+declare module "dimos-react"
+declare module "dimos-react/three"
+```
+
 ## Tests
 
 ```sh
-deno task test     # theme tokens, URL-state round trip (happy-dom), TF math
+deno task test     # theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock
 ```
 
 ## Layout

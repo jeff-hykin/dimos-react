@@ -134,6 +134,7 @@ export declare const applyTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const applyUrlEvent: ((...args: any[]) => any) & Record<string, any>
 export declare const bindUrlEvents: ((...args: any[]) => any) & Record<string, any>
 export declare const cameraInfoFor: ((...args: any[]) => any) & Record<string, any>
+export declare const cameraStreamsFor: ((...args: any[]) => any) & Record<string, any>
 export declare const cameraTabs: ((...args: any[]) => any) & Record<string, any>
 export declare const captureFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const clampPanelBox: ((...args: any[]) => any) & Record<string, any>

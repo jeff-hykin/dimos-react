@@ -192,9 +192,11 @@ const clamp = (value, min, max) => Math.min(max ?? Infinity, Math.max(min ?? -In
 
 /**
  * A number box that only reports finite numbers: typing keeps the text, Enter/blur commits; ↑/↓ step (shift: ×10).
- * `unit` shows after the number.
+ * `unit` shows after the number; `allowEmpty`: clearing the box reports null (e.g. "automatic").
  */
-export function NumberInput({ value, onChange, min, max, step = 1, unit, size = "md", precision, className, ...rest }) {
+export function NumberInput(
+    { value, onChange, min, max, step = 1, unit, size = "md", precision, allowEmpty = false, className, ...rest },
+) {
     const shown = (number) =>
         number === null || number === undefined || !Number.isFinite(number)
             ? ""
@@ -210,6 +212,13 @@ export function NumberInput({ value, onChange, min, max, step = 1, unit, size = 
     }, [value, precision])
     const commit = (raw) => {
         const number = Number(raw)
+        if (allowEmpty && raw.trim() === "") {
+            setText("")
+            if (value !== null && value !== undefined) {
+                onChange?.(null)
+            }
+            return
+        }
         if (raw.trim() === "" || !Number.isFinite(number)) {
             setText(shown(value))
             return

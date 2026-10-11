@@ -259,7 +259,19 @@ export function Popover(
 
 // ── Menu ──
 
-function MenuList({ items, onClose, autoFocus = true }) {
+/** A menu item's own DOM attributes: its `data-*` (a test id) and `aria-*` keys, and `id`. */
+function domProps(item) {
+    return Object.fromEntries(
+        Object.entries(item).filter(([key]) => key === "id" || key.startsWith("data-") || key.startsWith("aria-")),
+    )
+}
+
+/**
+ * A menu's items in place (inside a Popover, a panel): what Menu and MenuAt show. `items` as for Menu; `onClose` after
+ * a pick (unless the item `keepOpen`s).
+ * @param {{ items: any[], onClose?: () => void, autoFocus?: boolean }} props
+ */
+export function MenuList({ items, onClose, autoFocus = true }) {
     const list = useRef(null)
     const focusable = () => [...(list.current?.querySelectorAll(".dr-menu__item:not([disabled])") ?? [])]
     useEffect(() => {
@@ -302,6 +314,7 @@ function MenuList({ items, onClose, autoFocus = true }) {
                     disabled: item.disabled,
                     title: item.title,
                     className: cx("dr-menu__item", item.danger && "dr-menu__item--danger"),
+                    ...domProps(item),
                     onClick: () => {
                         item.onSelect?.()
                         if (!item.keepOpen) {
@@ -326,9 +339,10 @@ function MenuList({ items, onClose, autoFocus = true }) {
 }
 
 /**
- * A dropdown menu.
+ * A dropdown menu. An item's `data-*` / `aria-*` keys (and `id`) go on its button, like other components' DOM props.
  * @param {{ items: ({ label: any, icon?: string, onSelect?: () => void, danger?: boolean, disabled?: boolean,
- *   checked?: boolean, shortcut?: string, title?: string, keepOpen?: boolean } | "-" | { heading: any })[],
+ *   checked?: boolean, shortcut?: string, title?: string, keepOpen?: boolean, [dataOrAria: string]: any } | "-" |
+ *   { heading: any })[],
  *   trigger: any, placement?: string, open?: boolean, onOpenChange?: (open: boolean) => void, className?: string }} props
  */
 export function Menu({ items, trigger, placement = "bottom-start", open, onOpenChange, className }) {

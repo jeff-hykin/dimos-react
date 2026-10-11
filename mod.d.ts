@@ -74,6 +74,7 @@ export declare function Markdown(props: Record<string, any>): ReactNode
 export declare function MediaFrame(props: Record<string, any>): ReactNode
 export declare function Menu(props: Record<string, any>): ReactNode
 export declare function MenuAt(props: Record<string, any>): ReactNode
+export declare function MenuList(props: Record<string, any>): ReactNode
 export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
 export declare function NumberInput(props: Record<string, any>): ReactNode

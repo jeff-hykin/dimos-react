@@ -42,3 +42,16 @@ Deno.test("TagList renders every tag (oneLine trims only once laid out) and its 
     assert(tile.startsWith("<button") && tile.includes(`aria-pressed="true"`) && tile.includes("Unitree"), tile)
     assert(renderToStaticMarkup(h(Tile, { loading: true })).includes("dr-tile--loading"))
 })
+
+Deno.test("Menu items pass their data-* / aria-* keys (and id) to their buttons", async () => {
+    const { MenuList } = await import("../mod.js")
+    const html = renderToStaticMarkup(h(MenuList, {
+        autoFocus: false,
+        items: [{ label: "Clear", "data-testid": "clear-it", "aria-describedby": "why", id: "c", onSelect: () => {} }],
+    }))
+    assert(
+        html.includes(`data-testid="clear-it"`) && html.includes(`aria-describedby="why"`) && html.includes(`id="c"`),
+        html,
+    )
+    assert(!html.includes("onSelect"), html)
+})

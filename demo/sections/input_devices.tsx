@@ -14,7 +14,7 @@ import {
     ResizeHandle,
     StickIndicator,
     ThumbStick,
-} from "../../mod"
+} from "../../src/index"
 
 export function InputDevicesSection() {
     const [stick, setStick] = useState({ x: 0, y: 0 })

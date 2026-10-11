@@ -1,8 +1,9 @@
 // TF math: the transform tree (lookups, inverses, separate trees, defaults, problems) and the follow camera's spring.
-import { assert, assertAlmostEquals, assertEquals } from "@std/assert"
+import { test } from "vitest"
+import { assert, assertAlmostEquals, assertEquals } from "./assert"
 import { Quaternion, Vector3 } from "three"
-import { TfTree } from "../src/three/tf.js"
-import { PanGate, SmoothFollow } from "../src/three/follow.js"
+import { TfTree } from "../src/three/tf"
+import { PanGate, SmoothFollow } from "../src/three/follow"
 
 const yaw = (radians) => {
     const q = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), radians)
@@ -15,7 +16,7 @@ const near = (actual, expected, label) => {
     assertAlmostEquals(actual.z, expected[2], 1e-9, `${label} z`)
 }
 
-Deno.test("lookup composes a chain of transforms", () => {
+test("lookup composes a chain of transforms", () => {
     const tf = new TfTree()
     tf.set("world", "odom", [1, 0, 0], [0, 0, 0, 1])
     tf.set("odom", "base_link", [0, 2, 0], yaw(Math.PI / 2))
@@ -28,7 +29,7 @@ Deno.test("lookup composes a chain of transforms", () => {
     near(point, [1, 4, 0.5], "lidar point")
 })
 
-Deno.test("lookup in the inverse direction undoes it", () => {
+test("lookup in the inverse direction undoes it", () => {
     const tf = new TfTree()
     tf.set("world", "base_link", [3, 4, 0], yaw(Math.PI / 2))
     near(position(tf.lookup("world", "base_link")), [-4, 3, 0], "world origin in base_link")
@@ -40,7 +41,7 @@ Deno.test("lookup in the inverse direction undoes it", () => {
     near(position(tf.lookup("camera", "lidar")), [-1, 1, 0], "camera in lidar")
 })
 
-Deno.test("unrelated trees and unknown frames have no path", () => {
+test("unrelated trees and unknown frames have no path", () => {
     const tf = new TfTree()
     tf.set("map", "robot_a", [1, 0, 0], [0, 0, 0, 1])
     tf.set("other_root", "robot_b", [1, 0, 0], [0, 0, 0, 1])
@@ -49,13 +50,13 @@ Deno.test("unrelated trees and unknown frames have no path", () => {
     assertEquals(tf.snapshot().problems.roots, ["map", "other_root"])
 })
 
-Deno.test("the empty frame and the fixed frame itself are identity", () => {
+test("the empty frame and the fixed frame itself are identity", () => {
     const tf = new TfTree()
     near(position(tf.lookup("", "world")), [0, 0, 0], "empty")
     near(position(tf.lookup("world", "world")), [0, 0, 0], "self")
 })
 
-Deno.test("world-ish names are the same frame when no tf relates them", () => {
+test("world-ish names are the same frame when no tf relates them", () => {
     const tf = new TfTree()
     assert(tf.lookup("map", "world") !== null)
     // once "world" is a known frame in a different tree, the alias no longer applies
@@ -63,7 +64,7 @@ Deno.test("world-ish names are the same frame when no tf relates them", () => {
     assertEquals(tf.lookup("map", "world"), null)
 })
 
-Deno.test("defaultFixedFrame prefers world-ish roots, else the biggest tree", () => {
+test("defaultFixedFrame prefers world-ish roots, else the biggest tree", () => {
     const tf = new TfTree()
     assertEquals(tf.defaultFixedFrame(), "world")
     tf.set("small_root", "a", [0, 0, 0], [0, 0, 0, 1])
@@ -76,7 +77,7 @@ Deno.test("defaultFixedFrame prefers world-ish roots, else the biggest tree", ()
     assertEquals(tf.defaultFixedFrame(), "map")
 })
 
-Deno.test("cycles and double parents are reported, never looped on", () => {
+test("cycles and double parents are reported, never looped on", () => {
     const tf = new TfTree()
     tf.set("a", "b", [1, 0, 0], [0, 0, 0, 1])
     tf.set("b", "c", [1, 0, 0], [0, 0, 0, 1])
@@ -89,7 +90,7 @@ Deno.test("cycles and double parents are reported, never looped on", () => {
     assertEquals(other.snapshot().problems.doubleParent, [["child", ["p1", "p2"]]])
 })
 
-Deno.test("dynamic edges go stale, static ones don't", () => {
+test("dynamic edges go stale, static ones don't", () => {
     let now = 0
     const tf = new TfTree({ now: () => now })
     tf.set("world", "base_link", [0, 0, 0], [0, 0, 0, 1])
@@ -99,16 +100,18 @@ Deno.test("dynamic edges go stale, static ones don't", () => {
     assertEquals(tf.snapshot().problems.stale, ["base_link"])
 })
 
-Deno.test("setMessage reads a decoded TFMessage; version bumps and listeners fire", () => {
+test("setMessage reads a decoded TFMessage; version bumps and listeners fire", () => {
     const tf = new TfTree()
     let heard = 0
     tf.onChange(() => heard++)
     tf.setMessage({
-        transforms: [{
-            header: { frame_id: "world" },
-            child_frame_id: "base_link",
-            transform: { translation: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0, z: 0, w: 1 } },
-        }],
+        transforms: [
+            {
+                header: { frame_id: "world" },
+                child_frame_id: "base_link",
+                transform: { translation: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0, z: 0, w: 1 } },
+            },
+        ],
     })
     near(position(tf.lookup("base_link", "world")), [1, 2, 3], "from message")
     assertEquals(tf.version, 1)
@@ -117,7 +120,7 @@ Deno.test("setMessage reads a decoded TFMessage; version bumps and listeners fir
     assertEquals(tf.parentOf("base_link"), "world")
 })
 
-Deno.test("SmoothFollow snaps on a big jump and converges on a steady target", () => {
+test("SmoothFollow snaps on a big jump and converges on a steady target", () => {
     const follow = new SmoothFollow()
     assertEquals(follow.step([0, 0, 0], 0.016), [0, 0, 0])
     // a small move glides: the first frame lags behind
@@ -132,7 +135,7 @@ Deno.test("SmoothFollow snaps on a big jump and converges on a steady target", (
     assertEquals(follow.step([50, 0, 0], 0.016), [50, 0, 0])
 })
 
-Deno.test("PanGate undoes small pans and pauses following on a deliberate one", () => {
+test("PanGate undoes small pans and pauses following on a deliberate one", () => {
     const gate = new PanGate()
     gate.start()
     assertEquals(gate.step([0.05, 0, 0], 1).action, "undo")

@@ -15,7 +15,7 @@ import {
     Slider,
     Tabs,
     Toggle,
-} from "../../mod"
+} from "../../src/index"
 import {
     FrameHighlight,
     FramePicker,
@@ -41,7 +41,7 @@ import {
     useScene,
     useTfFrames,
     useTfIssues,
-} from "../../three"
+} from "../../src/three"
 
 const TF_KEY = "dimos/tf/tf2_msgs.TFMessage"
 const TF_STATIC_KEY = "dimos/tf_static/tf2_msgs.TFMessage"

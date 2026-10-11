@@ -21,7 +21,7 @@ import {
     Table,
     Timeline,
     Tree,
-} from "../../mod"
+} from "../../src/index"
 
 const TOPICS = [
     { key: "dimos/lidar/sensor_msgs.PointCloud2", name: "/lidar", type: "sensor_msgs.PointCloud2", hz: 10.1, kb: 1840 },

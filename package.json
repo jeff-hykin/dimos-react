@@ -1,23 +1,39 @@
 {
     "name": "dimos-react",
-    "version": "0.1.24",
+    "version": "0.2.0",
     "description": "React UI toolkit for dimOS Desktop apps: themed components, Desktop theme inheritance, URL state, zenoh hooks and a three.js 3D view",
     "type": "module",
-    "main": "mod.js",
-    "module": "mod.js",
-    "exports": {
-        ".": {
-            "types": "./mod.d.ts",
-            "default": "./mod.js"
-        },
-        "./three": {
-            "types": "./three.d.ts",
-            "default": "./three.js"
-        },
-        "./*": "./*"
-    },
     "license": "MIT",
     "repository": "github:jeff-hykin/dimos-react",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./three": {
+            "types": "./dist/three.d.ts",
+            "default": "./dist/three.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite --config vite.demo.config.ts",
+        "build:demo": "vite build --config vite.demo.config.ts",
+        "test": "vitest run",
+        "typecheck": "tsc -p .",
+        "lint": "eslint . && prettier --check .",
+        "format": "prettier --write . && eslint --fix .",
+        "release": "node tools/release.mjs",
+        "sync-tokens": "node tools/sync_tokens.mjs",
+        "vendor": "node tools/vendor.mjs"
+    },
     "peerDependencies": {
         "react": ">=18",
         "react-dom": ">=18",
@@ -28,5 +44,24 @@
             "optional": true
         }
     },
-    "types": "mod.d.ts"
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@types/three": "^0.180.0",
+        "@vitejs/plugin-react": "^6.1.2",
+        "eslint": "^10.12.0",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "happy-dom": "^20.14.6",
+        "prettier": "^3.9.10",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "three": "^0.180.0",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.71.1",
+        "vite": "^8.3.4",
+        "vite-plugin-dts": "^5.1.2",
+        "vite-plugin-singlefile": "^2.3.3",
+        "vitest": "^5.0.3"
+    }
 }

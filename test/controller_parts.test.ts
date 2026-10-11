@@ -1,22 +1,23 @@
 // The pure parts behind ViewPanel, ThumbStick and the camera views.
-import { assertEquals } from "@std/assert"
-import { clampPanelBox, shapeStick, smoothToward, swapTiles } from "../mod.js"
-import { cameraTabs, pickCamera, retargetCameras, videoPreset, videoPresetChanges } from "../mod.js"
+import { test } from "vitest"
+import { assertEquals } from "./assert"
+import { clampPanelBox, shapeStick, smoothToward, swapTiles } from "../src/index"
+import { cameraTabs, pickCamera, retargetCameras, videoPreset, videoPresetChanges } from "../src/index"
 
-Deno.test("shapeStick: dead zone, one-axis sticks, full deflection", () => {
+test("shapeStick: dead zone, one-axis sticks, full deflection", () => {
     assertEquals(shapeStick(5, 5, 100), { x: 0, y: 0 })
     assertEquals(shapeStick(0, -100, 100), { x: 0, y: 1 })
     assertEquals(shapeStick(80, -100, 100, "y").x, 0)
     assertEquals(shapeStick(-100, 0, 100, "x"), { x: -1, y: 0 })
 })
 
-Deno.test("smoothToward eases, and a release is zero at once", () => {
+test("smoothToward eases, and a release is zero at once", () => {
     const next = smoothToward(0, 1, 16)
     assertEquals(next > 0 && next < 1, true)
     assertEquals(smoothToward(0.8, 0, 16), 0)
 })
 
-Deno.test("clampPanelBox keeps a remembered box on this window", () => {
+test("clampPanelBox keeps a remembered box on this window", () => {
     const box = clampPanelBox(
         { x: 5000, y: -0.5, width: 9000, height: 50 },
         { x: -1, y: -1, width: 300, height: 200 },
@@ -39,19 +40,22 @@ Deno.test("clampPanelBox keeps a remembered box on this window", () => {
     assertEquals(placed, { x: 920, y: 48, width: 300, height: 200 })
 })
 
-Deno.test("swapTiles swaps two regions", () => {
+test("swapTiles swaps two regions", () => {
     assertEquals(swapTiles(["a", "b", "c"], "a", "c"), ["c", "b", "a"])
     assertEquals(swapTiles(["a", "b"], "a", "x"), ["a", "b"])
 })
 
 const topic = (name, type = "sensor_msgs.Image") => ({ key: `dimos${name}/${type}`, name, type })
 
-Deno.test("cameraTabs labels cameras by what tells them apart, color first", () => {
+test("cameraTabs labels cameras by what tells them apart, color first", () => {
     const tabs = cameraTabs([topic("/spot/left/image"), topic("/spot/depth/image"), topic("/spot/right/image")])
-    assertEquals(tabs.map((tab) => tab.label), ["left", "right", "depth"])
+    assertEquals(
+        tabs.map((tab) => tab.label),
+        ["left", "right", "depth"],
+    )
 })
 
-Deno.test("pickCamera / retargetCameras follow what the bus has", () => {
+test("pickCamera / retargetCameras follow what the bus has", () => {
     const color = topic("/color_image")
     const depth = topic("/depth_image")
     assertEquals(pickCamera([], [depth, color]), color)
@@ -60,7 +64,7 @@ Deno.test("pickCamera / retargetCameras follow what the bus has", () => {
     assertEquals(retargetCameras([{ key: color.key, id: 1 }], [color], []), null)
 })
 
-Deno.test("video presets: a switch nulls what only the old one set", () => {
+test("video presets: a switch nulls what only the old one set", () => {
     const changes = videoPresetChanges(videoPreset("quality"), videoPreset("latency"))
     assertEquals(changes.playoutDelay, null)
     assertEquals(changes.maxResolution, [640, 360])

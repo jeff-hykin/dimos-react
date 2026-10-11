@@ -1,32 +1,36 @@
 // The TF check (what's wrong with a tree) and the layer list: which topics become layers, what's on by default,
 // switching and persisting, the replay clock and seek.
-import { assert, assertEquals } from "@std/assert"
-import { TfTree } from "../src/three/tf.js"
-import { checkTf, confirmedIssues, TF_STALE_MS } from "../src/three/tf_check.js"
-import { LayerManager } from "../src/three/layers/manager.js"
-import { layerTypeFor } from "../src/three/layers/registry.js"
-import { Store } from "../src/three/store.js"
-import { memorySource } from "../src/data.js"
-import { cloudChanges, cloudOptions, cloudPreset } from "../src/three/cloud_quality.js"
-import { cameraInfoFor } from "../src/components/camera.js"
-import "../src/three/layers/index.js"
+import { test } from "vitest"
+import { assert, assertEquals } from "./assert"
+import { TfTree } from "../src/three/tf"
+import { checkTf, confirmedIssues, TF_STALE_MS } from "../src/three/tf_check"
+import { LayerManager } from "../src/three/layers/manager"
+import { layerTypeFor } from "../src/three/layers/registry"
+import { Store } from "../src/three/store"
+import { memorySource } from "../src/data"
+import { cloudChanges, cloudOptions, cloudPreset } from "../src/three/cloud_quality"
+import { cameraInfoFor } from "../src/components/camera"
+import "../src/three/layers/index"
 
 const identity = [0, 0, 0, 1]
 const check = (tf, fixedFrame, layers = []) =>
     checkTf({ snapshot: tf.snapshot(), fixedFrame, layers, placed: (frame) => tf.lookup(frame, fixedFrame) !== null })
 
-Deno.test("a healthy tree has no issues", () => {
+test("a healthy tree has no issues", () => {
     const tf = new TfTree()
     tf.set("world", "odom", [0, 0, 0], identity)
     tf.set("odom", "base_link", [1, 0, 0], identity)
     assertEquals(check(tf, "world", [{ name: "/lidar", frame: "base_link" }]), [])
 })
 
-Deno.test("separate trees, an unplaced layer frame and a missing fixed frame are reported", () => {
+test("separate trees, an unplaced layer frame and a missing fixed frame are reported", () => {
     const tf = new TfTree()
     tf.set("world", "base_link", [0, 0, 0], identity)
     tf.set("go2_odom", "camera", [0, 0, 0], identity)
-    const issues = check(tf, "world", [{ name: "/image", frame: "camera" }, { name: "/ghost", frame: "nowhere" }])
+    const issues = check(tf, "world", [
+        { name: "/image", frame: "camera" },
+        { name: "/ghost", frame: "nowhere" },
+    ])
     const kinds = issues.map((issue) => issue.kind)
     assertEquals(kinds, ["separateTrees", "unplaced", "unplaced"])
     assert(issues[0].summary.startsWith("2 separate trees (world"))
@@ -36,27 +40,30 @@ Deno.test("separate trees, an unplaced layer frame and a missing fixed frame are
     assert(lost.some((issue) => issue.kind === "fixedFrame"))
 })
 
-Deno.test("a stopped transform is stale only while others keep updating", () => {
+test("a stopped transform is stale only while others keep updating", () => {
     let now = 0
     const tf = new TfTree({ now: () => now })
     tf.set("world", "odom", [0, 0, 0], identity)
     tf.set("odom", "base_link", [0, 0, 0], identity)
     now = TF_STALE_MS + 1000
     // everything paused: nothing in particular broke
-    assertEquals(check(tf, "world").filter((issue) => issue.kind === "stale"), [])
+    assertEquals(
+        check(tf, "world").filter((issue) => issue.kind === "stale"),
+        [],
+    )
     tf.set("odom", "base_link", [1, 0, 0], identity)
     const stale = check(tf, "world").filter((issue) => issue.kind === "stale")
     assertEquals(stale.length, 1)
     assertEquals(stale[0].frames, ["odom"])
 })
 
-Deno.test("an issue shows once two checks in a row see it", () => {
+test("an issue shows once two checks in a row see it", () => {
     const issue = { kind: "unplaced", summary: "x", detail: "", frames: ["camera"] }
     assertEquals(confirmedIssues([], [issue]), [])
     assertEquals(confirmedIssues([issue], [issue]), [issue])
 })
 
-Deno.test("the layer manager makes an entry per drawable topic, with type defaults, switches and persistence", () => {
+test("the layer manager makes an entry per drawable topic, with type defaults, switches and persistence", () => {
     const saved = new Map()
     const persist = (key, defaults) => {
         const store = new Store(saved.get(key) ?? defaults)
@@ -79,11 +86,10 @@ Deno.test("the layer manager makes an entry per drawable topic, with type defaul
     // a map's points are bigger; one tf topic is drawn; images aren't projected unless asked
     assertEquals(entries["/global_map"].settings.get().look.size, 0.1)
     assertEquals(entries["/lidar"].settings.get().look.size, 0.04)
-    assertEquals([entries["/tf"].enabled, entries["/tf_static"].enabled, entries["/color_image"].enabled], [
-        true,
-        false,
-        false,
-    ])
+    assertEquals(
+        [entries["/tf"].enabled, entries["/tf_static"].enabled, entries["/color_image"].enabled],
+        [true, false, false],
+    )
     assertEquals(manager.topics.get().list.length, 6)
     manager.setEnabled("dimos/lidar/sensor_msgs.PointCloud2", false)
     manager.setStatus("dimos/global_map/sensor_msgs.PointCloud2", { info: "1 pts", frame: "map" })
@@ -96,7 +102,7 @@ Deno.test("the layer manager makes an entry per drawable topic, with type defaul
     assertEquals(layerTypeFor("nav_msgs.OccupancyGrid").id, "occupancy")
 })
 
-Deno.test("a replay source: its clock is the playhead and seek tells listeners", () => {
+test("a replay source: its clock is the playhead and seek tells listeners", () => {
     let playhead = 5000
     const source = memorySource({ clock: () => playhead })
     assert(source.replay)
@@ -114,7 +120,7 @@ Deno.test("a replay source: its clock is the playhead and seek tells listeners",
     assertEquals(got, [1000])
 })
 
-Deno.test("cloud presets turn into gateway options and in-place updates; a camera finds its CameraInfo", () => {
+test("cloud presets turn into gateway options and in-place updates; a camera finds its CameraInfo", () => {
     assertEquals(cloudOptions(cloudPreset("full")).minQuality, 1)
     assertEquals(cloudChanges(cloudPreset("low")), { maxHz: 5, minQuality: null, encodeOptions: { quality: 0.25 } })
     assertEquals(cloudPreset("nonsense").id, "balanced")

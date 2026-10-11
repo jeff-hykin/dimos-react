@@ -1,4 +1,5 @@
 // The repeating height palettes (src/colormaps.js): period wrap, no seam, distinct palettes. Moved from dim-map-builder.
+import { test } from "vitest"
 import { deepStrictEqual, ok, strictEqual } from "node:assert"
 import {
     cyclePhase,
@@ -8,12 +9,12 @@ import {
     PALETTE_NAMES,
     paletteAt,
     PALETTES,
-} from "../src/colormaps.js"
+} from "../src/colormaps"
 
 const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 const hex = (color) => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16))
 
-Deno.test("the cycle repeats every period, below zero too", () => {
+test("the cycle repeats every period, below zero too", () => {
     strictEqual(DEFAULT_PERIOD, 9)
     for (const name of PALETTE_NAMES) {
         for (const height of [-7.3, -0.4, 0, 0.9, 1.5, 2.99, 4.2, 31.7]) {
@@ -33,7 +34,7 @@ Deno.test("the cycle repeats every period, below zero too", () => {
     strictEqual(cyclePhase(1, 2), 0.5)
 })
 
-Deno.test("each period runs up the stops and back down: first at 0, last at half, first again at the period", () => {
+test("each period runs up the stops and back down: first at 0, last at half, first again at the period", () => {
     for (const name of PALETTE_NAMES) {
         const stops = PALETTES[name].colors.map(hex)
         const step = DEFAULT_PERIOD / 2 / (stops.length - 1)
@@ -46,7 +47,7 @@ Deno.test("each period runs up the stops and back down: first at 0, last at half
     deepStrictEqual(PALETTES.aurora.colors.length >= 3, true)
 })
 
-Deno.test("no seam: the color moves smoothly everywhere, across the wrap as much as inside a period", () => {
+test("no seam: the color moves smoothly everywhere, across the wrap as much as inside a period", () => {
     for (const name of PALETTE_NAMES) {
         const step = 0.001
         let largest = 0
@@ -59,7 +60,7 @@ Deno.test("no seam: the color moves smoothly everywhere, across the wrap as much
     }
 })
 
-Deno.test("the palettes are clearly apart, and a second cloud gets a different one", () => {
+test("the palettes are clearly apart, and a second cloud gets a different one", () => {
     for (const a of PALETTE_NAMES) {
         for (const b of PALETTE_NAMES) {
             if (a === b) {

@@ -1,6 +1,7 @@
 // The 2D map's model: the north-up view, grid and cloud images, the trail, and which topic it draws.
-import { assert, assertAlmostEquals, assertEquals } from "@std/assert"
-import { parseKey } from "../src/data.js"
+import { test } from "vitest"
+import { assert, assertAlmostEquals, assertEquals } from "./assert"
+import { parseKey } from "../src/data"
 import {
     chooseMapTopic,
     chooseOverlay,
@@ -22,9 +23,9 @@ import {
     wheelGesture,
     worldToScreen,
     zoomAt,
-} from "../src/map2d/math.js"
+} from "../src/map2d/math"
 const topic = (name, type) => parseKey(`dimos${name}/${type}`)
-Deno.test("north-up: +x is right, +y is up, the center is the middle", () => {
+test("north-up: +x is right, +y is up, the center is the middle", () => {
     const view = { centerX: 2, centerY: 3, metersPerPixel: 0.1 }
     assertEquals(worldToScreen(view, 200, 100, 2, 3), [100, 50])
     assertEquals(worldToScreen(view, 200, 100, 3, 3), [110, 50])
@@ -33,7 +34,7 @@ Deno.test("north-up: +x is right, +y is up, the center is the middle", () => {
     assertAlmostEquals(x, 3)
     assertAlmostEquals(y, 4)
 })
-Deno.test("zooming keeps the point under the cursor; panning moves the content with the drag", () => {
+test("zooming keeps the point under the cursor; panning moves the content with the drag", () => {
     const view = { centerX: 0, centerY: 0, metersPerPixel: 0.1 }
     const under = screenToWorld(view, 300, 200, 40, 170)
     const zoomed = zoomAt(view, 300, 200, 40, 170, 2)
@@ -47,12 +48,12 @@ Deno.test("zooming keeps the point under the cursor; panning moves the content w
     // zoom stays within its limits
     assertEquals(zoomAt(view, 300, 200, 0, 0, 1e9).metersPerPixel, 0.002)
 })
-Deno.test("fit shows the whole box", () => {
+test("fit shows the whole box", () => {
     const view = fitView([-10, 0, 10, 5], 200, 200)
     assertEquals([view.centerX, view.centerY], [0, 2.5])
     assert(view.metersPerPixel >= 0.1)
 })
-Deno.test("fit with empty or degenerate data never makes a view that blanks the map", () => {
+test("fit with empty or degenerate data never makes a view that blanks the map", () => {
     // no data (the empty box a min/max scan of nothing leaves), NaN, a reversed box: no view, the old one stays
     assertEquals(fitView([Infinity, Infinity, -Infinity, -Infinity], 300, 300), null)
     assertEquals(fitView([NaN, 0, 1, 1], 300, 300), null)
@@ -67,7 +68,7 @@ Deno.test("fit with empty or degenerate data never makes a view that blanks the 
     assert(!isValidView({ centerX: 0, centerY: 0, metersPerPixel: 0 }))
     assert(!isValidView(null))
 })
-Deno.test("a pose seen from above: position and yaw", () => {
+test("a pose seen from above: position and yaw", () => {
     const yaw = 0.7
     // column-major rotation about z by yaw, translated to (1, 2, 3)
     const elements = [Math.cos(yaw), Math.sin(yaw), 0, 0, -Math.sin(yaw), Math.cos(yaw), 0, 0, 0, 0, 1, 0, 1, 2, 3, 1]
@@ -75,13 +76,13 @@ Deno.test("a pose seen from above: position and yaw", () => {
     assertEquals([pose.x, pose.y], [1, 2])
     assertAlmostEquals(pose.yaw, yaw)
 })
-Deno.test("scale bar lengths are 1/2/5 × 10^n", () => {
+test("scale bar lengths are 1/2/5 × 10^n", () => {
     assertEquals(niceLength(7), 5)
     assertEquals(niceLength(3), 2)
     assertEquals(niceLength(1.5), 1)
     assertAlmostEquals(niceLength(0.3), 0.2)
 })
-Deno.test("grid cells: unknown clear, free, cost between low and high, lethal", () => {
+test("grid cells: unknown clear, free, cost between low and high, lethal", () => {
     const lut = gridLut({
         free: [10, 10, 10, 255],
         low: [0, 0, 100, 255],
@@ -95,9 +96,12 @@ Deno.test("grid cells: unknown clear, free, cost between low and high, lethal", 
     assert(pixels[10] > 100 && pixels[10] < 200)
     assertEquals([...pixels.slice(12, 16)], [255, 255, 255, 255])
 })
-Deno.test("a cloud from above: placed by its transform, the highest point colors a cell", () => {
+test("a cloud from above: placed by its transform, the highest point colors a cell", () => {
     const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 5, 0, 0, 1]
-    const lut = heatLut([[0, 0, 0, 255], [255, 255, 255, 255]])
+    const lut = heatLut([
+        [0, 0, 0, 255],
+        [255, 255, 255, 255],
+    ])
     const cloud = projectCloud(new Float32Array([0, 0, 0, 0.02, 0.02, 2, 1, 1, 0]), identity, lut, 0.5)
     assertEquals([cloud.originX, cloud.originY, cloud.cell], [5, 0, 0.5])
     assertEquals([cloud.width, cloud.height], [3, 3])
@@ -107,7 +111,7 @@ Deno.test("a cloud from above: placed by its transform, the highest point colors
     assertEquals(cloud.pixels[(2 * 3 + 2) * 4 + 3], 255)
     assertEquals(cloud.pixels[(1 * 3 + 0) * 4 + 3], 0)
 })
-Deno.test("trail: skips jitter, breaks at a jump, stays bounded", () => {
+test("trail: skips jitter, breaks at a jump, stays bounded", () => {
     const trail = new Trail(0.05, 2, 10)
     assert(trail.push(0, 0))
     assert(!trail.push(0.01, 0))
@@ -119,14 +123,14 @@ Deno.test("trail: skips jitter, breaks at a jump, stays bounded", () => {
     }
     assert(trail.points.length <= 20)
 })
-Deno.test("heat ramp: cold to hot, never black (the floor shows on a dark background)", () => {
+test("heat ramp: cold to hot, never black (the floor shows on a dark background)", () => {
     const lut = heatLut()
     const brightness = (index) => lut[index * 4] + lut[index * 4 + 1] + lut[index * 4 + 2]
     assert(brightness(0) > 100)
     assert(brightness(255) > brightness(128) && brightness(128) > brightness(0))
     assertEquals(lut[3], 255)
 })
-Deno.test("layers: the global map (a cloud) is the base, a costmap is an overlay only when picked", () => {
+test("layers: the global map (a cloud) is the base, a costmap is an overlay only when picked", () => {
     const lidar = topic("/lidar", "sensor_msgs.PointCloud2")
     const globalMap = topic("/global_map", "sensor_msgs.PointCloud2")
     const costmap = topic("/global_costmap", "nav_msgs.OccupancyGrid")
@@ -146,17 +150,17 @@ Deno.test("layers: the global map (a cloud) is the base, a costmap is an overlay
     assertEquals(chooseOverlay([globalMap, costmap], globalMap.key, base), null)
     assertEquals(chooseOverlay([costmap], costmap.key, costmap), null)
 })
-Deno.test("follow: on by default (base_link); a pan suspends it, a zoom keeps it, a re-center resumes it", () => {
+test("follow: on by default (base_link); a pan suspends it, a zoom keeps it, a re-center resumes it", () => {
     const follow = new MapFollow()
     assertEquals([follow.following, follow.frame], [true, DEFAULT_FOLLOW_FRAME])
     const view = { centerX: 0, centerY: 0, metersPerPixel: 0.05 }
     const target = { x: 3, y: -2 }
     assertEquals(follow.view(view, target), { centerX: 3, centerY: -2, metersPerPixel: 0.05 })
     // a zoom while following is anchored on the target, wherever the cursor is
-    assertEquals(follow.zoomAnchor({ centerX: 3, centerY: -2, metersPerPixel: 0.05 }, 200, 100, 7, 9, target), [
-        100,
-        50,
-    ])
+    assertEquals(
+        follow.zoomAnchor({ centerX: 3, centerY: -2, metersPerPixel: 0.05 }, 200, 100, 7, 9, target),
+        [100, 50],
+    )
     assert(follow.following)
     assertEquals(follow.pan(), true)
     assertEquals(follow.pan(), false)
@@ -167,14 +171,14 @@ Deno.test("follow: on by default (base_link); a pan suspends it, a zoom keeps it
     assertEquals(follow.recenter(), false)
     assertEquals(follow.view(view, target).centerX, 3)
 })
-Deno.test("follow: a frame not in the tree yet (no target) leaves the view where it is", () => {
+test("follow: a frame not in the tree yet (no target) leaves the view where it is", () => {
     const follow = new MapFollow("odom")
     const view = { centerX: 1, centerY: 1, metersPerPixel: 0.1 }
     assertEquals(follow.view(view, null), view)
     assertEquals(follow.zoomAnchor(view, 200, 100, 7, 9, null), [7, 9])
     assert(follow.following)
 })
-Deno.test("follow: a pinch is a zoom until its middle drifts past the slop, then a pan", () => {
+test("follow: a pinch is a zoom until its middle drifts past the slop, then a pan", () => {
     const follow = new MapFollow()
     follow.pinchStart()
     assertEquals(follow.pinchPans(3, 4), false)
@@ -190,7 +194,7 @@ Deno.test("follow: a pinch is a zoom until its middle drifts past the slop, then
     follow.pinchStart()
     assertEquals(follow.pinchPans(0, 10), false)
 })
-Deno.test("wheel: vertical scrolls and trackpad pinches zoom, sideways or shift scrolls pan", () => {
+test("wheel: vertical scrolls and trackpad pinches zoom, sideways or shift scrolls pan", () => {
     const wheel = (deltaX, deltaY, ctrlKey = false, shiftKey = false) =>
         wheelGesture({ deltaX, deltaY, ctrlKey, shiftKey })
     assertEquals(wheel(0, 120), "zoom")
@@ -199,15 +203,18 @@ Deno.test("wheel: vertical scrolls and trackpad pinches zoom, sideways or shift 
     assertEquals(wheel(0, 120, false, true), "pan")
     assertEquals(wheel(40, 3, true), "zoom")
 })
-Deno.test("follow frame options: the tree's frames, the chosen one first and waiting when it isn't there", () => {
-    assertEquals(followFrameOptions(["base_link", "odom", "world"], "base_link").map((o) => o.frame), [
-        "base_link",
-        "odom",
-        "world",
+test("follow frame options: the tree's frames, the chosen one first and waiting when it isn't there", () => {
+    assertEquals(
+        followFrameOptions(["base_link", "odom", "world"], "base_link").map((o) => o.frame),
+        ["base_link", "odom", "world"],
+    )
+    assertEquals(followFrameOptions(["odom", "world"], "base_link"), [
+        { frame: "base_link", waiting: true },
+        {
+            frame: "odom",
+            waiting: false,
+        },
+        { frame: "world", waiting: false },
     ])
-    assertEquals(followFrameOptions(["odom", "world"], "base_link"), [{ frame: "base_link", waiting: true }, {
-        frame: "odom",
-        waiting: false,
-    }, { frame: "world", waiting: false }])
     assertEquals(followFrameOptions([], "base_link"), [{ frame: "base_link", waiting: true }])
 })

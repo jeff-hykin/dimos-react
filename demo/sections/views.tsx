@@ -10,9 +10,9 @@ import {
     releaseAllThumbSticks,
     ThumbStick,
     ViewPanel,
-} from "../../mod"
-import { DataSourceProvider, memorySource, Select } from "../../mod"
-import { Map2D, TfTree } from "../../three"
+} from "../../src/index"
+import { DataSourceProvider, memorySource, Select } from "../../src/index"
+import { Map2D, TfTree } from "../../src/three"
 
 export function ViewsSection() {
     const [order, setOrder] = useState(["camera", "scene", "map"])

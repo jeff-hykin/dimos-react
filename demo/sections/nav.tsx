@@ -18,7 +18,7 @@ import {
     Toggle,
     Tooltip,
     useCommandPalette,
-} from "../../mod"
+} from "../../src/index"
 
 export function NavSection() {
     const [tab, setTab] = useState("layers")

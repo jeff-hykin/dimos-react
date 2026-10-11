@@ -1,6 +1,6 @@
 // Demo: an image view (a moving color frame, a depth frame through a colormap) and a recording's playback bar.
 import { useEffect, useMemo, useState } from "react"
-import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../mod"
+import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../src/index"
 
 function colorFrame(phase) {
     const [width, height] = [160, 100]

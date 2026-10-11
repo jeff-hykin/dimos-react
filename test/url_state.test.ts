@@ -1,9 +1,10 @@
 // URL state: pure helpers, and the round trip backend event → URL → rendered UI (with back/forward and deep links).
-import { assert, assertEquals } from "@std/assert"
+import { test } from "vitest"
+import { assert, assertEquals } from "./assert"
 import { Window } from "happy-dom"
-import { applyUrlEvent, createMemoryWindow, createUrlStore, parseUrlState, urlWith } from "../src/url_state.js"
+import { applyUrlEvent, createMemoryWindow, createUrlStore, parseUrlState, urlWith } from "../src/url_state"
 
-Deno.test("parseUrlState / urlWith round trip (search and hash)", () => {
+test("parseUrlState / urlWith round trip (search and hash)", () => {
     const href = urlWith("http://localhost/apps/rec/?a=1", { tab: "map", t: 12.5, gone: null })
     assertEquals(href, "http://localhost/apps/rec/?a=1&t=12.5&tab=map")
     assertEquals(parseUrlState(href), { a: "1", t: "12.5", tab: "map" })
@@ -13,7 +14,7 @@ Deno.test("parseUrlState / urlWith round trip (search and hash)", () => {
     assertEquals(parseUrlState(urlWith(href, { only: "this" }, { clear: true })), { only: "this" })
 })
 
-Deno.test("applyUrlEvent ignores other events and no-op changes", () => {
+test("applyUrlEvent ignores other events and no-op changes", () => {
     assertEquals(applyUrlEvent("http://localhost/", { type: "status", set: { a: 1 } }), null)
     assertEquals(applyUrlEvent("http://localhost/?a=1", { type: "url", set: { a: 1 } }), null)
     assertEquals(applyUrlEvent("http://localhost/", { type: "url", set: { a: 1 }, replace: true }), {
@@ -22,7 +23,7 @@ Deno.test("applyUrlEvent ignores other events and no-op changes", () => {
     })
 })
 
-Deno.test("memory window history: push, back, forward, popstate", () => {
+test("memory window history: push, back, forward, popstate", () => {
     const win = createMemoryWindow("http://localhost/?a=1")
     const store = createUrlStore({ window: win })
     let changes = 0
@@ -39,7 +40,7 @@ Deno.test("memory window history: push, back, forward, popstate", () => {
     off()
 })
 
-Deno.test("backend event → URL → rendered UI, back/forward and deep link reproduce it", async () => {
+test("backend event → URL → rendered UI, back/forward and deep link reproduce it", async () => {
     const dom = new Window({ url: "http://localhost/apps/demo/" })
     globalThis.window = dom
     globalThis.document = dom.document
@@ -47,8 +48,8 @@ Deno.test("backend event → URL → rendered UI, back/forward and deep link rep
     const React = await import("react")
     const { createRoot } = await import("react-dom/client")
     const { act, createElement: h } = React
-    const { UrlStateProvider, useUrlState } = await import("../src/url_state.js")
-    const { DataSourceProvider, memorySource } = await import("../src/data.js")
+    const { UrlStateProvider, useUrlState } = await import("../src/url_state")
+    const { DataSourceProvider, memorySource } = await import("../src/data")
 
     function Screen() {
         const [tab, setTab] = useUrlState("tab", "overview")

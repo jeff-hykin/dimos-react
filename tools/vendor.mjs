@@ -1,7 +1,9 @@
-#!/usr/bin/env -S deno run --allow-all
+#!/usr/bin/env node
+import fs from "node:fs"
+import { execFileSync } from "node:child_process"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
-const dimApp = Deno.env.get("DIM_APP") ?? `${Deno.env.get("HOME")}/repos/dim-app`
-const tag = Deno.args[0] ?? "v0.21.0"
+const dimApp = process.env.DIM_APP ?? `${process.env.HOME}/repos/dim-app`
+const tag = process.argv[2] ?? "v0.21.0"
 const files = [
     "source/zenoh.js",
     "source/topic.js",
@@ -12,19 +14,15 @@ const files = [
     "source/vendor/zenoh-gateway/vendor/fzstd.LICENSE",
 ]
 for (const file of files) {
-    const out = new Deno.Command("git", { args: ["-C", dimApp, "show", `${tag}:${file}`], stdout: "piped" })
-        .outputSync()
-    if (!out.success) {
-        throw new Error(`git show ${tag}:${file} failed`)
-    }
+    const out = execFileSync("git", ["-C", dimApp, "show", `${tag}:${file}`])
     const target = `src/vendor/dim-app/${file.replace(/^source\//, "")}`
-    Deno.mkdirSync(target.replace(/\/[^/]+$/, ""), { recursive: true })
-    Deno.writeFileSync(target, out.stdout)
+    fs.mkdirSync(target.replace(/\/[^/]+$/, ""), { recursive: true })
+    fs.writeFileSync(target, out)
 }
-Deno.writeTextFileSync("src/vendor/dim-app/VERSION", `jeff-hykin/dim-app ${tag}\n`)
-const controller = Deno.env.get("CONTROLLER") ?? `${Deno.env.get("HOME")}/repos/dim-live-viewer`
-const schemas = Deno.readTextFileSync(`${controller}/frontend/src/core/lcm/schemas.json`)
-Deno.writeTextFileSync(
+fs.writeFileSync("src/vendor/dim-app/VERSION", `jeff-hykin/dim-app ${tag}\n`)
+const controller = process.env.CONTROLLER ?? `${process.env.HOME}/repos/dim-live-viewer`
+const schemas = fs.readFileSync(`${controller}/frontend/src/core/lcm/schemas.json`, "utf8")
+fs.writeFileSync(
     "src/vendor/lcm_schemas.js",
     `// dimos LCM message schemas (from dim-controller's tools/gen_lcm_schemas.ts output)\nexport default ${schemas.trim()}\n`,
 )

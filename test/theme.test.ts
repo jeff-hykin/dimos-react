@@ -1,8 +1,9 @@
 // Theme tokens: every skin in the bundled copy of Desktop's /theme.css defines the theme contract, the components use
 // only tokens (no color literals), and every token the components use exists.
-import { assert, assertEquals } from "@std/assert"
-import { SKINS, TOKENS_CSS } from "../src/theme/tokens.js"
-import { COMPONENT_CSS } from "../src/theme/css.js"
+import { test } from "vitest"
+import { assert, assertEquals } from "./assert"
+import { SKINS, TOKENS_CSS } from "../src/theme/tokens"
+import { COMPONENT_CSS } from "../src/theme/css"
 
 // Desktop's theme contract (its /theme.css header): the required tokens every skin resolves
 const REQUIRED = [
@@ -53,7 +54,7 @@ function blocks(css) {
     return out
 }
 
-Deno.test("the bundled tokens cover every skin Desktop ships", () => {
+test("the bundled tokens cover every skin Desktop ships", () => {
     assert(SKINS.length >= 2)
     assertEquals(SKINS[0], "portal")
     for (const skin of SKINS.slice(1)) {
@@ -61,7 +62,7 @@ Deno.test("the bundled tokens cover every skin Desktop ships", () => {
     }
 })
 
-Deno.test("every required token is defined by :root, and each skin's own block keeps them resolvable", () => {
+test("every required token is defined by :root, and each skin's own block keeps them resolvable", () => {
     const parsed = blocks(TOKENS_CSS)
     const root = parsed.get(":root")
     for (const token of REQUIRED) {
@@ -78,27 +79,26 @@ Deno.test("every required token is defined by :root, and each skin's own block k
     }
 })
 
-Deno.test("light and dark skins both exist (the components have rules for each)", () => {
+test("light and dark skins both exist (the components have rules for each)", () => {
     const schemes = [...TOKENS_CSS.matchAll(/color-scheme:\s*(\w+)/g)].map((match) => match[1])
     assert(schemes.includes("dark"))
     assert(schemes.includes("light"))
 })
 
-Deno.test("component CSS has no color literals: only Desktop's tokens", () => {
+test("component CSS has no color literals: only Desktop's tokens", () => {
     const css = COMPONENT_CSS.replace(/\/\*[\s\S]*?\*\//g, "")
     const literals = [
         ...css.matchAll(
             /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab|lch)\(|\b(?:white|black|red|green|blue|gray|grey|orange|yellow|purple|pink)\b(?![\w-])/g,
         ),
-    ]
-        .map((match) => {
-            const line = css.slice(0, match.index).split("\n").length
-            return `${match[0]} (line ${line}: ${css.split("\n")[line - 1].trim()})`
-        })
+    ].map((match) => {
+        const line = css.slice(0, match.index).split("\n").length
+        return `${match[0]} (line ${line}: ${css.split("\n")[line - 1].trim()})`
+    })
     assertEquals(literals, [])
 })
 
-Deno.test("every token the components use is defined by Desktop's theme (or by the components themselves)", () => {
+test("every token the components use is defined by Desktop's theme (or by the components themselves)", () => {
     const defined = new Set([...TOKENS_CSS.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]))
     for (const match of COMPONENT_CSS.matchAll(/(--[\w-]+)\s*:/g)) {
         defined.add(match[1])
@@ -112,7 +112,7 @@ Deno.test("every token the components use is defined by Desktop's theme (or by t
     assertEquals(missing, [])
 })
 
-Deno.test("DimThemeProvider takes Desktop's saved skin and follows a live change (storage event)", async () => {
+test("DimThemeProvider takes Desktop's saved skin and follows a live change (storage event)", async () => {
     const { Window } = await import("happy-dom")
     const dom = new Window({ url: "http://localhost/apps/demo/" })
     globalThis.window = dom
@@ -122,12 +122,13 @@ Deno.test("DimThemeProvider takes Desktop's saved skin and follows a live change
     globalThis.addEventListener = dom.addEventListener.bind(dom)
     globalThis.removeEventListener = dom.removeEventListener.bind(dom)
     globalThis.dispatchEvent = dom.dispatchEvent.bind(dom)
+    globalThis.CustomEvent = dom.CustomEvent
     globalThis.IS_REACT_ACT_ENVIRONMENT = true
     dom.localStorage.setItem("portal.theme", "research")
     dom.localStorage.setItem("portal.corners", "rounded")
     const React = await import("react")
     const { createRoot } = await import("react-dom/client")
-    const { DimThemeProvider, useTheme } = await import("../src/theme/provider.js")
+    const { DimThemeProvider, useTheme } = await import("../src/theme/provider")
     function Show() {
         const theme = useTheme()
         return React.createElement("span", null, `${theme.skin}/${theme.corners}`)
@@ -136,7 +137,7 @@ Deno.test("DimThemeProvider takes Desktop's saved skin and follows a live change
     document.body.append(host)
     const root = createRoot(host)
     await React.act(async () =>
-        root.render(React.createElement(DimThemeProvider, { bundled: true }, React.createElement(Show)))
+        root.render(React.createElement(DimThemeProvider, { bundled: true }, React.createElement(Show))),
     )
     const html = document.documentElement
     assertEquals(html.dataset.skin, "research")
@@ -155,8 +156,8 @@ Deno.test("DimThemeProvider takes Desktop's saved skin and follows a live change
     await dom.happyDOM.close()
 })
 
-Deno.test("component CSS braces balance (one unclosed rule swallows every rule after it)", async () => {
-    const { COMPONENT_CSS } = await import("../src/theme/css.js")
+test("component CSS braces balance (one unclosed rule swallows every rule after it)", async () => {
+    const { COMPONENT_CSS } = await import("../src/theme/css")
     let depth = 0
     for (const char of COMPONENT_CSS.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"[^"]*"/g, "")) {
         depth += char === "{" ? 1 : char === "}" ? -1 : 0

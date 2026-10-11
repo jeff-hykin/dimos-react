@@ -283,6 +283,7 @@ function MenuList({ items, onClose, autoFocus = true }) {
                     role: item.checked !== undefined ? "menuitemcheckbox" : "menuitem",
                     "aria-checked": item.checked,
                     disabled: item.disabled,
+                    title: item.title,
                     className: cx("dr-menu__item", item.danger && "dr-menu__item--danger"),
                     onClick: () => {
                         item.onSelect?.()
@@ -310,7 +311,7 @@ function MenuList({ items, onClose, autoFocus = true }) {
 /**
  * A dropdown menu.
  * @param {{ items: ({ label: any, icon?: string, onSelect?: () => void, danger?: boolean, disabled?: boolean,
- *   checked?: boolean, shortcut?: string, keepOpen?: boolean } | "-" | { heading: any })[],
+ *   checked?: boolean, shortcut?: string, title?: string, keepOpen?: boolean } | "-" | { heading: any })[],
  *   trigger: any, placement?: string, open?: boolean, onOpenChange?: (open: boolean) => void, className?: string }} props
  */
 export function Menu({ items, trigger, placement = "bottom-start", open, onOpenChange, className }) {

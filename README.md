@@ -133,6 +133,25 @@ const [params, setParams] = useUrlParams() // all of them
 fresh deep link reproduce the same UI. Without React: `createUrlStore()`, `bindUrlEvents(source, store)`. `mode: "hash"`
 keeps params in `#a=1&b=2` instead of the query string.
 
+## Media (camera views, playback)
+
+`ImageView` draws the latest frame of an image topic (`sensor_msgs.Image`, `CompressedImage`, or a source's pre-decoded
+`{ kind: "image" | "depth", width, height, encoding, data }` frames; pass `encoding` for a source that delivers those)
+or a `frame` prop. Depth (16UC1 / 32FC1) goes through a colormap (`colormap`, `near` / `far` in meters, null = auto);
+`overlayTopic` draws `vision_msgs.Detection2DArray` boxes over it; `onInfo` reports size, fps, quality.
+
+```js
+h(ImageView, { topic: "dimos/color_image/sensor_msgs.Image", style: { height: 240 } })
+h(ImageView, { topic: "dimos/depth/sensor_msgs.Image", colormap: "magma", near: 0.3, far: 6 })
+```
+
+`PlaybackBar` is a recording player's bar: play / pause, time, speed, loop, a scrubber that zooms (ctrl/⌘ + wheel) and
+pans, and expanded, a lane per stream with a tick per message
+(`lanes: [{ id, label, meta, count, leading, menu,
+active, ticks: { times } | { counts } }]`). `onScrubStart` /
+`onSeek(t)` / `onScrubEnd` while dragging; `keyboard` adds space / ← → / Home / End. The colormaps (`RAMPS`,
+`sampleGradient`) come without three.js from `mod.js`.
+
 ## 3D view (three.js)
 
 The 3D view is its own entry, `three.js`, so apps without one never load three. It is the Controller's view made

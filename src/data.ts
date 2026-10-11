@@ -10,8 +10,8 @@
 // A source is `{ subscribe, subscribeFrontend, listTopics, state, onState, now }`; see zenohSource / memorySource.
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
-import { getZenoh } from "./vendor/dim-app/zenoh.js"
-import type { AppZenoh, ConnectionState, GetZenohOptions } from "./vendor/dim-app/zenoh.js"
+// @deno-types="./vendor/dim-app/zenoh.d.ts"
+import { getZenoh, type AppZenoh, type ConnectionState, type GetZenohOptions } from "./vendor/dim-app/zenoh.js"
 import { decode as decodeLcm } from "./lcm.ts"
 
 export type { AppZenoh }

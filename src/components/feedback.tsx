@@ -586,10 +586,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, { error: unknow
     static getDerivedStateFromError(error: unknown) {
         return { error }
     }
-    componentDidCatch(error: unknown, info: ErrorInfo) {
+    override componentDidCatch(error: unknown, info: ErrorInfo) {
         this.props.onError?.(error, info)
     }
-    render() {
+    override render() {
         const { error } = this.state
         if (!error) {
             return this.props.children

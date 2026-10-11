@@ -1,5 +1,6 @@
 // LCM wire format (ported from dim-controller core/lcm/lcm.ts), driven by the dimos_lcm schemas (vendor/lcm_schemas.js): big-endian, an
 // 8-byte fingerprint before the top-level struct only, strings as int32 length (with the NUL) + bytes + NUL.
+// @deno-types="./vendor/lcm_schemas.d.ts"
 import schemaJson from "./vendor/lcm_schemas.js"
 
 /** One field of an LCM struct: `dims` are fixed lengths (numbers) or the names of the fields holding the lengths. */

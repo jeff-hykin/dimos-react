@@ -1,17 +1,29 @@
 // nav_msgs.Path (planned paths): a thick line through the poses, placed by its header's frame. Or `poses` as props.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { FatLines } from "../lines"
-import { cssColor } from "../robot_model"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
-import { ColorSetting } from "./pose"
-import { Field, Slider, Toggle } from "../../components/controls"
+import { useStore } from "../store.ts"
+import { FatLines } from "../lines.ts"
+import { cssColor } from "../robot_model.ts"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry.ts"
+import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
+import { ColorSetting } from "./pose.tsx"
+import { Field, Slider, Toggle } from "../../components/controls.tsx"
+import type { Store } from "../store.ts"
+import type { FrameInfo } from "../viewer.ts"
 
-/** @typedef {{ color: string, width: number, lift: number, onTop?: boolean }} PathSettings `lift`: m above the floor */
+/** `lift`: m above the floor */
+export interface PathSettings {
+    color: string
+    width: number
+    lift: number
+    onTop?: boolean
+}
 
-/** Points of a path: nav_msgs.Path `poses` (PoseStamped), Poses, {x,y,z} or [x,y,z]. */
-export function pathPoints(poses) {
-    const out = []
+/** One point of a path */
+export type PathPoint = [x: number, y: number, z: number]
+
+/** Points of a path (decoded data: any shape): nav_msgs.Path `poses` (PoseStamped), Poses, {x,y,z} or [x,y,z]. */
+export function pathPoints(poses: Iterable<any> | null | undefined): PathPoint[] {
+    const out: PathPoint[] = []
     for (const item of poses ?? []) {
         const position = Array.isArray(item)
             ? { x: item[0], y: item[1], z: item[2] ?? 0 }
@@ -25,16 +37,16 @@ export function pathPoints(poses) {
 
 export class PathLayer {
     root = new THREE.Group()
-    #lines
-    #stop = () => {}
-    #unsubscribe
-    #frame = null
-    #points = []
-    #timestamp = 0
-    settings: any
-    context: any
+    #lines: FatLines
+    #stop: () => void = () => {}
+    #unsubscribe: () => void
+    #frame: string | null = null
+    #points: PathPoint[] = []
+    settings: Store<PathSettings>
+    context: LayerContext
 
-    constructor(context, topic, settings) {
+    /** `topic` null: data comes through setData */
+    constructor(context: LayerContext, topic: Topic | null, settings: Store<PathSettings>) {
         this.context = context
         this.settings = settings
         this.#lines = new FatLines(context.viewer.resolution, {
@@ -62,15 +74,14 @@ export class PathLayer {
         this.#draw()
     }
 
-    /** Props data: `{ poses, frame? }`. */
-    setData(data) {
+    /** Props data: `{ poses, frame?, timestamp? }` or the poses themselves (any shape pathPoints reads). */
+    setData(data: any) {
         this.#set(pathPoints(data?.poses ?? data), data?.frame ?? "", data?.timestamp ?? Date.now())
     }
 
-    #set(points, frame, timestamp) {
+    #set(points: PathPoint[], frame: string, timestamp: number | undefined) {
         this.#frame = frame
         this.#points = points
-        this.#timestamp = timestamp
         this.#draw()
         this.context.setStatus({ info: `${points.length} poses · ${frame || "no frame"}`, frame })
         this.context.viewer.noteData(timestamp)
@@ -88,7 +99,7 @@ export class PathLayer {
         this.context.viewer.requestRender()
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (this.#frame !== null) {
             placeLayer(this.context, this.root, this.#frame, frame.fixedFrame)
         }
@@ -101,7 +112,7 @@ export class PathLayer {
     }
 }
 
-export function PathSettingsEditor({ settings }) {
+export function PathSettingsEditor({ settings }: LayerSettingsProps<PathSettings>) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
@@ -126,7 +137,7 @@ export function PathSettingsEditor({ settings }) {
 }
 
 /** A stable, distinct color per name, as a hex string (paths, arrays, boxes of one class). */
-export function colorFor(name) {
+export function colorFor(name: unknown): THREE.Color {
     let hash = 0
     for (const char of String(name)) {
         hash = (hash * 31 + char.charCodeAt(0)) | 0
@@ -134,7 +145,7 @@ export function colorFor(name) {
     return new THREE.Color().setHSL(((hash >>> 0) % 360) / 360, 0.75, 0.6)
 }
 
-registerLayer({
+registerLayer<PathSettings>({
     id: "path",
     label: "Path",
     types: ["nav_msgs.Path"],

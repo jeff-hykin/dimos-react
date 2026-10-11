@@ -1,9 +1,10 @@
 // Theme tokens: every skin in the bundled copy of Desktop's /theme.css defines the theme contract, the components use
 // only tokens (no color literals), and every token the components use exists.
 import { test } from "vitest"
-import { assert, assertEquals } from "./assert"
-import { SKINS, TOKENS_CSS } from "../src/theme/tokens"
-import { COMPONENT_CSS } from "../src/theme/css"
+import { testGlobals } from "./fake_globals.ts"
+import { assert, assertEquals } from "./assert.ts"
+import { SKINS, TOKENS_CSS } from "../src/theme/tokens.ts"
+import { COMPONENT_CSS } from "../src/theme/css.ts"
 
 // Desktop's theme contract (its /theme.css header): the required tokens every skin resolves
 const REQUIRED = [
@@ -40,12 +41,12 @@ const REQUIRED = [
 ]
 
 /** `selector → { token: value }` for each top-level rule block of a stylesheet. */
-function blocks(css) {
-    const out = new Map()
+function blocks(css: string): Map<string, Record<string, string>> {
+    const out = new Map<string, Record<string, string>>()
     const clean = css.replace(/\/\*[\s\S]*?\*\//g, "")
     for (const match of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
         const selector = match[1].trim()
-        const tokens = {}
+        const tokens: Record<string, string> = {}
         for (const declaration of match[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
             tokens[declaration[1]] = declaration[2].trim()
         }
@@ -65,6 +66,7 @@ test("the bundled tokens cover every skin Desktop ships", () => {
 test("every required token is defined by :root, and each skin's own block keeps them resolvable", () => {
     const parsed = blocks(TOKENS_CSS)
     const root = parsed.get(":root")
+    assert(root, "no :root block")
     for (const token of REQUIRED) {
         assert(root[token] !== undefined, `:root lacks ${token}`)
     }
@@ -115,20 +117,20 @@ test("every token the components use is defined by Desktop's theme (or by the co
 test("DimThemeProvider takes Desktop's saved skin and follows a live change (storage event)", async () => {
     const { Window } = await import("happy-dom")
     const dom = new Window({ url: "http://localhost/apps/demo/" })
-    globalThis.window = dom
-    globalThis.document = dom.document
+    testGlobals.window = dom
+    testGlobals.document = dom.document
     Object.defineProperty(globalThis, "localStorage", { value: dom.localStorage, configurable: true, writable: true })
-    globalThis.getComputedStyle = dom.getComputedStyle.bind(dom)
-    globalThis.addEventListener = dom.addEventListener.bind(dom)
-    globalThis.removeEventListener = dom.removeEventListener.bind(dom)
-    globalThis.dispatchEvent = dom.dispatchEvent.bind(dom)
-    globalThis.CustomEvent = dom.CustomEvent
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    testGlobals.getComputedStyle = dom.getComputedStyle.bind(dom)
+    testGlobals.addEventListener = dom.addEventListener.bind(dom)
+    testGlobals.removeEventListener = dom.removeEventListener.bind(dom)
+    testGlobals.dispatchEvent = dom.dispatchEvent.bind(dom)
+    testGlobals.CustomEvent = dom.CustomEvent
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = true
     dom.localStorage.setItem("portal.theme", "research")
     dom.localStorage.setItem("portal.corners", "rounded")
     const React = await import("react")
     const { createRoot } = await import("react-dom/client")
-    const { DimThemeProvider, useTheme } = await import("../src/theme/provider")
+    const { DimThemeProvider, useTheme } = await import("../src/theme/provider.tsx")
     function Show() {
         const theme = useTheme()
         return React.createElement("span", null, `${theme.skin}/${theme.corners}`)
@@ -157,7 +159,7 @@ test("DimThemeProvider takes Desktop's saved skin and follows a live change (sto
 })
 
 test("component CSS braces balance (one unclosed rule swallows every rule after it)", async () => {
-    const { COMPONENT_CSS } = await import("../src/theme/css")
+    const { COMPONENT_CSS } = await import("../src/theme/css.ts")
     let depth = 0
     for (const char of COMPONENT_CSS.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"[^"]*"/g, "")) {
         depth += char === "{" ? 1 : char === "}" ? -1 : 0

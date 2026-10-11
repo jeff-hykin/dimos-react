@@ -1,26 +1,38 @@
 // geometry_msgs.PoseArray (candidate poses, particle clouds, waypoints): an arrow per pose along its +x.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { FatLines } from "../lines"
-import { cssColor } from "../robot_model"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
-import { ColorSetting, poseMatrix } from "./pose"
-import { colorFor } from "./path"
-import { Field, Slider } from "../../components/controls"
+import { useStore } from "../store.ts"
+import { FatLines } from "../lines.ts"
+import { cssColor } from "../robot_model.ts"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry.ts"
+import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
+import { ColorSetting, poseMatrix } from "./pose.tsx"
+import type { PoseLike } from "./pose.tsx"
+import { colorFor } from "./path.tsx"
+import { Field, Slider } from "../../components/controls.tsx"
+import type { Store } from "../store.ts"
+import type { FrameInfo } from "../viewer.ts"
 
-/** @typedef {{ length: number, color: string, width?: number }} ArrowSettings */
+export interface ArrowSettings {
+    length: number
+    color: string
+    width?: number
+}
+
+/** A pose of the array: a geometry_msgs Pose, or anything with one in `.pose` (decoded data). */
+type ArrayPose = (PoseLike & { pose?: PoseLike }) | null | undefined
 
 export class PoseArrayLayer {
     root = new THREE.Group()
-    #lines
-    #stop = () => {}
-    #unsubscribe
-    #frame = null
-    #poses = null
-    settings: any
-    context: any
+    #lines: FatLines
+    #stop: () => void = () => {}
+    #unsubscribe: () => void
+    #frame: string | null = null
+    #poses: ArrayPose[] | null | undefined = null
+    settings: Store<ArrowSettings>
+    context: LayerContext
 
-    constructor(context, topic, settings) {
+    /** `topic` null: data comes through setData */
+    constructor(context: LayerContext, topic: Topic | null, settings: Store<ArrowSettings>) {
         this.context = context
         this.settings = settings
         this.#lines = new FatLines(context.viewer.resolution, { width: settings.get().width ?? 2.5, color: 0xffffff })
@@ -34,12 +46,12 @@ export class PoseArrayLayer {
         this.#draw()
     }
 
-    /** Props data: `{ poses, frame? }`. */
-    setData(data) {
+    /** Props data: `{ poses, frame?, timestamp? }` or the poses themselves (any shape). */
+    setData(data: any) {
         this.#set(data?.poses ?? data, data?.frame ?? "", data?.timestamp ?? Date.now())
     }
 
-    #set(poses, frame, timestamp) {
+    #set(poses: ArrayPose[] | null | undefined, frame: string, timestamp: number | undefined) {
         this.#frame = frame
         this.#poses = poses
         this.#draw()
@@ -72,7 +84,7 @@ export class PoseArrayLayer {
         this.context.viewer.requestRender()
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (this.#frame !== null) {
             placeLayer(this.context, this.root, this.#frame, frame.fixedFrame)
         }
@@ -85,7 +97,7 @@ export class PoseArrayLayer {
     }
 }
 
-export function ArrowSettingsEditor({ settings }) {
+export function ArrowSettingsEditor({ settings }: LayerSettingsProps<ArrowSettings>) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
@@ -106,7 +118,7 @@ export function ArrowSettingsEditor({ settings }) {
     )
 }
 
-registerLayer({
+registerLayer<ArrowSettings>({
     id: "posearray",
     label: "Pose array",
     types: ["geometry_msgs.PoseArray"],

@@ -2,12 +2,27 @@
 // or a plain arrow. Real-world sized, +x forward (REP-103), base_link at the body's center (ground robots stand on
 // z = -height). Colors come from the theme (--primary body, --muted-fg joints, --warn nose) unless given.
 import * as THREE from "three"
-import { themeColors } from "../theme/theme"
+import { themeColors } from "../theme/theme.ts"
 
 export const ROBOT_KINDS = ["dog", "humanoid", "wheeled", "drone", "arrow"]
 
+/** A model's colors: CSS colors or tokens like "var(--primary)". */
+export interface RobotModelColors {
+    body?: string
+    dark?: string
+    nose?: string
+}
+
+interface Palette {
+    body: THREE.Color
+    dark: THREE.Color
+    nose: THREE.Color
+}
+
+type Vec3 = [number, number, number]
+
 /** A CSS color (or a token like "var(--primary)") as a THREE.Color; `fallback` when it can't be resolved. */
-export function cssColor(value, fallback = "#888888") {
+export function cssColor(value: string | null | undefined, fallback = "#888888"): THREE.Color {
     let text = value
     if (typeof value === "string" && value.startsWith("var(") && typeof document !== "undefined") {
         const name = value.slice(4, -1).split(",")[0].trim()
@@ -21,7 +36,8 @@ export function cssColor(value, fallback = "#888888") {
         if (text && /^[a-z-]+\(/i.test(text) && !/^(rgb|hsl)a?\(/i.test(text) && typeof document !== "undefined") {
             const canvas = document.createElement("canvas")
             canvas.width = canvas.height = 1
-            const context = canvas.getContext("2d")
+            // no 2D context throws below, into the catch
+            const context = canvas.getContext("2d")!
             context.fillStyle = text
             context.fillRect(0, 0, 1, 1)
             const [r, g, b] = context.getImageData(0, 0, 1, 1).data
@@ -34,7 +50,7 @@ export function cssColor(value, fallback = "#888888") {
     return color
 }
 
-function palette(colors = {}) {
+function palette(colors: RobotModelColors = {}): Palette {
     const theme = themeColors()
     return {
         body: cssColor(colors.body ?? theme.primary, "#5fb4e6"),
@@ -43,17 +59,17 @@ function palette(colors = {}) {
     }
 }
 
-function material(color, opacity = 0.85) {
+function material(color: THREE.Color, opacity = 0.85) {
     return new THREE.MeshLambertMaterial({ color, transparent: opacity < 1, opacity, depthWrite: opacity >= 1 })
 }
 
-function box(x, y, z, at, color) {
+function box(x: number, y: number, z: number, at: Vec3, color: THREE.Color) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), material(color))
     mesh.position.set(...at)
     return mesh
 }
 
-function cylinder(radius, length, at, axis, color) {
+function cylinder(radius: number, length: number, at: Vec3, axis: "x" | "y" | "z", color: THREE.Color) {
     const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, 20), material(color))
     mesh.position.set(...at)
     if (axis === "x") {
@@ -64,14 +80,14 @@ function cylinder(radius, length, at, axis, color) {
     return mesh
 }
 
-function heading(at, size, color) {
+function heading(at: Vec3, size: number, color: THREE.Color) {
     const cone = new THREE.Mesh(new THREE.ConeGeometry(size * 0.5, size, 16), material(color, 0.95))
     cone.rotation.z = -Math.PI / 2
     cone.position.set(...at)
     return cone
 }
 
-const MAKERS = {
+const MAKERS: Record<string, (p: Palette) => THREE.Group> = {
     dog(p) {
         const group = new THREE.Group()
         group.add(box(0.6, 0.26, 0.14, [0, 0, 0], p.body))
@@ -136,11 +152,9 @@ const MAKERS = {
 
 /**
  * A stand-in model of `kind` (ROBOT_KINDS), or null for an unknown kind.
- * @param {string} kind
- * @param {{ body?: string, dark?: string, nose?: string }} [colors] CSS colors or tokens
- * @returns {THREE.Group | null}
+ * @param colors CSS colors or tokens
  */
-export function robotModel(kind: string, colors: { body?: string; dark?: string; nose?: string }): THREE.Group | null {
+export function robotModel(kind: string, colors?: RobotModelColors): THREE.Group | null {
     const make = MAKERS[kind]
     if (!make) {
         return null
@@ -153,10 +167,10 @@ export function robotModel(kind: string, colors: { body?: string; dark?: string;
 }
 
 /** Disposes a model's geometries and materials (and removes it from its parent). */
-export function disposeTree(object) {
+export function disposeTree(object: THREE.Object3D) {
     object.traverse((child) => {
-        child.geometry?.dispose()
-        const material = child.material
+        const { geometry, material } = child as Partial<THREE.Mesh>
+        geometry?.dispose()
         if (Array.isArray(material)) {
             material.forEach((item) => item.dispose())
         } else {

@@ -18,7 +18,7 @@ import {
     Toggle,
     Tooltip,
     useCommandPalette,
-} from "../../src/index"
+} from "../../src/index.ts"
 
 export function NavSection() {
     const [tab, setTab] = useState("layers")
@@ -290,8 +290,8 @@ export function NavSection() {
 }
 
 /** MenuAt: a menu opened by the page's own logic (here a plain click) at the pointer, with an inline header line. */
-function MenuAtDemo({ onAction }) {
-    const [menu, setMenu] = useState(null)
+function MenuAtDemo({ onAction }: { onAction: (action: string) => void }) {
+    const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
     return (
         <Card title="MenuAt (a menu at a point)">
             <div className="demo-target" onClick={(event) => setMenu({ x: event.clientX, y: event.clientY })}>

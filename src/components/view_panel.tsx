@@ -7,8 +7,9 @@
 //  - "main": fills its positioned parent behind everything (a fullscreen camera or map)
 // The caller owns where it is: `onMove(x, y)` / `onResize(box)` report the user's drag, the caller keeps the box.
 import { useRef } from "react"
-import { cx } from "../cx"
-import { IconButton } from "./controls"
+import type { CSSProperties, HTMLAttributes, PointerEvent as ReactPointerEvent, ReactNode, Ref } from "react"
+import { cx } from "../cx.ts"
+import { IconButton } from "./controls.tsx"
 
 /** every panel's header height (px): a panel is this plus its body */
 export const VIEW_PANEL_HEAD_PX = 33
@@ -16,18 +17,59 @@ export const VIEW_PANEL_HEAD_PX = 33
 const KEEP_VISIBLE_X = 80
 const KEEP_VISIBLE_Y = 40
 
-const topLimit = (top) => (typeof top === "number" ? top : 0)
+/** a panel's place and size (px) */
+export interface PanelBox {
+    x: number
+    y: number
+    width: number
+    height: number
+}
+
+export interface PanelSize {
+    width: number
+    height: number
+}
+
+/** a float panel's resize handle */
+export interface PanelResize {
+    corner: "left" | "right"
+    minimum: PanelSize
+    /** body height / width */
+    aspect?: number
+    onDone: (box: PanelBox) => void
+}
+
+/** a tiled layout's order, which a header dragged onto another tile swaps */
+export interface PanelTiles {
+    order: string[]
+    onOrder: (order: string[]) => void
+}
+
+export interface PanelDock {
+    region: string
+    rect: PanelBox | null
+    maximized: boolean
+    onMaximize: () => void
+    tiles?: PanelTiles
+}
+
+const topLimit = (top: unknown) => (typeof top === "number" ? top : 0)
 
 /**
  * Drags `element` with the pointer from `event` (a header's pointerdown), kept on screen and below `top` px;
  * `onDone(x, y)` gets where it was dropped (only if it moved).
  */
-export function startPanelDrag(event, element, onDone, { top = 0 } = {}) {
+export function startPanelDrag(
+    event: { clientX: number; clientY: number },
+    element: HTMLElement,
+    onDone: (x: number, y: number) => void,
+    { top = 0 }: { top?: number } = {},
+): void {
     const box = element.getBoundingClientRect()
     const offsetX = event.clientX - box.left
     const offsetY = event.clientY - box.top
     let moved = false
-    const move = (pointer) => {
+    const move = (pointer: PointerEvent) => {
         moved = true
         const x = Math.max(0, Math.min(innerWidth - KEEP_VISIBLE_X, pointer.clientX - offsetX))
         const y = Math.max(topLimit(top), Math.min(innerHeight - KEEP_VISIBLE_Y, pointer.clientY - offsetY))
@@ -54,7 +96,11 @@ export function startPanelDrag(event, element, onDone, { top = 0 } = {}) {
  * `aspect` (body height / width) the height follows the width. It stays in the window; `onDone(box)` gets the final
  * `{ x, y, width, height }`.
  */
-export function startPanelResize(event, element, { corner, minimum, aspect, onDone, headPx = VIEW_PANEL_HEAD_PX }) {
+export function startPanelResize(
+    event: ReactPointerEvent<HTMLElement>,
+    element: HTMLElement,
+    { corner, minimum, aspect, onDone, headPx = VIEW_PANEL_HEAD_PX }: PanelResize & { headPx?: number },
+): void {
     event.preventDefault()
     event.stopPropagation()
     const box = element.getBoundingClientRect()
@@ -68,7 +114,7 @@ export function startPanelResize(event, element, { corner, minimum, aspect, onDo
     Object.assign(element.style, { left: `${box.left}px`, top: `${box.top}px`, right: "auto", bottom: "auto" })
     const maxWidth = corner === "left" ? box.right - 8 : innerWidth - box.left - 8
     const maxHeight = innerHeight - box.top - 8
-    const move = (moved) => {
+    const move = (moved: PointerEvent) => {
         const grown = corner === "left" ? startX - moved.clientX : moved.clientX - startX
         const widest = aspect ? Math.min(maxWidth, (maxHeight - headPx) / aspect) : maxWidth
         width = Math.round(Math.max(Math.min(minimum.width, widest), Math.min(widest, box.width + grown)))
@@ -96,8 +142,15 @@ export function startPanelResize(event, element, { corner, minimum, aspect, onDo
  * header reachable (on screen, below `top`); anything not a finite number takes its default. x/y < 0 = "the default
  * corner" (returned as -1, -1).
  */
-export function clampPanelBox(box, defaults, viewport, minimum, { top = 48 } = {}) {
-    const finite = (value, fallback) => (typeof value === "number" && Number.isFinite(value) ? value : fallback)
+export function clampPanelBox(
+    box: { [K in keyof PanelBox]?: unknown },
+    defaults: PanelBox,
+    viewport: PanelSize,
+    minimum: PanelSize,
+    { top = 48 }: { top?: number } = {},
+): PanelBox {
+    const finite = (value: unknown, fallback: number) =>
+        typeof value === "number" && Number.isFinite(value) ? value : fallback
     const viewWidth = viewport.width > 0 ? viewport.width : 1280
     const viewHeight = viewport.height > 0 ? viewport.height : 800
     const width = Math.round(
@@ -123,7 +176,7 @@ export function clampPanelBox(box, defaults, viewport, minimum, { top = 48 } = {
 }
 
 /** The order with `a` and `b` swapped (a tiled layout's drop). */
-export function swapTiles(order, a, b) {
+export function swapTiles<T>(order: T[], a: T, b: T): T[] {
     const ia = order.indexOf(a)
     const ib = order.indexOf(b)
     if (ia < 0 || ib < 0 || ia === ib) {
@@ -136,16 +189,16 @@ export function swapTiles(order, a, b) {
 }
 
 /** Tiles: a header dragged onto another tile swaps the two (the tile under the pointer lights up on the way). */
-function startTileSwap(event, region, tiles) {
+function startTileSwap(event: ReactPointerEvent<HTMLElement>, region: string, tiles: PanelTiles) {
     const startX = event.clientX
     const startY = event.clientY
-    let target = null
-    const tileAt = (x, y) =>
+    let target: HTMLElement | null = null
+    const tileAt = (x: number, y: number) =>
         document
             .elementsFromPoint(x, y)
-            .map((node) => node.closest?.("[data-region].dr-view-panel--tile"))
+            .map((node) => node.closest?.<HTMLElement>("[data-region].dr-view-panel--tile"))
             .find((tile) => tile && tile.dataset.region !== region) ?? null
-    const move = (moved) => {
+    const move = (moved: PointerEvent) => {
         if (Math.hypot(moved.clientX - startX, moved.clientY - startY) < 6) {
             return
         }
@@ -173,19 +226,29 @@ function startTileSwap(event, region, tiles) {
     addEventListener("pointercancel", up)
 }
 
-/**
- * A view's panel (see the top of this file).
- * @param {{ placement: "float" | "dock" | "main", dock?: { region: string, rect: { x: number, y: number, width: number,
- *   height: number } | null, maximized: boolean, onMaximize: () => void, tiles?: { order: string[],
- *   onOrder: (order: string[]) => void } } | null, head: any, children?: any, className?: string, style?: object,
- *   bodyClassName?: string, bodyOnClick?: () => void, onHeadDoubleClick?: () => void,
- *   onMove?: (x: number, y: number) => void, top?: number,
- *   resize?: { corner: "left" | "right", minimum: { width: number, height: number }, aspect?: number,
- *   onDone: (box: object) => void } | null, panelRef?: any, title?: string, wrapHead?: boolean } & Record<string, any>} props
- *   `head`: the header's content (title, buttons); `top`: a float panel's header never goes above this (a top bar);
- *   `wrapHead`: a header with several selects wraps onto more lines, each select as wide as its text, instead of
- *   squeezing them
- */
+export interface ViewPanelProps extends HTMLAttributes<HTMLDivElement> {
+    placement: "float" | "dock" | "main"
+    dock?: PanelDock | null
+    /** the header's content (title, buttons) */
+    head: ReactNode
+    children?: ReactNode
+    className?: string
+    style?: CSSProperties
+    bodyClassName?: string
+    bodyOnClick?: () => void
+    onHeadDoubleClick?: () => void
+    onMove?: (x: number, y: number) => void
+    /** a float panel's header never goes above this (a top bar) */
+    top?: number
+    resize?: PanelResize | null
+    panelRef?: Ref<HTMLDivElement>
+    /** the header's tooltip */
+    title?: string
+    /** a header with several selects wraps onto more lines, each select as wide as its text, instead of squeezing them */
+    wrapHead?: boolean
+}
+
+/** A view's panel (see the top of this file). */
 export function ViewPanel({
     placement,
     dock,
@@ -203,44 +266,9 @@ export function ViewPanel({
     title,
     wrapHead = false,
     ...rest
-}: {
-    placement: "float" | "dock" | "main"
-    dock?: {
-        region: string
-        rect: {
-            x: number
-            y: number
-            width: number
-            height: number
-        } | null
-        maximized: boolean
-        onMaximize: () => void
-        tiles?: {
-            order: string[]
-            onOrder: (order: string[]) => void
-        }
-    } | null
-    head: any
-    children?: any
-    className?: string
-    style?: object
-    bodyClassName?: string
-    bodyOnClick?: () => void
-    onHeadDoubleClick?: () => void
-    onMove?: (x: number, y: number) => void
-    top?: number
-    resize?: {
-        corner: "left" | "right"
-        minimum: { width: number; height: number }
-        aspect?: number
-        onDone: (box: object) => void
-    } | null
-    panelRef?: any
-    title?: string
-    wrapHead?: boolean
-} & Record<string, any>) {
-    const element = useRef(null)
-    const setRef = (node) => {
+}: ViewPanelProps) {
+    const element = useRef<HTMLDivElement | null>(null)
+    const setRef = (node: HTMLDivElement | null) => {
         element.current = node
         if (typeof panelRef === "function") {
             panelRef(node)
@@ -248,13 +276,14 @@ export function ViewPanel({
             panelRef.current = node
         }
     }
-    const fromControl = (event) => !!event.target.closest("button, select, input, label, textarea, [role=tab]")
-    const startHeadDrag = (event) => {
+    const fromControl = (event: { target: EventTarget }) =>
+        !!(event.target as Element).closest("button, select, input, label, textarea, [role=tab]")
+    const startHeadDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (fromControl(event) || event.button !== 0) {
             return
         }
         if (placement === "float" && onMove) {
-            startPanelDrag(event, element.current, onMove, { top })
+            startPanelDrag(event, element.current!, onMove, { top })
         } else if (placement === "dock" && dock?.tiles && !dock.maximized) {
             startTileSwap(event, dock.region, dock.tiles)
         }
@@ -317,7 +346,7 @@ export function ViewPanel({
                     className={cx("dr-view-panel-resize", `dr-view-panel-resize--${resize.corner}`)}
                     title="Drag to resize"
                     aria-label="Resize"
-                    onPointerDown={(event) => startPanelResize(event, element.current, resize)}
+                    onPointerDown={(event) => startPanelResize(event, element.current!, resize)}
                 />
             ) : null}
         </div>
@@ -325,7 +354,7 @@ export function ViewPanel({
 }
 
 /** A short live readout in a panel header ("640×480 · 30 fps"): muted, mono, truncated. */
-export function PanelInfo({ className, children, ...rest }) {
+export function PanelInfo({ className, children, ...rest }: HTMLAttributes<HTMLSpanElement>) {
     return (
         <span className={cx("dr-view-panel-info", className)} {...rest}>
             {children}

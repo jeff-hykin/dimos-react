@@ -2,22 +2,32 @@
 // 8-byte fingerprint before the top-level struct only, strings as int32 length (with the NUL) + bytes + NUL.
 import schemaJson from "./vendor/lcm_schemas.js"
 
-/** @type {Record<string, { name: string, type: string, dims: (number | string)[] }[]>} */
-export const schemas: Record<string, { name: string; type: string; dims: (number | string)[] }[]> = schemaJson
+/** One field of an LCM struct: `dims` are fixed lengths (numbers) or the names of the fields holding the lengths. */
+export interface LcmField {
+    name: string
+    type: string
+    dims: (number | string)[]
+}
+
+/** The dimos_lcm schemas: type name (e.g. "nav_msgs.Odometry") → its fields in wire order. */
+export const schemas: Record<string, LcmField[]> = schemaJson
+
+/** A decoded LCM struct: field name → value (numbers, strings, booleans, arrays, typed arrays, nested structs). */
+export type LcmStruct = Record<string, any>
 
 const textDecoder = new TextDecoder()
 const textEncoder = new TextEncoder()
 
 class Reader {
-    offset: any
-    view: DataView<any>
-    bytes: any
-    constructor(bytes, offset) {
+    offset: number
+    view: DataView
+    bytes: Uint8Array
+    constructor(bytes: Uint8Array, offset: number) {
         this.bytes = bytes
         this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
         this.offset = offset
     }
-    primitive(type) {
+    primitive(type: string): number | boolean | string {
         const view = this.view
         const at = this.offset
         switch (type) {
@@ -53,18 +63,18 @@ class Reader {
         }
         throw new Error(`lcm: unknown primitive ${type}`)
     }
-    struct(type) {
+    struct(type: string): LcmStruct {
         const fields = schemas[type]
         if (!fields) {
             throw new Error(`lcm: no schema for ${type}`)
         }
-        const out = {}
+        const out: LcmStruct = {}
         for (const field of fields) {
             out[field.name] = this.value(field.type, field.dims, 0, out)
         }
         return out
     }
-    value(type, dims, depth, scope) {
+    value(type: string, dims: (number | string)[], depth: number, scope: LcmStruct): unknown {
         if (depth === dims.length) {
             return type in schemas ? this.struct(type) : this.primitive(type)
         }
@@ -85,7 +95,7 @@ class Reader {
 }
 
 /** Decodes a dimos payload (fingerprint + struct) of `type`, e.g. "nav_msgs.Odometry"; a different type's bytes throw. */
-export function decode(type, bytes) {
+export function decode(type: string, bytes: Uint8Array): LcmStruct {
     const expected = fingerprint(type)
     for (let index = 0; index < 8; index++) {
         if (bytes[index] !== expected[index]) {
@@ -96,7 +106,7 @@ export function decode(type, bytes) {
 }
 
 /** Reads just the header's frame_id off a stamped message without decoding the rest (clouds, images). */
-export function headerFrameId(type, bytes) {
+export function headerFrameId(type: string, bytes: Uint8Array): string | null {
     const fields = schemas[type]
     if (!fields) {
         return null
@@ -117,19 +127,19 @@ export function headerFrameId(type, bytes) {
 // ── encoding ──
 
 const MASK = (1n << 64n) - 1n
-function hashUpdate(value, char) {
+function hashUpdate(value: bigint, char: number): bigint {
     // lcmgen's int64 arithmetic: ((v << 8) ^ (v >> 55)) + c, with c a signed char
     const signed = BigInt.asIntN(64, value)
     return BigInt.asIntN(64, ((signed << 8n) ^ (signed >> 55n)) + BigInt(char > 127 ? char - 256 : char))
 }
-function hashString(value, text) {
+function hashString(value: bigint, text: string): bigint {
     value = hashUpdate(value, text.length)
     for (const char of textEncoder.encode(text)) {
         value = hashUpdate(value, char)
     }
     return value
 }
-function baseHash(type) {
+function baseHash(type: string): bigint {
     let value = 0x12345678n
     for (const field of schemas[type]) {
         value = hashString(value, field.name)
@@ -144,7 +154,7 @@ function baseHash(type) {
     }
     return value
 }
-function recursiveHash(type, parents) {
+function recursiveHash(type: string, parents: string[]): bigint {
     if (parents.includes(type)) {
         return 0n
     }
@@ -156,9 +166,9 @@ function recursiveHash(type, parents) {
     }
     return (((value << 1n) & MASK) + (value >> 63n)) & MASK
 }
-const fingerprints = new Map()
+const fingerprints = new Map<string, Uint8Array>()
 /** The 8 bytes every top-level LCM message of `type` starts with. */
-export function fingerprint(type) {
+export function fingerprint(type: string): Uint8Array {
     let bytes = fingerprints.get(type)
     if (!bytes) {
         bytes = new Uint8Array(8)
@@ -169,14 +179,14 @@ export function fingerprint(type) {
 }
 
 class Writer {
-    chunks = []
+    chunks: number[] = []
     view = new DataView(new ArrayBuffer(8))
-    push(count) {
+    push(count: number) {
         for (let index = 0; index < count; index++) {
             this.chunks.push(this.view.getUint8(index))
         }
     }
-    primitive(type, value) {
+    primitive(type: string, value: any): void {
         const view = this.view
         switch (type) {
             case "int8_t":
@@ -213,8 +223,8 @@ class Writer {
         }
         throw new Error(`lcm: unknown primitive ${type}`)
     }
-    struct(type, value) {
-        const scope = { ...value }
+    struct(type: string, value: LcmStruct): void {
+        const scope: LcmStruct = { ...value }
         // array length fields follow their arrays unless given explicitly
         for (const field of schemas[type]) {
             for (const dim of field.dims) {
@@ -227,7 +237,7 @@ class Writer {
             this.value(field.type, field.dims, 0, scope[field.name])
         }
     }
-    value(type, dims, depth, value) {
+    value(type: string, dims: (number | string)[], depth: number, value: any): void {
         if (depth === dims.length) {
             return type in schemas ? this.struct(type, value ?? {}) : this.primitive(type, value)
         }
@@ -238,7 +248,7 @@ class Writer {
 }
 
 /** Encodes `value` as a dimos payload of `type` (missing fields are zero). */
-export function encode(type, value) {
+export function encode(type: string, value: LcmStruct): Uint8Array {
     const writer = new Writer()
     writer.struct(type, value)
     const out = new Uint8Array(8 + writer.chunks.length)

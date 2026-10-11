@@ -1,10 +1,12 @@
 // One TF frame picked out in the 3D view (e.g. a TF panel's hovered row): big axes drawn over everything, with a halo
 // behind them and the frame's name, following the frame as it moves. Works whether or not a TF layer is on.
 import * as THREE from "three"
-import { themeColors } from "../theme/theme"
-import { FatLines } from "./lines"
-import { LabelPool } from "./labels"
-import { cssColor } from "./robot_model"
+import { themeColors } from "../theme/theme.ts"
+import { FatLines } from "./lines.ts"
+import { LabelPool } from "./labels.ts"
+import { cssColor } from "./robot_model.ts"
+import type { TfTree } from "./tf.ts"
+import type { FrameInfo, Viewer } from "./viewer.ts"
 
 /** axes length (m) and line widths (CSS px) of the highlight */
 const AXES_METERS = 1.2
@@ -13,17 +15,16 @@ const HALO_PX = 22
 
 export class FrameHighlighter {
     root = new THREE.Group()
-    frame = null
+    frame: string | null = null
     placed = false
-    #axes
-    #halo
+    #axes: FatLines
+    #halo: FatLines
     #label = new LabelPool("dr-scene-label dr-highlight")
-    onPlaced: (placed: boolean) => void
-    tf: any
-    viewer: any
+    onPlaced: ((placed: boolean) => void) | undefined
+    tf: TfTree
+    viewer: Viewer
 
-    /** @param {(placed: boolean) => void} [onPlaced] */
-    constructor(viewer, tf, onPlaced: (placed: boolean) => void) {
+    constructor(viewer: Viewer, tf: TfTree, onPlaced?: (placed: boolean) => void) {
         this.viewer = viewer
         this.tf = tf
         this.onPlaced = onPlaced
@@ -41,7 +42,7 @@ export class FrameHighlighter {
         this.root.userData.noPick = true
     }
 
-    set(frame) {
+    set(frame: string | null) {
         if (frame !== this.frame) {
             this.frame = frame
             this.placed = false
@@ -49,7 +50,7 @@ export class FrameHighlighter {
         }
     }
 
-    update(frameInfo) {
+    update(frameInfo: FrameInfo) {
         const frame = this.frame
         const matrix = frame ? this.tf.lookup(frame, frameInfo.fixedFrame) : null
         this.#axes.clear()

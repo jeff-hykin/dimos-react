@@ -3,21 +3,35 @@
 // return) is transparent. The 2D view of the same coloring is ImageView's. Ported from dim-controller
 // core/render/depth.ts.
 import * as THREE from "three"
-import { sampleGradient } from "../colormaps"
-import { depthScale } from "../components/media"
+import { sampleGradient } from "../colormaps.ts"
+import { depthScale } from "../components/media.tsx"
 
-const DEFAULT_DEPTH_LOOK = { colormap: "turbo", near: null, far: null }
+/** A depth image's raw pixels: 16UC1 (millimeters) or 32FC1 (meters), row-major, one value per pixel. */
+export type DepthPixels = Uint16Array | Float32Array
+
+/** A depth image as camera streams deliver it. */
+export interface DepthImage {
+    width: number
+    height: number
+    encoding: string
+    data: DepthPixels
+}
+
+/** How depth is colored: a colormap name and a fixed range in meters (null = automatic). */
+export interface DepthLook {
+    colormap: string
+    near: number | null
+    far: number | null
+}
+
+const DEFAULT_DEPTH_LOOK: DepthLook = { colormap: "turbo", near: null, far: null }
 
 /** Tracks the automatic range (2nd–98th percentile of valid depth, eased) so it doesn't flicker frame to frame. */
 export class DepthRange {
     near = 0
     far = 1
     #seen = false
-    /**
-     * @param {{ width: number, height: number, encoding: string, data: ArrayLike<number> }} image
-     * @param {{ near: number | null, far: number | null }} look fixed range (meters), null = automatic
-     * @returns {[number, number]}
-     */
+    /** @param look fixed range (meters), null = automatic */
     update(
         image: { width: number; height: number; encoding: string; data: ArrayLike<number> },
         look: { near: number | null; far: number | null },
@@ -61,7 +75,7 @@ vec4 depthColor(float meters, vec2 range, sampler2D ramp) {
 }
 `
 
-function rampPixels(name) {
+function rampPixels(name: string): Uint8Array {
     const pixels = new Uint8Array(256 * 4)
     for (let index = 0; index < 256; index++) {
         pixels.set([...sampleGradient(name, index / 255).map(Math.round), 255], index * 4)
@@ -69,13 +83,13 @@ function rampPixels(name) {
     return pixels
 }
 
-const asFloat = (image) =>
+const asFloat = (image: DepthImage): Float32Array =>
     image.data instanceof Float32Array
         ? image.data
         : Float32Array.from(image.data.subarray(0, image.width * image.height))
 
-const rampTextures = new Map()
-function rampTexture(name) {
+const rampTextures: Map<string, THREE.DataTexture> = new Map()
+function rampTexture(name: string): THREE.DataTexture {
     let texture = rampTextures.get(name)
     if (!texture) {
         texture = new THREE.DataTexture(rampPixels(name), 256, 1)
@@ -88,8 +102,8 @@ function rampTexture(name) {
 
 /** A depth texture colored the same way, as a three.js material (`.material`); `update(image, look)` per image. */
 export class DepthMaterial {
-    material
-    #texture = null
+    material: THREE.ShaderMaterial
+    #texture: THREE.DataTexture | null = null
     #range = new DepthRange()
 
     constructor() {
@@ -122,7 +136,7 @@ export class DepthMaterial {
         })
     }
 
-    update(image, look = DEFAULT_DEPTH_LOOK) {
+    update(image: DepthImage, look: DepthLook = DEFAULT_DEPTH_LOOK) {
         const { width, height } = image
         const data = asFloat(image)
         if (!this.#texture || this.#texture.image.width !== width || this.#texture.image.height !== height) {

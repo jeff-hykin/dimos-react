@@ -4,8 +4,8 @@
 // soft blended gaussian fading into the background with distance. Coloring (gradient by height / intensity / range,
 // or solid) happens on the GPU, so restyling costs nothing.
 import * as THREE from "three"
-import { gradientTexture } from "./gradients"
-import { DEFAULT_PERIOD, isPalette } from "../colormaps"
+import { gradientTexture } from "./gradients.ts"
+import { DEFAULT_PERIOD, isPalette } from "../colormaps.ts"
 
 /** What glow splats fade into: the page behind the canvas (Viewer.setTheme keeps it on --scene-bg). */
 export const splatBackground = new THREE.Color().setRGB(0, 0, 0, THREE.NoColorSpace)
@@ -32,14 +32,26 @@ export const CUBE_SHADES = {
     memworld: { id: 4, label: "Contrast", about: "strong per-face light" },
 }
 
-/**
- * @typedef {{ style?: "voxel" | "splat" | "disc" | "square", size?: number, colorMode?: "height" | "intensity" | "range" | "solid",
- *   gradient?: string, period?: number, axis?: 0 | 1 | 2, rangeMin?: number | null, rangeMax?: number | null, solid?: string,
- *   opacity?: number, cubeShade?: keyof typeof CUBE_SHADES }} PointLook
- */
+export type PointStyle = keyof typeof POINT_STYLES
+export type CubeShade = keyof typeof CUBE_SHADES
+export type ColorMode = "height" | "intensity" | "range" | "solid"
+
+export interface PointLook {
+    style?: PointStyle
+    size?: number
+    colorMode?: ColorMode
+    gradient?: string
+    period?: number
+    axis?: 0 | 1 | 2
+    rangeMin?: number | null
+    rangeMax?: number | null
+    solid?: string
+    opacity?: number
+    cubeShade?: CubeShade
+}
 
 /** The look a point layer starts from; props override any field. */
-export const DEFAULT_LOOK = {
+export const DEFAULT_LOOK: Required<Omit<PointLook, "period">> = {
     style: "voxel",
     size: 0.05,
     colorMode: "height",
@@ -52,7 +64,7 @@ export const DEFAULT_LOOK = {
     cubeShade: "soft",
 }
 
-const COLOR = { height: 0, intensity: 1, range: 2, solid: 3 }
+const COLOR: Record<ColorMode, number> = { height: 0, intensity: 1, range: 2, solid: 3 }
 const VIEW_LIGHT = new THREE.Vector3(2, 4, 3).normalize()
 
 const vertexShader = /* glsl */ `
@@ -212,8 +224,7 @@ void main() {
 export const focusDistance = { value: 10 }
 
 /**
- * @param {{ value: number }} pixelsPerMeter the viewer's (Viewer.pixelsPerMeter), shared so sprites size in meters
- * @returns {THREE.ShaderMaterial}
+ * @param pixelsPerMeter the viewer's (Viewer.pixelsPerMeter), shared so sprites size in meters
  */
 export function makePointMaterial(pixelsPerMeter: { value: number }): THREE.ShaderMaterial {
     const material = new THREE.ShaderMaterial({
@@ -255,9 +266,6 @@ export function makePointMaterial(pixelsPerMeter: { value: number }): THREE.Shad
 
 /**
  * Pushes a look into the material's uniforms; `range` is the resolved [min, max] when the look's is auto.
- * @param {THREE.ShaderMaterial} material
- * @param {PointLook} partial
- * @param {[number, number]} range
  */
 export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, range: [number, number]) {
     const look = { ...DEFAULT_LOOK, ...partial }
@@ -266,7 +274,7 @@ export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, ra
     uniforms.uSize.value = Math.max(0.001, look.size)
     const style = POINT_STYLES[look.style] ?? POINT_STYLES.disc
     uniforms.uStyle.value = style.id
-    const wanted = new Set()
+    const wanted: Set<string> = new Set()
     if (style.define) {
         wanted.add(style.define)
     }
@@ -306,9 +314,6 @@ export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, ra
 /**
  * Draws only the points inside an axis-aligned box of the scene (world) frame; `null` bounds (or no call) = no limit
  * on that side. `min` / `max` are [x, y, z] with nulls allowed.
- * @param {THREE.ShaderMaterial} material
- * @param {(number | null)[] | null} [min]
- * @param {(number | null)[] | null} [max]
  */
 export function setClipBox(
     material: THREE.ShaderMaterial,
@@ -316,7 +321,7 @@ export function setClipBox(
     max: (number | null)[] | null = null,
 ) {
     const big = 1e9
-    const at = (bounds, index, fallback) => bounds?.[index] ?? fallback
+    const at = (bounds: (number | null)[] | null, index: number, fallback: number) => bounds?.[index] ?? fallback
     material.uniforms.uClipMin.value.set(at(min, 0, -big), at(min, 1, -big), at(min, 2, -big))
     material.uniforms.uClipMax.value.set(at(max, 0, big), at(max, 1, big), at(max, 2, big))
 }

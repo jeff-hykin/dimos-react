@@ -9,14 +9,11 @@ export const SNAP_METERS = 2
 const SNAP_GAP_SECONDS = 1
 
 export class SmoothFollow {
-    #at = null
-    #velocity = [0, 0, 0]
+    #at: [number, number, number] | null = null
+    #velocity: [number, number, number] = [0, 0, 0]
 
     /**
      * Where the camera should look this frame, given the target's latest position and the frame time.
-     * @param {[number, number, number]} target
-     * @param {number} dtSeconds
-     * @returns {[number, number, number]}
      */
     step(target: [number, number, number], dtSeconds: number): [number, number, number] {
         const at = this.#at
@@ -26,8 +23,9 @@ export class SmoothFollow {
             Math.hypot(target[0] - at[0], target[1] - at[1], target[2] - at[2]) > SNAP_METERS
         ) {
             this.#velocity = [0, 0, 0]
-            this.#at = [...target]
-            return this.#at
+            const at: [number, number, number] = [...target]
+            this.#at = at
+            return at
         }
         const omega = 2 / SMOOTH_SECONDS
         const x = omega * dtSeconds
@@ -50,13 +48,15 @@ export class SmoothFollow {
 const PAN_PAUSE_METERS = 0.15
 const PAN_PAUSE_SHARE = 0.04
 
+export type PanVerdict = { action: "undo" } | { action: "pause"; restore: [number, number, number] }
+
 /**
  * Tells a deliberate pan from the slip of a pinch or an orbit: while following, a gesture's pan is undone ("undo")
  * until it adds up past a threshold; then following stops and the whole pan is kept ("pause", with the earlier,
  * undone part to put back so the view lands where the drag put it).
  */
 export class PanGate {
-    #total = [0, 0, 0]
+    #total: [number, number, number] = [0, 0, 0]
 
     /** a new drag or pinch began */
     start() {
@@ -64,14 +64,10 @@ export class PanGate {
     }
 
     /**
-     * @param {[number, number, number]} pan how far this frame's controls moved the target
-     * @param {number} distance camera to target
-     * @returns {{ action: "undo" } | { action: "pause", restore: [number, number, number] }}
+     * @param pan how far this frame's controls moved the target
+     * @param distance camera to target
      */
-    step(
-        pan: [number, number, number],
-        distance: number,
-    ): { action: "undo" } | { action: "pause"; restore: [number, number, number] } {
+    step(pan: [number, number, number], distance: number): PanVerdict {
         const before = this.#total
         this.#total = [before[0] + pan[0], before[1] + pan[1], before[2] + pan[2]]
         if (Math.hypot(...this.#total) > Math.max(PAN_PAUSE_METERS, PAN_PAUSE_SHARE * distance)) {

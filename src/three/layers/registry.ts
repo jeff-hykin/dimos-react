@@ -13,31 +13,74 @@
 //         Settings: ({ settings, topic }) => h(...),  // optional, built from dimos-react components
 //     })
 import * as THREE from "three"
-import { decodeMessage } from "../../data"
+import type { ComponentType } from "react"
+import { decodeMessage } from "../../data.ts"
+import type { DataSource, Message, Topic } from "../../data.ts"
+import type { CameraStreams } from "../../components/camera.tsx"
+import type { Store } from "../store.ts"
+import type { TfTree } from "../tf.ts"
+import type { FrameInfo, Viewer } from "../viewer.ts"
 
-/**
- * @typedef {{ key: string, name: string, type: string }} Topic
- * @typedef {{ info?: string, problem?: string | null, frame?: string }} LayerStatus
- *   `info`: short live info ("84k pts · 10 Hz"); `problem`: why it isn't drawn as expected; `frame`: its data's frame_id
- * @typedef {{
- *   viewer: import("../viewer").Viewer, tf: import("../tf").TfTree, source: any,
- *   video: import("../../components/camera").CameraStreams, topics: () => Topic[], setStatus: (status: LayerStatus) => void,
- *   robotPose: RobotPose, options: { baseFrame?: string, cameraInfo?: Record<string, string> },
- * }} LayerContext
- * @typedef {{ root: THREE.Object3D, update?: (frame: any) => void, dispose: () => void, reset?: () => void,
- *   setData?: (data: any) => void }} LayerInstance
- * @typedef {{ id: string, label: string, types: string[], defaults: object | ((topic: Topic) => object),
- *   enabledByDefault?: (topic: Topic) => boolean, create: (context: LayerContext, topic: Topic | null, settings: any) => LayerInstance,
- *   Settings?: Function }} LayerType
- * @typedef {{ id: string, label: string, types: string[],
- *   draw: (context: CanvasRenderingContext2D, message: any, image: { width: number, height: number }) => void }} OverlayType
- */
+export type { Topic }
 
-/** @type {LayerType[]} */
+/** `info`: short live info ("84k pts · 10 Hz"); `problem`: why it isn't drawn as expected; `frame`: its data's frame_id */
+export interface LayerStatus {
+    info?: string
+    problem?: string | null
+    frame?: string
+}
+
+export interface LayerContext {
+    viewer: Viewer
+    tf: TfTree
+    source: DataSource
+    video: CameraStreams
+    topics: () => Topic[]
+    setStatus: (status: LayerStatus) => void
+    robotPose: RobotPose
+    options: { baseFrame?: string; cameraInfo?: Record<string, string> }
+    /** a pose layer's pose, placed in the fixed frame (a <Layer>'s onPose) */
+    onPose?: (matrix: THREE.Matrix4) => void
+}
+
+export interface LayerInstance {
+    root: THREE.Object3D
+    update?: (frame: FrameInfo) => void
+    dispose: () => void
+    reset?: () => void
+    /** props data (a <Layer data>): its shape is up to the layer type */
+    setData?: (data: any) => void
+}
+
+export interface LayerSettingsProps<S extends object> {
+    settings: Store<S>
+    topic?: Topic | null
+}
+
+/** `S`: the type's per-topic settings (any by default: a registry holds every type's). */
+export interface LayerType<S extends object = any> {
+    id: string
+    label: string
+    types: string[]
+    defaults: S | ((topic: Topic | null) => S)
+    enabledByDefault?: (topic: Topic) => boolean
+    /** `topic` null: the data comes through `setData` */
+    create: (context: LayerContext, topic: Topic | null, settings: Store<S>) => LayerInstance
+    Settings?: ComponentType<LayerSettingsProps<S>>
+}
+
+export interface OverlayType {
+    id: string
+    label: string
+    types: string[]
+    /** `message`: the decoded message, any shape */
+    draw: (context: CanvasRenderingContext2D, message: any, image: { width: number; height: number }) => void
+}
+
 const layerTypes: LayerType[] = []
 
-/** Registers a layer type (replacing one with the same id). @param {LayerType} type */
-export function registerLayer(type: LayerType) {
+/** Registers a layer type (replacing one with the same id). */
+export function registerLayer<S extends object>(type: LayerType<S>) {
     const existing = layerTypes.findIndex((other) => other.id === type.id)
     if (existing >= 0) {
         layerTypes.splice(existing, 1)
@@ -46,7 +89,7 @@ export function registerLayer(type: LayerType) {
 }
 
 /** The layer type drawing a message type (the latest registration wins), or undefined. */
-export function layerTypeFor(messageType) {
+export function layerTypeFor(messageType: string): LayerType | undefined {
     for (let index = layerTypes.length - 1; index >= 0; index--) {
         if (layerTypes[index].types.includes(messageType)) {
             return layerTypes[index]
@@ -56,22 +99,20 @@ export function layerTypeFor(messageType) {
 }
 
 /** A layer type by id. */
-export const layerTypeById = (id) => layerTypes.find((type) => type.id === id)
+export const layerTypeById = (id: string): LayerType | undefined => layerTypes.find((type) => type.id === id)
 
-/** @returns {readonly LayerType[]} */
 export function allLayerTypes(): readonly LayerType[] {
     return layerTypes
 }
 
 /** A type's default settings for a topic (a fresh copy). */
-export function defaultSettings(type, topic) {
+export function defaultSettings<S extends object>(type: LayerType<S>, topic: Topic | null): S {
     return typeof type.defaults === "function" ? type.defaults(topic) : structuredClone(type.defaults ?? {})
 }
 
-/** @type {OverlayType[]} */
 const overlayTypes: OverlayType[] = []
 
-/** Registers a 2D overlay drawn over camera images (e.g. Detection2DArray boxes). @param {OverlayType} type */
+/** Registers a 2D overlay drawn over camera images (e.g. Detection2DArray boxes). */
 export function registerOverlay(type: OverlayType) {
     const existing = overlayTypes.findIndex((other) => other.id === type.id)
     if (existing >= 0) {
@@ -80,11 +121,11 @@ export function registerOverlay(type: OverlayType) {
     overlayTypes.push(type)
 }
 
-export function overlayTypeFor(messageType) {
+export function overlayTypeFor(messageType: string): OverlayType | undefined {
     return [...overlayTypes].reverse().find((type) => type.types.includes(messageType))
 }
 
-export function allOverlayTypes() {
+export function allOverlayTypes(): readonly OverlayType[] {
     return overlayTypes
 }
 
@@ -92,7 +133,7 @@ export function allOverlayTypes() {
  * Sets `object.matrix` to T_fixed_frame and shows it; with no TF path it hides it and reports why. Returns whether
  * it could be placed.
  */
-export function placeLayer(context, object, frame, fixedFrame) {
+export function placeLayer(context: LayerContext, object: THREE.Object3D, frame: string, fixedFrame: string): boolean {
     const matrix = context.tf.lookup(frame, fixedFrame)
     if (!matrix) {
         if (object.visible) {
@@ -114,15 +155,15 @@ export function placeLayer(context, object, frame, fixedFrame) {
 
 /**
  * Subscribes to a topic and hands each decoded message (and its timestamp) to `onMessage`; decode failures are
- * counted into the layer's status.
- * @param {{ maxHz?: number, reliable?: boolean, decodeAs?: string }} options
+ * counted into the layer's status. Returns unsubscribe.
  */
 export function subscribeDecoded(
-    context,
-    topic,
+    context: LayerContext,
+    topic: Topic,
     options: { maxHz?: number; reliable?: boolean; decodeAs?: string },
-    onMessage,
-) {
+    // the decoded message is LCM / a published value: any shape
+    onMessage: (decoded: any, timestamp: number | undefined, message: Message) => void,
+): () => void {
     let failures = 0
     return context.source.subscribe(
         topic.key,
@@ -133,7 +174,8 @@ export function subscribeDecoded(
                 decoded = decodeMessage(message, "auto", options.decodeAs ?? topic.type)
             } catch (error) {
                 failures++
-                context.setStatus({ problem: `cannot decode ${topic.type} (${failures}×): ${error?.message ?? error}` })
+                const reason = error instanceof Error ? error.message : error
+                context.setStatus({ problem: `cannot decode ${topic.type} (${failures}×): ${reason}` })
                 return
             }
             onMessage(decoded, message.timestamp, message)
@@ -141,8 +183,16 @@ export function subscribeDecoded(
     )
 }
 
+/** std_msgs ColorRGBA (any field may be missing) */
+export interface ColorRGBA {
+    r?: number
+    g?: number
+    b?: number
+    a?: number
+}
+
 /** std_msgs ColorRGBA → THREE.Color + alpha. */
-export function rgba(color) {
+export function rgba(color: ColorRGBA | null | undefined): { color: THREE.Color; alpha: number } {
     return { color: new THREE.Color(color?.r ?? 1, color?.g ?? 1, color?.b ?? 1), alpha: color?.a ?? 1 }
 }
 
@@ -151,16 +201,16 @@ export function rgba(color) {
  * the robot. The first topic to report keeps it until it goes away. One per Scene3D.
  */
 export class RobotPose {
-    /** @type {THREE.Matrix4 | null} */
     matrix: THREE.Matrix4 | null = null
-    source = null
-    report(source, matrix) {
+    /** who reported it: a topic key, or the layer itself when it has no topic */
+    source: unknown = null
+    report(source: unknown, matrix: THREE.Matrix4) {
         if (this.source === null || this.source === source) {
             this.source = source
             this.matrix = matrix
         }
     }
-    forget(source) {
+    forget(source: unknown) {
         if (this.source === source) {
             this.source = null
             this.matrix = null

@@ -1,18 +1,28 @@
 // Data display: tables, trees, key/value readouts, stats, lists, logs, code, sparklines, an attitude indicator and a
 // timeline scrubber.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { cx } from "../cx"
-import { Icon } from "./icon"
-import { copyText } from "../hooks"
+import type {
+    HTMLAttributes,
+    Key,
+    KeyboardEvent as ReactKeyboardEvent,
+    MouseEvent as ReactMouseEvent,
+    PointerEvent as ReactPointerEvent,
+    ReactNode,
+    Ref,
+    SVGAttributes,
+} from "react"
+import { cx } from "../cx.ts"
+import { Icon } from "./icon.tsx"
+import { copyText } from "../hooks.ts"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
 /** Controlled when `value` is given, else internal state seeded from `initial`. */
-function useControllable(value, initial, onChange) {
+function useControllable<T>(value: T | undefined, initial: T, onChange?: (next: T) => void): [T, (next: T) => void] {
     const [inner, setInner] = useState(initial)
     const controlled = value !== undefined
     const current = controlled ? value : inner
-    const set = (next) => {
+    const set = (next: T) => {
         if (!controlled) {
             setInner(next)
         }
@@ -23,7 +33,7 @@ function useControllable(value, initial, onChange) {
 
 // ── Table ──
 
-const compareValues = (a, b) => {
+const compareValues = (a: unknown, b: unknown) => {
     if (a === b) {
         return 0
     }
@@ -39,19 +49,52 @@ const compareValues = (a, b) => {
     return String(a).localeCompare(String(b), undefined, { numeric: true })
 }
 
+/** A row's field by name (rows are the caller's records, of any shape). */
+const field = (row: unknown, key: string): unknown => (row as Record<string, unknown> | null | undefined)?.[key]
+
+export interface TableColumn<Row> {
+    /** the row field it shows (and its React key) */
+    key: string
+    label?: ReactNode
+    /** the cell (default: the field as text) */
+    render?: (row: Row, index: number) => ReactNode
+    /** sortable; a function sorts by it instead of by the value */
+    sort?: boolean | ((a: Row, b: Row) => number)
+    align?: "left" | "right" | "center"
+    width?: string | number
+    /** what to sort by (default: the field) */
+    value?: (row: Row) => unknown
+}
+
+export interface TableSort {
+    key: string
+    dir: "asc" | "desc"
+}
+
+export interface TableProps<Row> extends HTMLAttributes<HTMLDivElement> {
+    columns: TableColumn<Row>[]
+    rows: Row[]
+    /** a field name, or `(row, index) => key` (default: row.id, row.key, the index) */
+    rowKey?: string | ((row: Row, index: number) => Key)
+    sort?: TableSort | null
+    onSortChange?: (sort: TableSort | null) => void
+    defaultSort?: TableSort | null
+    onRowClick?: (row: Row, index: number) => void
+    /** the selected row's key */
+    selected?: Key | null
+    empty?: ReactNode
+    sticky?: boolean
+    compact?: boolean
+    maxHeight?: string | number
+    /** false: the rows arrive already sorted (by a backend); the headers still show and change `sort` */
+    sortRows?: boolean
+}
+
 /**
- * A sortable table.
- * @param {{
- *   columns: { key: string, label?: any, render?: (row: any, index: number) => any, sort?: boolean | ((a: any, b: any) => number),
- *     align?: "left" | "right" | "center", width?: string | number, value?: (row: any) => any }[],
- *   rows: any[], rowKey?: string | ((row: any, index: number) => any),
- *   sort?: { key: string, dir: "asc" | "desc" } | null, onSortChange?: (sort: any) => void, defaultSort?: any,
- *   onRowClick?: (row: any, index: number) => void, selected?: any, empty?: any, sticky?: boolean, compact?: boolean,
- *   maxHeight?: string | number, sortRows?: boolean, className?: string, style?: object,
- * }} props
- *   `sortRows: false`: the rows arrive already sorted (by a backend); the headers still show and change `sort`
+ * A sortable table. `sortRows: false`: the rows arrive already sorted (by a backend); the headers still show and change
+ * `sort`.
  */
-export function Table({
+export function Table<Row>({
     columns,
     rows = [],
     rowKey,
@@ -68,31 +111,7 @@ export function Table({
     className,
     style,
     ...rest
-}: {
-    columns: {
-        key: string
-        label?: any
-        render?: (row: any, index: number) => any
-        sort?: boolean | ((a: any, b: any) => number)
-        align?: "left" | "right" | "center"
-        width?: string | number
-        value?: (row: any) => any
-    }[]
-    rows: any[]
-    rowKey?: string | ((row: any, index: number) => any)
-    sort?: { key: string; dir: "asc" | "desc" } | null
-    onSortChange?: (sort: any) => void
-    defaultSort?: any
-    onRowClick?: (row: any, index: number) => void
-    selected?: any
-    empty?: any
-    sticky?: boolean
-    compact?: boolean
-    maxHeight?: string | number
-    sortRows?: boolean
-    className?: string
-    style?: object
-}) {
+}: TableProps<Row>) {
     const [currentSort, setSort] = useControllable(sort, defaultSort, onSortChange)
     const sorted = useMemo(() => {
         if (!currentSort || !sortRows) {
@@ -102,14 +121,19 @@ export function Table({
         if (!column) {
             return rows
         }
-        const read = column.value ?? ((row) => row?.[column.key])
-        const compare = typeof column.sort === "function" ? column.sort : (a, b) => compareValues(read(a), read(b))
+        const read = column.value ?? ((row: Row) => field(row, column.key))
+        const compare =
+            typeof column.sort === "function" ? column.sort : (a: Row, b: Row) => compareValues(read(a), read(b))
         const out = [...rows].sort(compare)
         return currentSort.dir === "desc" ? out.reverse() : out
     }, [rows, columns, currentSort?.key, currentSort?.dir, sortRows])
-    const keyOf = (row, index) =>
-        typeof rowKey === "function" ? rowKey(row, index) : rowKey ? row?.[rowKey] : (row?.id ?? row?.key ?? index)
-    const onHeader = (column) => {
+    const keyOf = (row: Row, index: number): Key =>
+        typeof rowKey === "function"
+            ? rowKey(row, index)
+            : rowKey
+              ? (field(row, rowKey) as Key)
+              : ((field(row, "id") ?? field(row, "key") ?? index) as Key)
+    const onHeader = (column: TableColumn<Row>) => {
         if (!column.sort) {
             return
         }
@@ -135,7 +159,7 @@ export function Table({
                                     className={cx(column.sort && "dr-table__sortable", active && "dr-table__sorted")}
                                     onClick={() => onHeader(column)}
                                     aria-sort={
-                                        active ? (currentSort.dir === "asc" ? "ascending" : "descending") : undefined
+                                        active ? (currentSort!.dir === "asc" ? "ascending" : "descending") : undefined
                                     }
                                 >
                                     <span>{column.label ?? column.key}</span>
@@ -143,7 +167,7 @@ export function Table({
                                         <Icon
                                             name={
                                                 active
-                                                    ? currentSort.dir === "asc"
+                                                    ? currentSort!.dir === "asc"
                                                         ? "chevron-up"
                                                         : "chevron-down"
                                                     : "sort"
@@ -180,7 +204,7 @@ export function Table({
                                         <td key={column.key} style={{ textAlign: column.align }}>
                                             {column.render
                                                 ? column.render(row, index)
-                                                : String(row?.[column.key] ?? "")}
+                                                : String(field(row, column.key) ?? "")}
                                         </td>
                                     ))}
                                 </tr>
@@ -195,16 +219,27 @@ export function Table({
 
 // ── Tree ──
 
-/**
- * A collapsible tree (TF frames, recording summaries, URDF links).
- * @param {{
- *   nodes: { id: string, label?: any, children?: any[], icon?: string, badge?: any }[],
- *   expanded?: string[], defaultExpanded?: string[] | "all", onExpandedChange?: (ids: string[]) => void,
- *   selected?: string | null, onSelect?: (id: string, node: any) => void,
- *   renderLabel?: (node: any) => any, className?: string, style?: object,
- * }} props
- */
-export function Tree({
+export interface TreeNode {
+    id: string
+    label?: ReactNode
+    children?: this[]
+    icon?: string
+    badge?: ReactNode
+}
+
+export interface TreeProps<Node extends TreeNode> extends Omit<HTMLAttributes<HTMLUListElement>, "onSelect"> {
+    nodes: Node[]
+    /** the open nodes' ids (controlled, with onExpandedChange) */
+    expanded?: string[]
+    defaultExpanded?: string[] | "all"
+    onExpandedChange?: (ids: string[]) => void
+    selected?: string | null
+    onSelect?: (id: string, node: Node) => void
+    renderLabel?: (node: Node) => ReactNode
+}
+
+/** A collapsible tree (TF frames, recording summaries, URDF links). */
+export function Tree<Node extends TreeNode>({
     nodes = [],
     expanded,
     defaultExpanded = [],
@@ -214,20 +249,10 @@ export function Tree({
     renderLabel,
     className,
     ...rest
-}: {
-    nodes: { id: string; label?: any; children?: any[]; icon?: string; badge?: any }[]
-    expanded?: string[]
-    defaultExpanded?: string[] | "all"
-    onExpandedChange?: (ids: string[]) => void
-    selected?: string | null
-    onSelect?: (id: string, node: any) => void
-    renderLabel?: (node: any) => any
-    className?: string
-    style?: object
-}) {
+}: TreeProps<Node>) {
     const allIds = useMemo(() => {
-        const ids = []
-        const walk = (list) =>
+        const ids: string[] = []
+        const walk = (list: Node[]) =>
             list.forEach((node) => {
                 if (node.children?.length) {
                     ids.push(node.id)
@@ -243,8 +268,8 @@ export function Tree({
         onExpandedChange,
     )
     const openSet = new Set(open)
-    const toggle = (id) => setOpen(openSet.has(id) ? open.filter((other) => other !== id) : [...open, id])
-    const renderNodes = (list, depth) =>
+    const toggle = (id: string) => setOpen(openSet.has(id) ? open.filter((other) => other !== id) : [...open, id])
+    const renderNodes = (list: Node[], depth: number): ReactNode[] =>
         list.map((node) => {
             const hasChildren = !!node.children?.length
             const isOpen = openSet.has(node.id)
@@ -277,7 +302,7 @@ export function Tree({
                             <span className="dr-tree__badge">{node.badge}</span>
                         ) : null}
                     </div>
-                    {hasChildren && isOpen ? <ul role="group">{renderNodes(node.children, depth + 1)}</ul> : null}
+                    {hasChildren && isOpen ? <ul role="group">{renderNodes(node.children!, depth + 1)}</ul> : null}
                 </li>
             )
         })
@@ -290,11 +315,14 @@ export function Tree({
 
 // ── key / value ──
 
-/**
- * One label / value row.
- * @param {Record<string, any>} props
- */
-export function KeyValueRow({ label, children, mono = true, className, ...rest }: Record<string, any>) {
+export interface KeyValueRowProps extends HTMLAttributes<HTMLDivElement> {
+    label?: ReactNode
+    /** the value in the monospace face (default true) */
+    mono?: boolean
+}
+
+/** One label / value row (`children` is the value). */
+export function KeyValueRow({ label, children, mono = true, className, ...rest }: KeyValueRowProps) {
     return (
         <div className={cx("dr-kv__row", className)} {...rest}>
             <span className="dr-kv__key">{label}</span>
@@ -303,22 +331,14 @@ export function KeyValueRow({ label, children, mono = true, className, ...rest }
     )
 }
 
-/**
- * Label / value readout rows.
- * @param {{ items?: [any, any][], children?: any, mono?: boolean, className?: string }} props
- */
-export function KeyValue({
-    items,
-    children,
-    mono = true,
-    className,
-    ...rest
-}: {
-    items?: [any, any][]
-    children?: any
+export interface KeyValueProps extends HTMLAttributes<HTMLDivElement> {
+    /** [label, value] rows */
+    items?: (readonly [ReactNode, ReactNode])[]
     mono?: boolean
-    className?: string
-}) {
+}
+
+/** Label / value readout rows. */
+export function KeyValue({ items, children, mono = true, className, ...rest }: KeyValueProps) {
     return (
         <div className={cx("dr-kv", className)} {...rest}>
             {items?.map(([label, value], index) => (
@@ -331,29 +351,18 @@ export function KeyValue({
     )
 }
 
-/**
- * A big number: label, value, unit, a change, a tone.
- * @param {{ label: any, value: any, unit?: any, delta?: number | string, tone?: "ok" | "warn" | "danger" | "info",
- *   hint?: any, className?: string }} props
- */
-export function Stat({
-    label,
-    value,
-    unit,
-    delta,
-    tone,
-    hint,
-    className,
-    ...rest
-}: {
-    label: any
-    value: any
-    unit?: any
+export interface StatProps extends HTMLAttributes<HTMLDivElement> {
+    label: ReactNode
+    value: ReactNode
+    unit?: ReactNode
+    /** a change: a number shows +/- colored, a string as is */
     delta?: number | string
     tone?: "ok" | "warn" | "danger" | "info"
-    hint?: any
-    className?: string
-}) {
+    hint?: ReactNode
+}
+
+/** A big number: label, value, unit, a change, a tone. */
+export function Stat({ label, value, unit, delta, tone, hint, className, ...rest }: StatProps) {
     const deltaTone = typeof delta === "number" ? (delta > 0 ? "up" : delta < 0 ? "down" : "flat") : "flat"
     return (
         <div className={cx("dr-stat", tone && `dr-stat--${tone}`, className)} {...rest}>
@@ -374,11 +383,13 @@ export function Stat({
 
 // ── lists ──
 
-/**
- * A vertical list of ListRows.
- * @param {Record<string, any>} props
- */
-export function List({ children, className, divided = true, ...rest }: Record<string, any>) {
+export interface ListProps extends HTMLAttributes<HTMLDivElement> {
+    /** lines between rows (default true) */
+    divided?: boolean
+}
+
+/** A vertical list of ListRows. */
+export function List({ children, className, divided = true, ...rest }: ListProps) {
     return (
         <div className={cx("dr-list", divided && "dr-list--divided", className)} role="list" {...rest}>
             {children}
@@ -386,12 +397,23 @@ export function List({ children, className, divided = true, ...rest }: Record<st
     )
 }
 
-/**
- * A list row: icon, title, subtitle, meta on the right, actions.
- * @param {{ icon?: string | any, title: any, subtitle?: any, meta?: any, actions?: any, selected?: boolean,
- *   onClick?: (event: any) => void, handle?: boolean | object, disabled?: boolean, className?: string }} props
- *   `handle`: show a drag grip (an object = props for it, e.g. from useDrag)
- */
+export interface ListRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "title" | "onClick"> {
+    /** an Icon name, or an element */
+    icon?: ReactNode
+    title: ReactNode
+    subtitle?: ReactNode
+    /** on the right */
+    meta?: ReactNode
+    actions?: ReactNode
+    selected?: boolean
+    /** a click, or Enter / Space on the focused row */
+    onClick?: (event: ReactMouseEvent<HTMLDivElement> | ReactKeyboardEvent<HTMLDivElement>) => void
+    /** show a drag grip (an object = props for it, e.g. from useDrag) */
+    handle?: boolean | HTMLAttributes<HTMLSpanElement>
+    disabled?: boolean
+}
+
+/** A list row: icon, title, subtitle, meta on the right, actions. `handle`: a drag grip. */
 export function ListRow({
     icon,
     title,
@@ -404,18 +426,7 @@ export function ListRow({
     disabled,
     className,
     ...rest
-}: {
-    icon?: string | any
-    title: any
-    subtitle?: any
-    meta?: any
-    actions?: any
-    selected?: boolean
-    onClick?: (event: any) => void
-    handle?: boolean | object
-    disabled?: boolean
-    className?: string
-}) {
+}: ListRowProps) {
     return (
         <div
             className={cx(
@@ -468,7 +479,10 @@ export function ListRow({
 
 // ── LogView ──
 
-const formatTs = (ts) => {
+/** A log line's time: epoch ms, a date string or a Date. */
+export type LogTime = number | string | Date
+
+const formatTs = (ts: LogTime | null | undefined) => {
     if (ts === undefined || ts === null) {
         return ""
     }
@@ -476,12 +490,24 @@ const formatTs = (ts) => {
     return Number.isNaN(date.getTime?.()) ? String(ts) : date.toTimeString().slice(0, 8)
 }
 
-/**
- * A console: follows the tail (auto scroll) until you scroll up, then offers "jump to end".
- * @param {{ lines: (string | { text: string, level?: "debug" | "info" | "warn" | "error", ts?: any })[],
- *   filter?: string, maxLines?: number, follow?: boolean, height?: string | number, showTime?: boolean,
- *   wrap?: boolean, className?: string, style?: object }} props
- */
+export interface LogLine {
+    text: string
+    level?: "debug" | "info" | "warn" | "error"
+    ts?: LogTime
+}
+
+export interface LogViewProps extends HTMLAttributes<HTMLDivElement> {
+    lines: (string | LogLine)[]
+    /** shows only lines containing it (case-insensitive) */
+    filter?: string
+    maxLines?: number
+    follow?: boolean
+    height?: string | number
+    showTime?: boolean
+    wrap?: boolean
+}
+
+/** A console: follows the tail (auto scroll) until you scroll up, then offers "jump to end". */
 export function LogView({
     lines = [],
     filter = "",
@@ -493,22 +519,12 @@ export function LogView({
     className,
     style,
     ...rest
-}: {
-    lines: (string | { text: string; level?: "debug" | "info" | "warn" | "error"; ts?: any })[]
-    filter?: string
-    maxLines?: number
-    follow?: boolean
-    height?: string | number
-    showTime?: boolean
-    wrap?: boolean
-    className?: string
-    style?: object
-}) {
-    const box = useRef(null)
+}: LogViewProps) {
+    const box = useRef<HTMLDivElement>(null)
     const [atEnd, setAtEnd] = useState(true)
     const shown = useMemo(() => {
         const needle = filter.trim().toLowerCase()
-        const normalized = lines.map((line) => (typeof line === "string" ? { text: line } : line))
+        const normalized = lines.map((line): LogLine => (typeof line === "string" ? { text: line } : line))
         const filtered = needle ? normalized.filter((line) => line.text.toLowerCase().includes(needle)) : normalized
         return filtered.length > maxLines ? filtered.slice(filtered.length - maxLines) : filtered
     }, [lines, filter, maxLines])
@@ -561,7 +577,7 @@ export function LogView({
 
 // ── CodeBlock ──
 
-const KEYWORDS = {
+const KEYWORDS: Record<string, string> = {
     js: "const let var function return if else for while of in new class extends import export from await async true false null undefined this throw try catch",
     py: "def return if elif else for while in import from as class with try except finally raise lambda True False None and or not is pass yield async await self",
     sh: "if then else fi for do done case esac function export local echo cd sudo",
@@ -572,8 +588,10 @@ KEYWORDS.python = KEYWORDS.py
 KEYWORDS.bash = KEYWORDS.sh
 KEYWORDS.javascript = KEYWORDS.js
 
+export type TokenKind = "kw" | "str" | "num" | "com" | "func" | "plain"
+
 /** Splits one line of code into [kind, text] tokens (kw, str, num, com, func, plain). */
-export function tokenizeLine(line, language = "js") {
+export function tokenizeLine(line: string, language = "js"): [TokenKind, string][] {
     const keywords = new Set((KEYWORDS[language] ?? KEYWORDS.js).split(" "))
     const comment =
         language === "py" || language === "python" || language === "sh" || language === "bash"
@@ -585,7 +603,7 @@ export function tokenizeLine(line, language = "js") {
         `(${comment})|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`)|(\\b\\d+(?:\\.\\d+)?\\b)|([A-Za-z_$][\\w$]*)(?=\\s*\\()|([A-Za-z_$][\\w$]*)`,
         "g",
     )
-    const tokens = []
+    const tokens: [TokenKind, string][] = []
     let last = 0
     for (const match of line.matchAll(pattern)) {
         if (match.index > last) {
@@ -610,11 +628,19 @@ export function tokenizeLine(line, language = "js") {
     return tokens
 }
 
-/**
- * Code with light highlighting (the theme's --code-* colors), line numbers and a copy button.
- * @param {{ code: string, language?: string, lineNumbers?: boolean, copy?: boolean, title?: any,
- *   maxHeight?: string | number, className?: string, style?: object }} props
- */
+export interface CodeBlockProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+    code: string
+    /** js, ts, py, sh, json, … (default js) */
+    language?: string
+    lineNumbers?: boolean
+    /** a copy button (default true) */
+    copy?: boolean
+    /** the header's text (default: the language) */
+    title?: ReactNode
+    maxHeight?: string | number
+}
+
+/** Code with light highlighting (the theme's --code-* colors), line numbers and a copy button. */
 export function CodeBlock({
     code = "",
     language = "js",
@@ -625,16 +651,7 @@ export function CodeBlock({
     className,
     style,
     ...rest
-}: {
-    code: string
-    language?: string
-    lineNumbers?: boolean
-    copy?: boolean
-    title?: any
-    maxHeight?: string | number
-    className?: string
-    style?: object
-}) {
+}: CodeBlockProps) {
     const [copied, setCopied] = useState(false)
     const lines = String(code).replace(/\n$/, "").split("\n")
     const onCopy = async () => {
@@ -683,11 +700,19 @@ export function CodeBlock({
 
 // ── Sparkline ──
 
+export interface AttitudeIndicatorProps extends HTMLAttributes<HTMLDivElement> {
+    roll?: number | null
+    pitch?: number | null
+    yaw?: number | null
+    /** px */
+    height?: number
+    /** px of shift per degree of pitch (default 1.4) */
+    pitchScale?: number
+}
+
 /**
  * An attitude indicator (artificial horizon): the horizon rolls and shifts with the body's roll and pitch, yaw is
  * printed below. Angles in radians; null shows a level, dimmed horizon.
- * @param {{ roll?: number | null, pitch?: number | null, yaw?: number | null, height?: number,
- *   pitchScale?: number, className?: string }} props `pitchScale`: px of shift per degree of pitch (default 1.4)
  */
 export function AttitudeIndicator({
     roll = null,
@@ -697,15 +722,8 @@ export function AttitudeIndicator({
     pitchScale = 1.4,
     className,
     ...rest
-}: {
-    roll?: number | null
-    pitch?: number | null
-    yaw?: number | null
-    height?: number
-    pitchScale?: number
-    className?: string
-}) {
-    const deg = (radians) => (radians * 180) / Math.PI
+}: AttitudeIndicatorProps) {
+    const deg = (radians: number) => (radians * 180) / Math.PI
     const known = roll !== null && pitch !== null
     const shift = known ? Math.max(-height / 2, Math.min(height / 2, deg(pitch) * pitchScale)) : 0
     return (
@@ -730,12 +748,27 @@ export function AttitudeIndicator({
     )
 }
 
-/**
- * A tiny line chart (rates, latency, battery).
- * @param {{ values: number[], width?: number, height?: number, color?: string, fill?: boolean, min?: number,
- *   max?: number, strokeWidth?: number, className?: string, title?: string }} props
- *   `color`: a CSS color, default var(--primary)
- */
+export interface SparklineProps extends Omit<
+    SVGAttributes<SVGSVGElement>,
+    "values" | "width" | "height" | "color" | "fill" | "min" | "max" | "strokeWidth"
+> {
+    values: number[]
+    /** px */
+    width?: number
+    /** px */
+    height?: number
+    /** a CSS color, default var(--primary) */
+    color?: string
+    /** shade under the line (default true) */
+    fill?: boolean
+    min?: number
+    max?: number
+    strokeWidth?: number
+    /** an accessible name (an untitled sparkline is aria-hidden) */
+    title?: string
+}
+
+/** A tiny line chart (rates, latency, battery). `color`: a CSS color, default var(--primary). */
 export function Sparkline({
     values = [],
     width = 120,
@@ -748,24 +781,13 @@ export function Sparkline({
     className,
     title,
     ...rest
-}: {
-    values: number[]
-    width?: number
-    height?: number
-    color?: string
-    fill?: boolean
-    min?: number
-    max?: number
-    strokeWidth?: number
-    className?: string
-    title?: string
-}) {
+}: SparklineProps) {
     const finite = values.filter(Number.isFinite)
     const low = min ?? Math.min(...finite, 0)
     const high = max ?? Math.max(...finite, low + 1e-9)
     const span = high - low || 1
     const step = values.length > 1 ? width / (values.length - 1) : width
-    const points = values.map((value, index) => [
+    const points = values.map((value, index): [number, number] => [
         index * step,
         height - 1 - (((Number.isFinite(value) ? value : low) - low) / span) * (height - 2),
     ])
@@ -788,7 +810,7 @@ export function Sparkline({
             {points.length > 1 ? (
                 <path d={line} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" />
             ) : null}
-            {points.length ? <circle cx={points.at(-1)[0]} cy={points.at(-1)[1]} r={2} fill="currentColor" /> : null}
+            {points.length ? <circle cx={points.at(-1)![0]} cy={points.at(-1)![1]} r={2} fill="currentColor" /> : null}
         </svg>
     )
 }
@@ -796,7 +818,7 @@ export function Sparkline({
 // ── Timeline ──
 
 /** Seconds → "m:ss" (or "h:mm:ss"). */
-export function formatDuration(seconds) {
+export function formatDuration(seconds: number): string {
     const total = Math.max(0, Math.floor(seconds))
     const hours = Math.floor(total / 3600)
     const minutes = Math.floor((total % 3600) / 60)
@@ -804,12 +826,30 @@ export function formatDuration(seconds) {
     return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${secs}` : `${minutes}:${secs}`
 }
 
+export interface TimelineMarker {
+    t: number
+    label?: string
+    tone?: "ok" | "warn" | "danger" | "info"
+}
+
+export interface TimelineProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {
+    start?: number
+    end: number
+    value: number
+    onChange?: (t: number) => void
+    playing?: boolean
+    /** adds a play/pause button (Space too) */
+    onPlayPause?: (playing: boolean) => void
+    markers?: TimelineMarker[]
+    format?: (t: number) => string
+    /** snaps to multiples of it; the arrow keys' nudge (default 1% of the span) */
+    step?: number
+    disabled?: boolean
+}
+
 /**
- * A recording player's scrubber: play/pause, the position, markers.
- * @param {{ start?: number, end: number, value: number, onChange?: (t: number) => void, playing?: boolean,
- *   onPlayPause?: (playing: boolean) => void, markers?: { t: number, label?: string, tone?: "ok" | "warn" | "danger" | "info" }[],
- *   format?: (t: number) => string, step?: number, disabled?: boolean, className?: string, style?: object }} props
- *   times in seconds (any unit works with your own `format`)
+ * A recording player's scrubber: play/pause, the position, markers. Times in seconds (any unit works with your own
+ * `format`).
  */
 export function Timeline({
     start = 0,
@@ -825,42 +865,29 @@ export function Timeline({
     className,
     style,
     ...rest
-}: {
-    start?: number
-    end: number
-    value: number
-    onChange?: (t: number) => void
-    playing?: boolean
-    onPlayPause?: (playing: boolean) => void
-    markers?: { t: number; label?: string; tone?: "ok" | "warn" | "danger" | "info" }[]
-    format?: (t: number) => string
-    step?: number
-    disabled?: boolean
-    className?: string
-    style?: object
-}) {
-    const track = useRef(null)
-    const show = format ?? ((t) => formatDuration(t - start))
+}: TimelineProps) {
+    const track = useRef<HTMLDivElement>(null)
+    const show = format ?? ((t: number) => formatDuration(t - start))
     const span = Math.max(1e-9, end - start)
     const fraction = Math.min(1, Math.max(0, (value - start) / span))
-    const timeAt = (clientX) => {
-        const rect = track.current.getBoundingClientRect()
+    const timeAt = (clientX: number) => {
+        const rect = track.current!.getBoundingClientRect()
         const t = start + Math.min(1, Math.max(0, (clientX - rect.left) / Math.max(1, rect.width))) * span
         return step ? Math.round(t / step) * step : t
     }
-    const onPointerDown = (event) => {
+    const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (disabled || !onChange) {
             return
         }
         event.currentTarget.setPointerCapture?.(event.pointerId)
         onChange(timeAt(event.clientX))
     }
-    const onPointerMove = (event) => {
+    const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (!disabled && onChange && event.currentTarget.hasPointerCapture?.(event.pointerId)) {
             onChange(timeAt(event.clientX))
         }
     }
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
         if (disabled || !onChange) {
             return
         }
@@ -925,12 +952,24 @@ export function Timeline({
     )
 }
 
+export interface MediaFrameProps extends HTMLAttributes<HTMLDivElement> {
+    /** plays in a muted inline <video> (null: a video with nothing yet) */
+    stream?: MediaStream | null
+    /** an image, when there's no `stream` */
+    src?: string | null
+    alt?: string
+    fit?: "contain" | "cover"
+    height?: string | number
+    /** covers it until there is something to show */
+    placeholder?: ReactNode
+    /** the <video> (with `stream`) or the <img> */
+    ref?: Ref<HTMLVideoElement | HTMLImageElement>
+}
+
 /**
  * A video stream or an image in a themed frame. `stream` (a MediaStream, e.g. a zenoh-gateway camera track) plays in a
  * muted inline <video>; without `stream`, `src` shows as an image. `placeholder` covers it until there is something to
  * show. `ref` reaches the <video>/<img> (for captureFrame).
- * @param {{ stream?: MediaStream | null, src?: string | null, alt?: string, fit?: "contain" | "cover",
- *   height?: string | number, placeholder?: any, ref?: any, className?: string, style?: object }} props
  */
 export function MediaFrame({
     stream,
@@ -943,28 +982,19 @@ export function MediaFrame({
     className,
     style,
     ...rest
-}: {
-    stream?: MediaStream | null
-    src?: string | null
-    alt?: string
-    fit?: "contain" | "cover"
-    height?: string | number
-    placeholder?: any
-    ref?: any
-    className?: string
-    style?: object
-}) {
-    const element = useRef(null)
+}: MediaFrameProps) {
+    const element = useRef<HTMLVideoElement | HTMLImageElement | null>(null)
     const [playing, setPlaying] = useState(false)
     const isVideo = stream !== undefined
     useEffect(() => {
-        const video = element.current
+        // with a stream the element is the <video>
+        const video = element.current as HTMLVideoElement | null
         if (isVideo && video && video.srcObject !== (stream ?? null)) {
             video.srcObject = stream ?? null
             setPlaying(false)
         }
     }, [isVideo, stream])
-    const setRef = (node) => {
+    const setRef = (node: HTMLVideoElement | HTMLImageElement | null) => {
         element.current = node
         if (typeof ref === "function") {
             ref(node)
@@ -999,7 +1029,7 @@ export function MediaFrame({
 }
 
 /** The frame a <video> is showing, as a data URL (null before its first frame). */
-export function captureFrame(video, type = "image/png") {
+export function captureFrame(video: HTMLVideoElement | null | undefined, type = "image/png"): string | null {
     if (!video?.videoWidth) {
         return null
     }
@@ -1007,6 +1037,6 @@ export function captureFrame(video, type = "image/png") {
         width: video.videoWidth,
         height: video.videoHeight,
     })
-    canvas.getContext("2d").drawImage(video, 0, 0)
+    canvas.getContext("2d")!.drawImage(video, 0, 0)
     return canvas.toDataURL(type)
 }

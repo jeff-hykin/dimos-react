@@ -1,11 +1,13 @@
 // Touch and pointer input: a virtual joystick, a stick readout, a D-pad, a file drop zone, a color swatch and HUD key
 // hints.
 import { useEffect, useRef, useState } from "react"
-import { cx } from "../cx"
-import { Icon } from "./icon"
+import type { CSSProperties, HTMLAttributes, PointerEvent as ReactPointerEvent, ReactNode, SVGAttributes } from "react"
+import { cx } from "../cx.ts"
+import { Icon } from "./icon.tsx"
+import type { StickValue } from "./thumbstick.tsx"
 
 /** Pointer offset from a circle's center → stick value in -1..1 (y up), clamped to the unit circle. */
-export function stickValue(dx, dy, radius) {
+export function stickValue(dx: number, dy: number, radius: number): StickValue {
     let x = dx / radius
     let y = -dy / radius
     const length = Math.hypot(x, y)
@@ -16,11 +18,18 @@ export function stickValue(dx, dy, radius) {
     return { x, y }
 }
 
-/**
- * A virtual joystick: `onChange({ x, y })` (-1..1, y up) on every move while held, `{0, 0}` on release.
- * @param {{ onChange?: (value: { x: number, y: number }) => void, onStart?: () => void, onEnd?: () => void,
- *   size?: number, disabled?: boolean, label?: any, className?: string, style?: object }} props
- */
+export interface JoystickProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {
+    onChange?: (value: StickValue) => void
+    onStart?: () => void
+    onEnd?: () => void
+    size?: number
+    disabled?: boolean
+    label?: ReactNode
+    className?: string
+    style?: CSSProperties
+}
+
+/** A virtual joystick: `onChange({ x, y })` (-1..1, y up) on every move while held, `{0, 0}` on release. */
 export function Joystick({
     onChange,
     onStart,
@@ -31,21 +40,12 @@ export function Joystick({
     className,
     style,
     ...rest
-}: {
-    onChange?: (value: { x: number; y: number }) => void
-    onStart?: () => void
-    onEnd?: () => void
-    size?: number
-    disabled?: boolean
-    label?: any
-    className?: string
-    style?: object
-}) {
-    const base = useRef(null)
+}: JoystickProps) {
+    const base = useRef<HTMLDivElement>(null)
     const [knob, setKnob] = useState({ x: 0, y: 0, active: false })
     const radius = size / 2 - size * 0.18
-    const update = (event) => {
-        const rect = base.current.getBoundingClientRect()
+    const update = (event: ReactPointerEvent<HTMLDivElement>) => {
+        const rect = base.current!.getBoundingClientRect()
         const value = stickValue(
             event.clientX - (rect.left + rect.width / 2),
             event.clientY - (rect.top + rect.height / 2),
@@ -104,21 +104,18 @@ export function Joystick({
     )
 }
 
+export interface StickIndicatorProps extends SVGAttributes<SVGSVGElement> {
+    value: StickValue | null
+    size?: number
+    label?: string
+    className?: string
+}
+
 /**
  * A small read-only stick: a ring with a dot where a stick is (x, y in -1..1, y up), e.g. a gamepad's or a policy's
  * sticks. `value` null shows it idle.
- * @param {{ value: { x: number, y: number } | null, size?: number, label?: string, className?: string } & Record<string, any>} props
  */
-export function StickIndicator({
-    value,
-    size = 22,
-    label = "stick",
-    className,
-    ...rest
-}: { value: { x: number; y: number } | null; size?: number; label?: string; className?: string } & Record<
-    string,
-    any
->) {
+export function StickIndicator({ value, size = 22, label = "stick", className, ...rest }: StickIndicatorProps) {
     const x = value?.x ?? 0
     const y = value?.y ?? 0
     return (
@@ -138,7 +135,9 @@ export function StickIndicator({
     )
 }
 
-const DIRECTIONS = [
+export type DPadDirection = "up" | "down" | "left" | "right" | "center"
+
+const DIRECTIONS: [DPadDirection, string | null][] = [
     ["up", "arrow-up"],
     ["left", "arrow-left"],
     ["center", null],
@@ -146,12 +145,22 @@ const DIRECTIONS = [
     ["down", "arrow-down"],
 ]
 
+export interface DPadProps extends HTMLAttributes<HTMLDivElement> {
+    onPress?: (dir: DPadDirection) => void
+    onRelease?: (dir: DPadDirection) => void
+    size?: number
+    /** content of the middle button (omit for none) */
+    center?: ReactNode
+    disabled?: boolean
+    /** directions to show as pressed (e.g. from keys) */
+    held?: string[]
+    className?: string
+    style?: CSSProperties
+}
+
 /**
  * A D-pad: `onPress(dir)` when a direction goes down, `onRelease(dir)` when it comes up ("up" | "down" | "left" |
  * "right" | "center"). Holds while the pointer is down.
- * @param {{ onPress?: (dir: string) => void, onRelease?: (dir: string) => void, size?: number, center?: any,
- *   disabled?: boolean, held?: string[], className?: string, style?: object }} props
- *   `center`: content of the middle button (omit for none); `held`: directions to show as pressed (e.g. from keys)
  */
 export function DPad({
     onPress,
@@ -163,18 +172,9 @@ export function DPad({
     className,
     style,
     ...rest
-}: {
-    onPress?: (dir: string) => void
-    onRelease?: (dir: string) => void
-    size?: number
-    center?: any
-    disabled?: boolean
-    held?: string[]
-    className?: string
-    style?: object
-}) {
-    const [down, setDown] = useState(null)
-    const press = (dir, event) => {
+}: DPadProps) {
+    const [down, setDown] = useState<DPadDirection | null>(null)
+    const press = (dir: DPadDirection, event: ReactPointerEvent<HTMLButtonElement>) => {
         if (disabled) {
             return
         }
@@ -182,7 +182,7 @@ export function DPad({
         setDown(dir)
         onPress?.(dir)
     }
-    const release = (dir) => {
+    const release = (dir: DPadDirection) => {
         if (down === dir) {
             setDown(null)
             onRelease?.(dir)
@@ -221,11 +221,20 @@ export function DPad({
     )
 }
 
-/**
- * A drop zone that also opens the file picker on click.
- * @param {{ onFiles: (files: File[]) => void, accept?: string, multiple?: boolean, disabled?: boolean, title?: any,
- *   hint?: any, icon?: string, children?: any, className?: string, style?: object }} props
- */
+export interface FileDropProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+    onFiles: (files: File[]) => void
+    accept?: string
+    multiple?: boolean
+    disabled?: boolean
+    title?: ReactNode
+    hint?: ReactNode
+    icon?: string
+    children?: ReactNode
+    className?: string
+    style?: CSSProperties
+}
+
+/** A drop zone that also opens the file picker on click. */
 export function FileDrop({
     onFiles,
     accept,
@@ -238,21 +247,10 @@ export function FileDrop({
     className,
     style,
     ...rest
-}: {
-    onFiles: (files: File[]) => void
-    accept?: string
-    multiple?: boolean
-    disabled?: boolean
-    title?: any
-    hint?: any
-    icon?: string
-    children?: any
-    className?: string
-    style?: object
-}) {
-    const input = useRef(null)
+}: FileDropProps) {
+    const input = useRef<HTMLInputElement>(null)
     const [over, setOver] = useState(false)
-    const accepts = (file) => {
+    const accepts = (file: File) => {
         if (!accept) {
             return true
         }
@@ -267,7 +265,7 @@ export function FileDrop({
                       : file.type === rule,
             )
     }
-    const take = (list) => {
+    const take = (list: FileList | null | undefined) => {
         const files = [...(list ?? [])].filter(accepts)
         if (files.length) {
             onFiles?.(multiple ? files : files.slice(0, 1))
@@ -329,11 +327,16 @@ export function FileDrop({
     )
 }
 
-/**
- * A color picker swatch (the color is user data: a layer's color, a path's color), with optional presets.
- * @param {{ value: string, onChange?: (color: string) => void, presets?: string[], disabled?: boolean,
- *   label?: string, className?: string }} props
- */
+export interface ColorSwatchProps extends Omit<HTMLAttributes<HTMLSpanElement>, "onChange"> {
+    value: string
+    onChange?: (color: string) => void
+    presets?: string[]
+    disabled?: boolean
+    label?: string
+    className?: string
+}
+
+/** A color picker swatch (the color is user data: a layer's color, a path's color), with optional presets. */
 export function ColorSwatch({
     value,
     onChange,
@@ -342,14 +345,7 @@ export function ColorSwatch({
     label = "Color",
     className,
     ...rest
-}: {
-    value: string
-    onChange?: (color: string) => void
-    presets?: string[]
-    disabled?: boolean
-    label?: string
-    className?: string
-}) {
+}: ColorSwatchProps) {
     return (
         <span className={cx("dr-swatch", className)} {...rest}>
             <label className={cx("dr-swatch__pick", disabled && "dr-swatch__pick--disabled")} title={value}>
@@ -380,20 +376,15 @@ export function ColorSwatch({
     )
 }
 
-/**
- * Key hints for a HUD: `[[["W", "A", "S", "D"], "drive"], [["Space"], "stop"]]` (a string key list works too: "W A S D").
- * @param {{ hints: [string | string[], any][], vertical?: boolean, className?: string }} props
- */
-export function KeyHints({
-    hints = [],
-    vertical = false,
-    className,
-    ...rest
-}: {
-    hints: [string | string[], any][]
+export interface KeyHintsProps extends HTMLAttributes<HTMLDivElement> {
+    /** [keys, label] pairs; keys is a list or a space-separated string */
+    hints?: [string | string[], ReactNode][]
     vertical?: boolean
     className?: string
-}) {
+}
+
+/** Key hints for a HUD: `[[["W", "A", "S", "D"], "drive"], [["Space"], "stop"]]` (a string key list works too: "W A S D"). */
+export function KeyHints({ hints = [], vertical = false, className, ...rest }: KeyHintsProps) {
     return (
         <div className={cx("dr-keyhints", vertical && "dr-keyhints--vertical", className)} {...rest}>
             {hints.map(([keys, label], index) => (
@@ -411,7 +402,11 @@ export function KeyHints({
 }
 
 /** Keeps calling `onTick(value)` at `hz` while `value` is non-zero (a joystick held still still drives). */
-export function useRepeatWhileHeld(value, onTick, hz = 10) {
+export function useRepeatWhileHeld(
+    value: StickValue | null | undefined,
+    onTick: (value: StickValue) => void,
+    hz: number = 10,
+): void {
     const latest = useRef(onTick)
     latest.current = onTick
     const active = value && (value.x || value.y)

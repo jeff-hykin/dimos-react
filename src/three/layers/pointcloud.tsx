@@ -3,11 +3,11 @@
 // go straight into preallocated GPU buffers (a ring when accumulating) and are colored in the shader, so a new scan
 // costs one buffer upload and nothing is allocated per frame.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { headerFrameId } from "../../lcm"
-import { decodeMessage } from "../../data"
-import { applyLook, makePointMaterial } from "../point_material"
-import { rendering, resolveLook, splatFallback } from "../rendering"
+import { useStore } from "../store.ts"
+import { headerFrameId } from "../../lcm.ts"
+import { decodeMessage } from "../../data.ts"
+import { applyLook, makePointMaterial } from "../point_material.ts"
+import { rendering, resolveLook, splatFallback } from "../rendering.ts"
 import {
     CLOUD_PRESETS,
     cloudQualities,
@@ -17,19 +17,51 @@ import {
     formatCount,
     setCloudQuality,
     setCloudRate,
-} from "../cloud_quality"
-import { placeLayer, registerLayer } from "./registry"
-import { Field, Select } from "../../components/controls"
-import { PointLookEditor } from "../look_editor"
+} from "../cloud_quality.ts"
+import type { CloudQuality } from "../cloud_quality.ts"
+import { placeLayer, registerLayer } from "./registry.ts"
+import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
+import { Field, Select } from "../../components/controls.tsx"
+import type { SelectProps } from "../../components/controls.tsx"
+import { PointLookEditor } from "../look_editor.tsx"
+import type { EditablePointLook } from "../look_editor.tsx"
+import type { Message } from "../../data.ts"
+import type { Store } from "../store.ts"
+import type { FrameInfo } from "../viewer.ts"
 
 /**
- * @typedef {{ look: import("../point_material").PointLook & { style: string }, mode: "latest" | "accumulate",
- *   windowSeconds: number, maxPoints: number, maxHz?: number, quality?: number, frame?: string }} CloudSettings
- *   "latest": only the newest scan, moved by TF every frame; "accumulate": scans stay where they were seen;
- *   `maxHz` / `quality` pin the subscription (else this viewer's preset); `frame` overrides the data's frame_id
+ * "latest": only the newest scan, moved by TF every frame; "accumulate": scans stay where they were seen;
+ * `maxHz` / `quality` pin the subscription (else this viewer's preset); `frame` overrides the data's frame_id
  */
+export interface CloudSettings {
+    look: EditablePointLook
+    mode: "latest" | "accumulate"
+    windowSeconds: number
+    maxPoints: number
+    maxHz?: number
+    quality?: number
+    frame?: string
+}
 
-export const CLOUD_DEFAULTS = {
+/** A cloud's points: xyz triples (in `frame`) and optional 0..255 intensity. */
+export interface CloudPoints {
+    positions: Float32Array
+    intensity?: ArrayLike<number>
+    frame?: string
+}
+
+/** A decoded sensor_msgs.PointCloud2 (the fields this reads). */
+export interface PointCloud2 {
+    header?: { frame_id?: string }
+    fields?: { name: string; offset: number; datatype: number }[]
+    width?: number
+    height?: number
+    point_step?: number
+    is_bigendian?: boolean
+    data?: Uint8Array
+}
+
+export const CLOUD_DEFAULTS: CloudSettings = {
     look: {
         style: "default",
         size: 0.04,
@@ -47,7 +79,8 @@ export const CLOUD_DEFAULTS = {
 }
 
 /** A map-like cloud by name (drawn with bigger points). */
-export const isMapTopic = (topic) => /map|global|voxel|terrain|costmap/i.test(topic?.name ?? "")
+export const isMapTopic = (topic: Topic | null | undefined): boolean =>
+    /map|global|voxel|terrain|costmap/i.test(topic?.name ?? "")
 
 const SPLAT_BUDGET = 3_000_000
 /** How often a topic cloud's frame_id is re-read from one raw message (the encoding's output carries no header). */
@@ -57,7 +90,7 @@ const FRAME_RECHECK_MS = 30_000
  * sensor_msgs.PointCloud2 (decoded) → `{ positions: Float32Array, intensity?: Uint8Array, frame }`: reads the x/y/z
  * float32 fields (and intensity, scaled to 0..255) at their offsets; NaN points are skipped.
  */
-export function pointCloud2ToPositions(cloud) {
+export function pointCloud2ToPositions(cloud: PointCloud2): CloudPoints & { frame: string } {
     const fields = Object.fromEntries((cloud.fields ?? []).map((field) => [field.name, field]))
     const step = cloud.point_step
     const count = (cloud.width ?? 0) * (cloud.height ?? 1)
@@ -86,7 +119,7 @@ export function pointCloud2ToPositions(cloud) {
         positions[kept * 3] = x
         positions[kept * 3 + 1] = y
         positions[kept * 3 + 2] = z
-        if (raw) {
+        if (raw && intensityField) {
             raw[kept] =
                 intensityField.datatype === 7
                     ? view.getFloat32(at + intensityField.offset, little)
@@ -110,8 +143,8 @@ export function pointCloud2ToPositions(cloud) {
     }
 }
 
-/** Any cloud-shaped value → `{ positions, intensity?, frame? }` or null. */
-function cloudOf(value) {
+/** Any cloud-shaped value (decoded data: any shape) → `{ positions, intensity?, frame? }` or null. */
+function cloudOf(value: any): CloudPoints | null {
     if (value?.positions) {
         return { positions: value.positions, intensity: value.intensity, frame: value.frame ?? value.header?.frame_id }
     }
@@ -123,42 +156,34 @@ function cloudOf(value) {
 
 export class CloudLayer {
     root = new THREE.Group()
-    #points
+    #points: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>
     #geometry = new THREE.BufferGeometry()
-    #material
+    #material: THREE.ShaderMaterial
     #capacity = 0
     #write = 0
     #filled = 0
     /** null until known: a cloud placed without its frame would ride the wrong pose */
-    #frame = null
+    #frame: string | null = null
     /** a frame given by the app (props), which wins over the data's */
-    #fixedFrameOverride = undefined
-    #range = [0, 2]
+    #fixedFrameOverride: string | undefined = undefined
+    #range: [number, number] = [0, 2]
     #rangeSeen = false
-    #unsubscribe = []
-    #stream = null
+    #unsubscribe: (() => void)[] = []
+    #stream: CloudStream | null = null
     #rateSince = performance.now()
     #scans = 0
-    #frameTimer = 0
+    #frameTimer: ReturnType<typeof setInterval> | undefined = undefined
     #fixedFrame = ""
     #lastCount = 0
-    #mode
+    #mode: CloudSettings["mode"]
     /** data-clock origin (ms): point times are seconds since it, small enough for float32 */
-    #epoch
-    settings: any
-    topic: any
-    context: any
+    #epoch: number
+    settings: Store<CloudSettings>
+    topic: Topic | null
+    context: LayerContext
 
-    /**
-     * @param {import("./registry").LayerContext} context
-     * @param {import("./registry").Topic | null} topic null: data comes through setData
-     * @param {import("../store").Store<CloudSettings>} settings
-     */
-    constructor(
-        context: import("./registry").LayerContext,
-        topic: import("./registry").Topic | null,
-        settings: import("../store").Store<CloudSettings>,
-    ) {
+    /** `topic` null: data comes through setData */
+    constructor(context: LayerContext, topic: Topic | null, settings: Store<CloudSettings>) {
         this.context = context
         this.topic = topic
         this.settings = settings
@@ -186,7 +211,10 @@ export class CloudLayer {
 
     #openStream() {
         const topic = this.topic
-        const onMessage = (message) => {
+        if (!topic) {
+            return
+        }
+        const onMessage = (message: Message) => {
             let value
             try {
                 value = decodeMessage(message, "auto", topic.type)
@@ -222,7 +250,7 @@ export class CloudLayer {
         this.#stream = new CloudStream(this.context.source, topic.key, cloudQualityOf(topic.key), onMessage)
     }
 
-    #fixedStream = null
+    #fixedStream: { stop: () => void } | null = null
 
     #onSettings() {
         const settings = this.settings.get()
@@ -242,17 +270,19 @@ export class CloudLayer {
 
     /** One raw message for its header's frame_id, then unsubscribe (a raw cloud is big). */
     #readFrame() {
-        if (this.#fixedFrameOverride !== undefined) {
+        const topic = this.topic
+        if (this.#fixedFrameOverride !== undefined || !topic) {
             return
         }
-        let stop = null
-        stop = this.context.source.subscribe(this.topic.key, { delivery: "latest", maxHz: 1 }, (message) => {
-            let frame = null
-            const value = message.value ?? message.decoded
+        let stop: (() => void) | null = null
+        stop = this.context.source.subscribe(topic.key, { delivery: "latest", maxHz: 1 }, (message) => {
+            let frame: unknown = null
+            // decoded LCM / a published value: any shape
+            const value: any = message.value ?? message.decoded
             try {
                 frame = value
                     ? (value.frame ?? value.header?.frame_id ?? null)
-                    : headerFrameId(this.topic.type, message.bytes)
+                    : headerFrameId(topic.type, message.bytes)
             } catch {
                 // not LCM and no frame in the payload
             }
@@ -266,7 +296,7 @@ export class CloudLayer {
     }
 
     /** The cloud's frame (an app-given frame wins over the data's). */
-    setFrame(frame, override = false) {
+    setFrame(frame: string, override = false) {
         if (override) {
             this.#fixedFrameOverride = frame
         }
@@ -277,8 +307,8 @@ export class CloudLayer {
         }
     }
 
-    /** Props data: `{ positions | points, intensity?, frame? }` or a decoded PointCloud2. */
-    setData(data) {
+    /** Props data: `{ positions | points, intensity?, frame?, timestamp? }` or a decoded PointCloud2 (any shape). */
+    setData(data: any) {
         const cloud = cloudOf(data?.points ? { ...data, positions: data.points } : data)
         if (!cloud) {
             return
@@ -292,7 +322,7 @@ export class CloudLayer {
         this.#material.uniforms.uKeep.value = Math.min(1, SPLAT_BUDGET / Math.max(1, this.#filled))
     }
 
-    #resize(capacity) {
+    #resize(capacity: number) {
         this.#capacity = capacity
         const position = new THREE.BufferAttribute(new Float32Array(capacity * 3), 3).setUsage(THREE.DynamicDrawUsage)
         const time = new THREE.BufferAttribute(new Float32Array(capacity), 1).setUsage(THREE.DynamicDrawUsage)
@@ -317,7 +347,7 @@ export class CloudLayer {
     }
 
     /** One scan: xyz triples (in the cloud's frame) and optional 0..255 intensity. */
-    onCloud(positions, intensity, timestamp) {
+    onCloud(positions: ArrayLike<number>, intensity: ArrayLike<number> | undefined, timestamp: number | undefined) {
         if (this.#frame === null) {
             return
         }
@@ -326,7 +356,7 @@ export class CloudLayer {
         this.#lastCount = count
         this.#scans++
         const accumulate = settings.mode === "accumulate"
-        let transform = null
+        let transform: THREE.Matrix4 | null = null
         if (accumulate) {
             transform = this.context.tf.lookup(this.#frame, this.context.viewer.fixedFrame)
             if (!transform) {
@@ -341,9 +371,10 @@ export class CloudLayer {
         if (wanted > this.#capacity || (!accumulate && this.#capacity > 4 * Math.max(wanted, 1024))) {
             this.#resize(accumulate ? wanted : Math.max(1024, 2 ** Math.ceil(Math.log2(Math.max(1, wanted)))))
         }
-        const position = this.#geometry.getAttribute("position")
-        const time = this.#geometry.getAttribute("aTime")
-        const strength = this.#geometry.getAttribute("aIntensity")
+        // #resize made all three plain BufferAttributes
+        const position = this.#geometry.getAttribute("position") as THREE.BufferAttribute
+        const time = this.#geometry.getAttribute("aTime") as THREE.BufferAttribute
+        const strength = this.#geometry.getAttribute("aIntensity") as THREE.BufferAttribute
         const now = (this.context.viewer.dataClock() - this.#epoch) / 1000
         const start = accumulate ? this.#write : 0
         const xyz = position.array
@@ -396,19 +427,23 @@ export class CloudLayer {
     }
 
     /** Auto color range: 5th-95th percentile of a sample, eased so it doesn't flicker scan to scan. */
-    #updateRange(positions, intensity, transform) {
+    #updateRange(
+        positions: ArrayLike<number>,
+        intensity: ArrayLike<number> | undefined,
+        transform: THREE.Matrix4 | null,
+    ) {
         const look = this.settings.get().look
         const count = positions.length / 3
         if (!count) {
             return
         }
-        let low, high
+        let low: number, high: number
         if (look.colorMode === "intensity") {
             ;[low, high] = intensity ? [0, 255] : [0, 1]
         } else {
             const e = transform?.elements ?? new THREE.Matrix4().elements
             const step = Math.max(1, Math.floor(count / 2048))
-            const samples = []
+            const samples: number[] = []
             for (let index = 0; index < count; index += step) {
                 const x = positions[index * 3],
                     y = positions[index * 3 + 1],
@@ -447,7 +482,7 @@ export class CloudLayer {
         }
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         const settings = this.settings.get()
         if (frame.fixedFrame !== this.#fixedFrame) {
             this.#fixedFrame = frame.fixedFrame
@@ -473,7 +508,7 @@ export class CloudLayer {
             const seconds = (frame.now - this.#rateSince) / 1000
             this.#rateSince = frame.now
             let rate
-            if (this.#stream) {
+            if (this.#stream && this.topic) {
                 rate = this.#stream.sample(frame.now)
                 setCloudRate(this.topic.key, rate)
             } else {
@@ -507,13 +542,17 @@ export class CloudLayer {
     }
 }
 
+export interface CloudQualitySelectProps extends Omit<SelectProps<CloudQuality>, "value" | "options" | "onChange"> {
+    topicKey: string
+}
+
 /** This viewer's bandwidth preset for a cloud topic (shared by every place that shows it). */
-export function CloudQualitySelect({ topicKey, ...rest }) {
+export function CloudQualitySelect({ topicKey, ...rest }: CloudQualitySelectProps) {
     useStore(cloudQualities)
     return (
         <Select
             value={cloudQualityOf(topicKey)}
-            options={CLOUD_PRESETS.map((preset) => [preset.id, preset.label])}
+            options={CLOUD_PRESETS.map((preset): [CloudQuality, string] => [preset.id, preset.label])}
             onChange={(quality) => setCloudQuality(topicKey, quality)}
             {...rest}
         />
@@ -521,13 +560,13 @@ export function CloudQualitySelect({ topicKey, ...rest }) {
 }
 
 /** A point-cloud layer's settings: its look, keep mode and window, and this viewer's bandwidth preset. */
-export function CloudSettingsEditor({ settings, topic }) {
+export function CloudSettingsEditor({ settings, topic }: LayerSettingsProps<CloudSettings>) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
             <PointLookEditor look={value.look} onChange={(look) => settings.update({ look })} />
             <Field label="Keep">
-                <Select
+                <Select<CloudSettings["mode"]>
                     value={value.mode}
                     options={[
                         ["latest", "latest scan"],
@@ -565,7 +604,7 @@ export function CloudSettingsEditor({ settings, topic }) {
     )
 }
 
-registerLayer({
+registerLayer<CloudSettings>({
     id: "pointcloud",
     label: "Point cloud",
     types: ["sensor_msgs.PointCloud2"],

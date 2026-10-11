@@ -3,8 +3,10 @@
 // and a scale bar. Wheel / pinch zoom and drag pan move the picture; it follows a TF frame until the viewer pans; a click
 // that didn't drag reports where it landed (onPick). Colors come from the theme tokens. Every topic's last message is
 // kept per map context, so a reopened map or a re-picked topic shows at once. Ported from dim-controller's MapPanel.
-import { decode, headerFrameId } from "../lcm"
-import { poseMatrix } from "../three/layers/pose"
+import type { DataSource, Topic } from "../data.ts"
+import { decode, headerFrameId, type LcmStruct } from "../lcm.ts"
+import { poseMatrix } from "../three/layers/pose.tsx"
+import type { TfTree } from "../three/tf.ts"
 import {
     fitView,
     floorPose,
@@ -23,19 +25,73 @@ import {
     wheelGesture,
     worldToScreen,
     zoomAt,
-} from "./math"
+} from "./math.ts"
+import type { CloudImage, FloorPose, MapBox, MapView, Rgba, RgbaPixels } from "./math.ts"
+/** A decoded OccupancyGrid, as the map keeps it. */
+interface GridData {
+    width: number
+    height: number
+    resolution: number
+    /** the grid's (0,0) corner in `frame` (a geometry_msgs Pose) */
+    origin: Parameters<typeof poseMatrix>[0]
+    data: ArrayLike<number>
+    frame: string
+}
+/** One topic's last data, kept per map context. */
+export interface RetainedMapData {
+    grid?: GridData
+    gridInfo?: string
+    cloudFrame?: string
+    cloudPositions?: ArrayLike<number>
+    cloudMatrix?: number[]
+    cloudInfo?: string
+}
+/** What the renderer reads through: the data source, the TF tree, the frames to use, the data kept across remounts. */
+export interface Map2DContext {
+    source: DataSource
+    tf: TfTree
+    /** each topic's last data (by topic key) */
+    retained: Map<string, RetainedMapData>
+    fixedFrame: () => string
+    robotFrame: () => string
+}
+export interface Map2DFollowState {
+    following: boolean
+    /** the followed frame isn't in the TF tree yet */
+    waiting: boolean
+}
+export interface Map2DStatus {
+    info: string
+    problem: string
+}
+/** a click that didn't move the map: where it landed in the fixed frame */
+export interface Map2DPick {
+    x: number
+    y: number
+    frame: string
+    event: PointerEvent
+}
+/** What the renderer reports. */
+export interface Map2DEvents {
+    /** the view settled (debounced): remember it to start there next time */
+    onView: (view: MapView) => void
+    onFollow: (follow: Map2DFollowState) => void
+    onStatus: (status: Map2DStatus) => void
+    onPick?: (pick: Map2DPick) => void
+}
 /** Each topic's last data for a map context (`map.retained`, a Map): a reopened map shows it at once. */
-function retainedFor(map, key) {
+function retainedFor(map: Map2DContext, key: string): RetainedMapData {
     let entry = map.retained.get(key)
     if (!entry) {
         map.retained.set(key, (entry = {}))
     }
     return entry
 }
-const css = ([r, g, b, a], alpha = 1) => `rgba(${r}, ${g}, ${b}, ${(a / 255) * alpha})`
-const blend = (a, b, t) => [0, 1, 2, 3].map((index) => Math.round(a[index] + (b[index] - a[index]) * t))
+const css = ([r, g, b, a]: Rgba, alpha = 1): string => `rgba(${r}, ${g}, ${b}, ${(a / 255) * alpha})`
+const blend = (a: Rgba, b: Rgba, t: number): number[] =>
+    [0, 1, 2, 3].map((index) => Math.round(a[index] + (b[index] - a[index]) * t))
 /** A theme token (any CSS color, color-mix included) as rgba bytes, read back off a 1×1 canvas. */
-function token(name) {
+function token(name: string): Rgba {
     const probe = document.createElement("span")
     probe.style.color = `var(${name})`
     document.body.appendChild(probe)
@@ -43,18 +99,33 @@ function token(name) {
     probe.remove()
     const pixel = document.createElement("canvas")
     pixel.width = pixel.height = 1
-    const context = pixel.getContext("2d", { willReadFrequently: true })
+    const context = pixel.getContext("2d", { willReadFrequently: true })!
     context.fillStyle = color
     context.fillRect(0, 0, 1, 1)
     const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data
     return [r, g, b, a]
 }
-function themePalette() {
+/** The map's colors, from the theme tokens. */
+interface MapPalette {
+    background: Rgba
+    fg: Rgba
+    muted: Rgba
+    primary: Rgba
+    robot: Rgba
+    path: Rgba
+    /** CSS colors */
+    axisX: string
+    axisY: string
+    gridLut: RgbaPixels
+    overlayLut: RgbaPixels
+    heatLut: RgbaPixels
+}
+function themePalette(): MapPalette {
     const background = token("--scene-bg, var(--bg)")
     const fg = token("--fg"),
         muted = token("--muted-fg"),
         primary = token("--primary")
-    const opaque = (color) => [color[0], color[1], color[2], 255]
+    const opaque = (color: Rgba): Rgba => [color[0], color[1], color[2], 255]
     const base = opaque(background)
     const clear = [0, 0, 0, 0]
     return {
@@ -91,25 +162,26 @@ const YAW_EPSILON = 0.005
 const DEFAULT_METERS_PER_PIXEL = 0.05
 /** One topic the map draws (the base, or the costmap over it): its subscription, its latest data as an image. */
 class MapSource {
-    map
-    topic
-    lut
-    changed
-    grid = null
-    gridImage = null
-    #gridPixels
+    map: Map2DContext
+    topic: Topic
+    /** the colors to draw it in (read at each rebuild: the theme can change) */
+    lut: () => RgbaPixels
+    changed: () => void
+    grid: GridData | null = null
+    gridImage: HTMLCanvasElement | null = null
+    #gridPixels: RgbaPixels | undefined
     /** the grid's (0,0) corner in the fixed frame, as last drawn */
-    gridPose = null
-    cloud = null
-    cloudImage = null
-    #cloudFrame = null
+    gridPose: FloorPose | null = null
+    cloud: CloudImage | null = null
+    cloudImage: HTMLCanvasElement | null = null
+    #cloudFrame: string | null = null
     /** the last cloud, kept to recolor it on a theme change */
-    #cloudPositions = null
-    #cloudMatrix = null
+    #cloudPositions: ArrayLike<number> | null = null
+    #cloudMatrix: number[] | null = null
     info = ""
     problem = ""
-    #stop = []
-    constructor(map, topic, lut, changed) {
+    #stop: (() => void)[] = []
+    constructor(map: Map2DContext, topic: Topic, lut: () => RgbaPixels, changed: () => void) {
         this.map = map
         this.topic = topic
         this.lut = lut
@@ -136,9 +208,10 @@ class MapSource {
         if (isGridTopic(topic)) {
             this.#stop.push(
                 connection.subscribe(topic.key, { delivery: "latest", maxHz: 2 }, (message) => {
-                    let grid
+                    let grid: LcmStruct
                     try {
-                        grid = message.value ?? decode(topic.type, message.bytes)
+                        // a decoded message: its shape is checked below
+                        grid = (message.value as LcmStruct | undefined) ?? decode(topic.type, message.bytes)
                     } catch (error) {
                         this.#status(this.info, `cannot decode ${topic.name}: ${error}`)
                         return
@@ -165,21 +238,26 @@ class MapSource {
             return
         }
         // a cloud: its frame from one raw message (the compact encoding drops the header), then 1 Hz compact clouds
-        let frameStop = connection.subscribe(topic.key, { delivery: "latest", maxHz: 1 }, (message) => {
-            this.#cloudFrame = kept.cloudFrame =
-                (message.value
-                    ? (message.value.frame ?? message.value.header?.frame_id)
-                    : headerFrameId(topic.type, message.bytes)) ?? ""
-            frameStop?.()
-            frameStop = null
-        })
+        let frameStop: (() => void) | null = connection.subscribe(
+            topic.key,
+            { delivery: "latest", maxHz: 1 },
+            (message) => {
+                const value = message.value as LcmStruct | undefined
+                this.#cloudFrame = kept.cloudFrame =
+                    (value ? (value.frame ?? value.header?.frame_id) : headerFrameId(topic.type, message.bytes)) ?? ""
+                frameStop?.()
+                frameStop = null
+            },
+        )
         this.#stop.push(() => frameStop?.())
         this.#stop.push(
             connection.subscribe(
                 topic.key,
                 { delivery: "latest", maxHz: 1, encoding: "dimos_lcm_pointcloud2" },
                 (message) => {
-                    const positions = (message.decoded ?? message.value)?.positions
+                    const positions = (
+                        (message.decoded ?? message.value) as { positions?: ArrayLike<number> } | undefined
+                    )?.positions
                     if (!positions || this.#cloudFrame === null) {
                         return
                     }
@@ -201,7 +279,7 @@ class MapSource {
         this.#stop.forEach((stop) => stop())
         this.#stop = []
     }
-    #status(info, problem) {
+    #status(info: string, problem: string) {
         this.info = info
         this.problem = problem
         this.changed()
@@ -226,7 +304,7 @@ class MapSource {
         }
     }
     /** every 3D frame: the grid's TF placement; true when it moved */
-    place(fixedFrame) {
+    place(fixedFrame: string): boolean {
         if (!this.grid) {
             return false
         }
@@ -256,7 +334,7 @@ class MapSource {
         return false
     }
     /** the drawn data's box in the fixed frame, or null */
-    bounds() {
+    bounds(): MapBox | null {
         if (this.grid && this.gridPose) {
             const { width, height, resolution } = this.grid,
                 { x, y, yaw } = this.gridPose
@@ -282,7 +360,7 @@ class MapSource {
         return null
     }
     /** draws itself in world coordinates (the context already maps meters to the screen) */
-    draw(context) {
+    draw(context: CanvasRenderingContext2D) {
         if (this.grid && this.gridImage && this.gridPose) {
             context.translate(this.gridPose.x, this.gridPose.y)
             context.rotate(this.gridPose.yaw)
@@ -297,29 +375,35 @@ class MapSource {
 }
 /** Draws the map onto its canvas (no React): subscriptions, view, interaction. */
 export class Map2DRenderer {
-    app
-    canvas
-    events
-    #view
-    #fitted
-    #follow
+    map: Map2DContext
+    canvas: HTMLCanvasElement
+    events: Map2DEvents
+    #view: MapView
+    #fitted: boolean
+    #follow: MapFollow
     /** where the followed frame is on the floor, or null while it isn't in the TF tree */
-    #target = null
+    #target: FloorPose | null = null
     #palette = themePalette()
-    #base = null
-    #overlay = null
-    #robot = null
+    #base: MapSource | null = null
+    #overlay: MapSource | null = null
+    #robot: FloorPose | null = null
     #trail = new Trail()
     #fixedFrame = ""
     #frameRequest = 0
-    #pointers = new Map()
+    /** the pointers down on the canvas (by pointerId), where each was last */
+    #pointers = new Map<number, { x: number; y: number }>()
     #dragged = false
-    #dispose = []
+    #dispose: (() => void)[] = []
     /** a nav_msgs.Path drawn over the map: its poses (x, y) in `frame` */
-    #path = null
-    #stopPath = null
-    map: any
-    constructor(map, canvas, view, followFrame, events) {
+    #path: { frame: string; points: [number, number][] } | null = null
+    #stopPath: (() => void) | null = null
+    constructor(
+        map: Map2DContext,
+        canvas: HTMLCanvasElement,
+        view: MapView | null | undefined,
+        followFrame: string,
+        events: Map2DEvents,
+    ) {
         this.map = map
         this.canvas = canvas
         this.events = events
@@ -356,19 +440,19 @@ export class Map2DRenderer {
         this.requestDraw()
     }
     /** Draws a nav_msgs.Path topic over the map (null: none). */
-    setPath(topicKey) {
+    setPath(topicKey: string | null | undefined) {
         this.#stopPath?.()
         this.#stopPath = null
         this.#path = null
         if (topicKey) {
             const off = this.map.source.subscribe(topicKey, { delivery: "latest", maxHz: 5 }, (message) => {
-                let path
+                let path: LcmStruct
                 try {
-                    path = message.value ?? decode("nav_msgs.Path", message.bytes)
+                    path = (message.value as LcmStruct | undefined) ?? decode("nav_msgs.Path", message.bytes)
                 } catch {
                     return
                 }
-                const points = (path.poses ?? []).map((pose) => [
+                const points = ((path.poses ?? []) as LcmStruct[]).map((pose): [number, number] => [
                     pose.pose?.position?.x ?? 0,
                     pose.pose?.position?.y ?? 0,
                 ])
@@ -387,7 +471,7 @@ export class Map2DRenderer {
         this.#dispose.forEach((stop) => stop())
     }
     /** follows another TF frame (and resumes following: picking one means "show me that") */
-    setFollowFrame(frame) {
+    setFollowFrame(frame: string) {
         if (frame !== this.#follow.frame) {
             this.#follow.frame = frame
             this.#target = this.#lookupTarget()
@@ -403,12 +487,12 @@ export class Map2DRenderer {
     #reportFollow() {
         this.events.onFollow({ following: this.#follow.following, waiting: !this.#target })
     }
-    #lookupTarget() {
+    #lookupTarget(): FloorPose | null {
         const placed = this.map.tf.lookup(this.#follow.frame, this.map.fixedFrame())
         return placed && this.map.tf.has(this.#follow.frame) ? floorPose(placed.elements) : null
     }
     /** the base map and the costmap over it (null: none); a source that didn't change keeps its data */
-    setTopics(base, overlay) {
+    setTopics(base: Topic | null | undefined, overlay: Topic | null | undefined) {
         const changed = () => {
             this.#report()
             this.requestDraw()
@@ -490,8 +574,8 @@ export class Map2DRenderer {
         }
     }
     /** the box around everything drawn, in the fixed frame, or null */
-    #bounds() {
-        const boxes = [this.#base?.bounds(), this.#overlay?.bounds()].filter((box) => !!box)
+    #bounds(): MapBox | null {
+        const boxes = [this.#base?.bounds(), this.#overlay?.bounds()].filter((box): box is MapBox => !!box)
         if (!boxes.length) {
             return null
         }
@@ -514,7 +598,7 @@ export class Map2DRenderer {
             this.#setView({ centerX: this.#robot.x, centerY: this.#robot.y, metersPerPixel: DEFAULT_METERS_PER_PIXEL })
         }
     }
-    #setView(view) {
+    #setView(view: MapView) {
         // a NaN or out-of-range view would blank the map and be remembered: keep the last good one
         if (!isValidView(view)) {
             return
@@ -524,7 +608,7 @@ export class Map2DRenderer {
         this.requestDraw()
         this.#saveView()
     }
-    #saveTimer = 0
+    #saveTimer: ReturnType<typeof setTimeout> | number = 0
     #saveView() {
         clearTimeout(this.#saveTimer)
         this.#saveTimer = setTimeout(() => this.events.onView(this.#view), 400)
@@ -539,7 +623,7 @@ export class Map2DRenderer {
     }
     #listen() {
         const canvas = this.canvas
-        const wheel = (event) => {
+        const wheel = (event: WheelEvent) => {
             event.preventDefault()
             const box = canvas.getBoundingClientRect()
             const lines = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? box.height : 1
@@ -552,7 +636,7 @@ export class Map2DRenderer {
             }
             this.#zoom(Math.exp(-event.deltaY * lines * 0.0015), event.clientX - box.left, event.clientY - box.top)
         }
-        const down = (event) => {
+        const down = (event: PointerEvent) => {
             canvas.setPointerCapture(event.pointerId)
             this.#pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
             this.#dragged = false
@@ -560,7 +644,7 @@ export class Map2DRenderer {
                 this.#follow.pinchStart()
             }
         }
-        const move = (event) => {
+        const move = (event: PointerEvent) => {
             const before = this.#pointers.get(event.pointerId)
             if (!before) {
                 return
@@ -607,7 +691,7 @@ export class Map2DRenderer {
             }
             this.#pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
         }
-        const up = (event) => {
+        const up = (event: PointerEvent) => {
             const tap = this.#pointers.size === 1 && !this.#dragged && event.type === "pointerup"
             this.#pointers.delete(event.pointerId)
             // a click that didn't move the map: where it landed, in the fixed frame (e.g. a goal)
@@ -646,7 +730,7 @@ export class Map2DRenderer {
         }
     }
     /** zooms about a point; following, about the followed frame (so it stays centered) */
-    #zoom(factor, sx, sy) {
+    #zoom(factor: number, sx: number, sy: number) {
         const box = this.canvas.getBoundingClientRect()
         const [anchorX, anchorY] = this.#follow.zoomAnchor(this.#view, box.width, box.height, sx, sy, this.#target)
         this.#setView(zoomAt(this.#view, box.width, box.height, anchorX, anchorY, factor))
@@ -673,7 +757,7 @@ export class Map2DRenderer {
             this.#view = this.#follow.following && this.#target ? this.#follow.view(fitted, this.#target) : fitted
             this.#fitted = true
         }
-        const context = canvas.getContext("2d")
+        const context = canvas.getContext("2d")!
         const palette = this.#palette
         const view = this.#view
         const scale = 1 / view.metersPerPixel
@@ -681,7 +765,7 @@ export class Map2DRenderer {
         context.fillStyle = css(palette.background)
         context.fillRect(0, 0, pixelWidth, pixelHeight)
         context.setTransform(ratio, 0, 0, ratio, 0, 0)
-        const toScreen = (x, y) => worldToScreen(view, width, height, x, y)
+        const toScreen = (x: number, y: number) => worldToScreen(view, width, height, x, y)
         // a faint meter grid at the scale bar's step
         const step = niceLength(80 * view.metersPerPixel)
         context.strokeStyle = css(palette.fg, 0.06)
@@ -707,7 +791,7 @@ export class Map2DRenderer {
         for (const [source, alpha] of [
             [this.#base, 1],
             [this.#overlay, 0.85],
-        ]) {
+        ] as const) {
             if (source) {
                 context.setTransform(
                     ratio * scale,
@@ -817,8 +901,15 @@ export class Map2DRenderer {
     }
 }
 /** x (right) and y (up) arrows from (x, y); labeled ones mark the world origin */
-function drawAxes(context, palette, x, y, length, origin) {
-    const arrow = (dx, dy, color, name) => {
+function drawAxes(
+    context: CanvasRenderingContext2D,
+    palette: MapPalette,
+    x: number,
+    y: number,
+    length: number,
+    origin: boolean,
+) {
+    const arrow = (dx: number, dy: number, color: string, name: string) => {
         context.strokeStyle = color
         context.fillStyle = color
         context.lineWidth = 2
@@ -840,12 +931,17 @@ function drawAxes(context, palette, x, y, length, origin) {
     arrow(0, -1, palette.axisY, origin ? "y" : "+y")
 }
 /** RGBA pixels on a canvas the map draws scaled (reused when the size matches). */
-function toCanvas(pixels, width, height, reuse) {
+function toCanvas(
+    pixels: RgbaPixels,
+    width: number,
+    height: number,
+    reuse: HTMLCanvasElement | null,
+): HTMLCanvasElement {
     const canvas = reuse && reuse.width === width && reuse.height === height ? reuse : document.createElement("canvas")
     if (canvas !== reuse) {
         canvas.width = width
         canvas.height = height
     }
-    canvas.getContext("2d").putImageData(new ImageData(pixels, width, height), 0, 0)
+    canvas.getContext("2d")!.putImageData(new ImageData(pixels, width, height), 0, 0)
     return canvas
 }

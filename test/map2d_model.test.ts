@@ -1,7 +1,7 @@
 // The 2D map's model: the north-up view, grid and cloud images, the trail, and which topic it draws.
 import { test } from "vitest"
-import { assert, assertAlmostEquals, assertEquals } from "./assert"
-import { parseKey } from "../src/data"
+import { assert, assertAlmostEquals, assertEquals } from "./assert.ts"
+import { parseKey } from "../src/data.ts"
 import {
     chooseMapTopic,
     chooseOverlay,
@@ -23,8 +23,12 @@ import {
     wheelGesture,
     worldToScreen,
     zoomAt,
-} from "../src/map2d/math"
-const topic = (name, type) => parseKey(`dimos${name}/${type}`)
+} from "../src/map2d/math.ts"
+const topic = (name: string, type: string) => {
+    const parsed = parseKey(`dimos${name}/${type}`)
+    assert(parsed, `unparsable topic ${name}`)
+    return parsed
+}
 test("north-up: +x is right, +y is up, the center is the middle", () => {
     const view = { centerX: 2, centerY: 3, metersPerPixel: 0.1 }
     assertEquals(worldToScreen(view, 200, 100, 2, 3), [100, 50])
@@ -50,6 +54,7 @@ test("zooming keeps the point under the cursor; panning moves the content with t
 })
 test("fit shows the whole box", () => {
     const view = fitView([-10, 0, 10, 5], 200, 200)
+    assert(view)
     assertEquals([view.centerX, view.centerY], [0, 2.5])
     assert(view.metersPerPixel >= 0.1)
 })
@@ -60,6 +65,7 @@ test("fit with empty or degenerate data never makes a view that blanks the map",
     assertEquals(fitView([1, 1, 0, 0], 300, 300), null)
     // a single point: centered on it, but not zoomed in past a few meters across
     const point = fitView([3, 4, 3, 4], 300, 300)
+    assert(point)
     assertEquals([point.centerX, point.centerY], [3, 4])
     assert(point.metersPerPixel * 300 >= MIN_FIT_SPAN)
     // a canvas with no size yet still gives a usable view
@@ -103,6 +109,7 @@ test("a cloud from above: placed by its transform, the highest point colors a ce
         [255, 255, 255, 255],
     ])
     const cloud = projectCloud(new Float32Array([0, 0, 0, 0.02, 0.02, 2, 1, 1, 0]), identity, lut, 0.5)
+    assert(cloud)
     assertEquals([cloud.originX, cloud.originY, cloud.cell], [5, 0, 0.5])
     assertEquals([cloud.width, cloud.height], [3, 3])
     // cell (0,0) holds z=0 and z=2: the tall one wins
@@ -125,7 +132,7 @@ test("trail: skips jitter, breaks at a jump, stays bounded", () => {
 })
 test("heat ramp: cold to hot, never black (the floor shows on a dark background)", () => {
     const lut = heatLut()
-    const brightness = (index) => lut[index * 4] + lut[index * 4 + 1] + lut[index * 4 + 2]
+    const brightness = (index: number) => lut[index * 4] + lut[index * 4 + 1] + lut[index * 4 + 2]
     assert(brightness(0) > 100)
     assert(brightness(255) > brightness(128) && brightness(128) > brightness(0))
     assertEquals(lut[3], 255)
@@ -195,7 +202,7 @@ test("follow: a pinch is a zoom until its middle drifts past the slop, then a pa
     assertEquals(follow.pinchPans(0, 10), false)
 })
 test("wheel: vertical scrolls and trackpad pinches zoom, sideways or shift scrolls pan", () => {
-    const wheel = (deltaX, deltaY, ctrlKey = false, shiftKey = false) =>
+    const wheel = (deltaX: number, deltaY: number, ctrlKey = false, shiftKey = false) =>
         wheelGesture({ deltaX, deltaY, ctrlKey, shiftKey })
     assertEquals(wheel(0, 120), "zoom")
     assertEquals(wheel(2, -30), "zoom")

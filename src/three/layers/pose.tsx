@@ -3,22 +3,45 @@
 // data source knows a topic's whole route up front (a recording: `source.route(key)`), it's drawn faintly ahead of
 // the robot, and after a seek the trail is rebuilt from it up to the playhead instead of starting empty.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { themeColors } from "../../theme/theme"
-import { FatLines } from "../lines"
-import { cssColor } from "../robot_model"
-import { registerLayer, subscribeDecoded } from "./registry"
-import { Field, Select, Slider, Toggle } from "../../components/controls"
-import { ColorSwatch } from "../../components/input_devices"
+import { useStore } from "../store.ts"
+import { themeColors } from "../../theme/theme.ts"
+import { FatLines } from "../lines.ts"
+import { cssColor } from "../robot_model.ts"
+import { registerLayer, subscribeDecoded } from "./registry.ts"
+import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
+import { Field, Select, Slider, Toggle } from "../../components/controls.tsx"
+import { ColorSwatch } from "../../components/input_devices.tsx"
+import type { DataSource, Route } from "../../data.ts"
+import type { Store } from "../store.ts"
+import type { FrameInfo } from "../viewer.ts"
 
 /**
- * @typedef {{ trail: boolean, trailLength: number, jumpMeters: number, color: string, width: number,
- *   axesSize: number, onTop: boolean, route: boolean }} PoseSettings
- *   `trailLength`: most trail segments kept; `jumpMeters`: a longer step is a teleport (no segment); `onTop`: drawn
- *   over everything; `route`: the whole recorded route, faint (when the source knows it); `color`: CSS or a token
+ * `trailLength`: most trail segments kept; `jumpMeters`: a longer step is a teleport (no segment); `onTop`: drawn
+ * over everything; `route`: the whole recorded route, faint (when the source knows it); `color`: CSS or a token
  */
+export interface PoseSettings {
+    trail: boolean
+    trailLength: number
+    jumpMeters: number
+    color: string
+    width: number
+    axesSize: number
+    onTop: boolean
+    route: boolean
+}
 
-export const POSE_DEFAULTS = {
+/** A geometry_msgs Pose (`{ position, orientation }`, any field may be missing) or a `{ x, y, z, yaw }` shorthand. */
+export interface PoseLike {
+    position?: { x?: number; y?: number; z?: number }
+    orientation?: { x?: number; y?: number; z?: number; w?: number }
+    x?: number
+    y?: number
+    z?: number
+    yaw?: number
+    isMatrix4?: undefined
+}
+
+export const POSE_DEFAULTS: PoseSettings = {
     trail: true,
     trailLength: 20000,
     jumpMeters: 2.5,
@@ -32,7 +55,10 @@ export const POSE_DEFAULTS = {
 const MIN_STEP = 0.02
 
 /** A geometry_msgs Pose ({ position, orientation }), a `{ x, y, z, yaw }` shorthand or a Matrix4, as a Matrix4. */
-export function poseMatrix(pose, out = new THREE.Matrix4()) {
+export function poseMatrix(
+    pose: PoseLike | THREE.Matrix4 | null | undefined,
+    out: THREE.Matrix4 = new THREE.Matrix4(),
+): THREE.Matrix4 {
     if (pose?.isMatrix4) {
         return out.copy(pose)
     }
@@ -62,15 +88,15 @@ export function poseMatrix(pose, out = new THREE.Matrix4()) {
     )
 }
 
-/** The pose inside a decoded message: Odometry / PoseWithCovarianceStamped (.pose.pose), PoseStamped (.pose), Pose. */
-export function poseOf(message) {
+/** The pose inside a decoded message (any shape): Odometry / PoseWithCovarianceStamped (.pose.pose), PoseStamped (.pose), Pose. */
+export function poseOf(message: any): PoseLike | THREE.Matrix4 | null | undefined {
     return message?.pose?.pose ?? message?.pose ?? message
 }
 
-const routes = new WeakMap()
+const routes = new WeakMap<DataSource, Map<string, Promise<Route | null>>>()
 
 /** The source's recorded route of a pose topic, cached per source and topic (null when it has none). */
-function routeOf(source, key) {
+function routeOf(source: DataSource, key: string): Promise<Route | null> {
     if (typeof source.route !== "function") {
         return Promise.resolve(null)
     }
@@ -79,44 +105,35 @@ function routeOf(source, key) {
         cache = new Map()
         routes.set(source, cache)
     }
-    if (!cache.has(key)) {
-        cache.set(
-            key,
-            Promise.resolve(source.route(key)).catch(() => null),
-        )
+    let promise = cache.get(key)
+    if (!promise) {
+        promise = Promise.resolve(source.route(key)).catch(() => null)
+        cache.set(key, promise)
     }
-    return cache.get(key)
+    return promise
 }
 
 export class PoseLayer {
     root = new THREE.Group()
-    #axes
-    #trail
-    #ghost
-    #stop = () => {}
-    #pose = null
+    #axes: THREE.AxesHelper
+    #trail: FatLines
+    #ghost: FatLines
+    #stop: () => void = () => {}
+    #pose: THREE.Matrix4 | null = null
     #frame = ""
-    #last = null
+    #last: THREE.Vector3 | null = null
     #fixedFrame = ""
     #count = 0
     #since = performance.now()
-    #route = null
+    #route: Route | null = null
     #ghostFrame = ""
-    #unsubscribe
-    settings: any
-    topic: any
-    context: any
+    #unsubscribe: () => void
+    settings: Store<PoseSettings>
+    topic: Topic | null
+    context: LayerContext
 
-    /**
-     * @param {import("./registry").LayerContext} context
-     * @param {import("./registry").Topic | null} topic null: poses come through setData
-     * @param {import("../store").Store<PoseSettings>} settings
-     */
-    constructor(
-        context: import("./registry").LayerContext,
-        topic: import("./registry").Topic | null,
-        settings: import("../store").Store<PoseSettings>,
-    ) {
+    /** `topic` null: poses come through setData */
+    constructor(context: LayerContext, topic: Topic | null, settings: Store<PoseSettings>) {
         this.context = context
         this.topic = topic
         this.settings = settings
@@ -240,13 +257,13 @@ export class PoseLayer {
     }
 
     /** Props data: `{ pose, frame?, timestamp? }` (pose: geometry_msgs Pose, `{ x, y, yaw }` or a Matrix4). */
-    setData(data) {
+    setData(data: { pose?: PoseLike | THREE.Matrix4; frame?: string; timestamp?: number } | null | undefined) {
         if (data?.pose) {
             this.#onPose(data.pose, data.frame ?? "", data.timestamp ?? Date.now())
         }
     }
 
-    #onPose(pose, frame, timestamp) {
+    #onPose(pose: PoseLike | THREE.Matrix4 | null | undefined, frame: string, timestamp: number | undefined) {
         this.#frame = frame
         this.#pose = poseMatrix(pose, this.#pose ?? new THREE.Matrix4())
         this.#count++
@@ -281,7 +298,7 @@ export class PoseLayer {
         this.context.viewer.noteData(timestamp)
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (frame.fixedFrame !== this.#fixedFrame) {
             this.#fixedFrame = frame.fixedFrame
             this.reset()
@@ -322,13 +339,19 @@ export class PoseLayer {
     }
 }
 
+export interface ColorSettingProps {
+    /** CSS or a token like var(--primary) */
+    value: string
+    onChange?: (color: string) => void
+}
+
 /** A color setting: a swatch for hex colors (a token like var(--primary) shows as its current color). */
-export function ColorSetting({ value, onChange }) {
+export function ColorSetting({ value, onChange }: ColorSettingProps) {
     const hex = `#${cssColor(value, "white").getHexString()}`
     return <ColorSwatch value={hex} onChange={onChange} />
 }
 
-export function PoseSettingsEditor({ settings }) {
+export function PoseSettingsEditor({ settings }: LayerSettingsProps<PoseSettings>) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
@@ -380,7 +403,7 @@ export function PoseSettingsEditor({ settings }) {
     )
 }
 
-registerLayer({
+registerLayer<PoseSettings>({
     id: "pose",
     label: "Pose + trail",
     types: ["nav_msgs.Odometry", "geometry_msgs.PoseStamped", "geometry_msgs.PoseWithCovarianceStamped"],

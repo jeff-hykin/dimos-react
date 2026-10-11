@@ -2,34 +2,46 @@
 // arm, a humanoid) names only the robot's frame, the fixed frame and `named` past `maxNames`. Reading tf into the tree
 // is TfFeed's job (whether or not this layer is on).
 import * as THREE from "three"
-import { useStore } from "../store"
-import { themeColors } from "../../theme/theme"
-import { FatLines } from "../lines"
-import { LabelPool } from "../labels"
-import { cssColor } from "../robot_model"
-import { registerLayer } from "./registry"
-import { Field, Slider, Toggle } from "../../components/controls"
+import { useStore, type Store } from "../store.ts"
+import { themeColors } from "../../theme/theme.ts"
+import { FatLines } from "../lines.ts"
+import { LabelPool } from "../labels.ts"
+import { cssColor } from "../robot_model.ts"
+import { registerLayer, type LayerContext, type LayerSettingsProps } from "./registry.ts"
+import type { FrameInfo } from "../viewer.ts"
+import { Field, Slider, Toggle } from "../../components/controls.tsx"
 
-/**
- * @typedef {{ axesSize: number, names: boolean, links: boolean, maxNames?: number, named?: string[],
- *   maxFrames?: number }} TfSettings
- */
+export interface TfSettings {
+    axesSize: number
+    names: boolean
+    links: boolean
+    maxNames?: number
+    named?: string[]
+    maxFrames?: number
+}
 
-export const TF_DEFAULTS = { axesSize: 0.25, names: true, links: true, maxNames: 16, named: [], maxFrames: 512 }
+export const TF_DEFAULTS: Required<TfSettings> = {
+    axesSize: 0.25,
+    names: true,
+    links: true,
+    maxNames: 16,
+    named: [],
+    maxFrames: 512,
+}
 
 export class TfFramesLayer {
     root = new THREE.Group()
-    #axes
-    #links
+    #axes: FatLines
+    #links: FatLines
     #labels = new LabelPool("dr-scene-label dr-frame-label")
     #version = -1
     #fixedFrame = ""
-    #colors = null
-    #unsubscribe
-    settings: any
-    context: any
+    #colors: THREE.Color[] = []
+    #unsubscribe: () => void
+    settings: Store<TfSettings>
+    context: LayerContext
 
-    constructor(context, settings) {
+    constructor(context: LayerContext, settings: Store<TfSettings>) {
         this.context = context
         this.settings = settings
         const maxFrames = settings.get().maxFrames ?? 512
@@ -55,14 +67,14 @@ export class TfFramesLayer {
         this.#version = -1
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         const tf = this.context.tf
         if (tf.version === this.#version && frame.fixedFrame === this.#fixedFrame) {
             return
         }
         this.#version = tf.version
         this.#fixedFrame = frame.fixedFrame
-        const settings = { ...TF_DEFAULTS, ...this.settings.get() }
+        const settings: Required<TfSettings> = { ...TF_DEFAULTS, ...this.settings.get() }
         const snapshot = tf.snapshot()
         const unit = [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)]
         this.#axes.clear()
@@ -118,7 +130,9 @@ export class TfFramesLayer {
     }
 }
 
-export function TfSettingsEditor({ settings }) {
+export type TfSettingsEditorProps = LayerSettingsProps<TfSettings>
+
+export function TfSettingsEditor({ settings }: TfSettingsEditorProps) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
@@ -128,21 +142,21 @@ export function TfSettingsEditor({ settings }) {
                     max={1}
                     step={0.05}
                     value={value.axesSize}
-                    format={(size) => `${size} m`}
-                    onChange={(axesSize) => settings.update({ axesSize })}
+                    format={(size: number) => `${size} m`}
+                    onChange={(axesSize: number) => settings.update({ axesSize })}
                 />
             </Field>
             <Field label="Names">
-                <Toggle value={value.names} onChange={(names) => settings.update({ names })} />
+                <Toggle value={value.names} onChange={(names: boolean) => settings.update({ names })} />
             </Field>
             <Field label="Links">
-                <Toggle value={value.links} onChange={(links) => settings.update({ links })} />
+                <Toggle value={value.links} onChange={(links: boolean) => settings.update({ links })} />
             </Field>
         </div>
     )
 }
 
-registerLayer({
+registerLayer<TfSettings>({
     id: "tf",
     label: "TF frames",
     types: ["tf2_msgs.TFMessage"],

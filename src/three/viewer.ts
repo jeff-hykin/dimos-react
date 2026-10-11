@@ -5,33 +5,70 @@
 import * as THREE from "three"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
 import { CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js"
-import { Store } from "./store"
-import { focusDistance, splatBackground } from "./point_material"
-import { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./follow"
-import { themeColors } from "../theme/theme"
-import { cssColor } from "./robot_model"
-import { FRAME_BUDGET_MS, splatFallback } from "./rendering"
+import type { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js"
+import { Store } from "./store.ts"
+import { focusDistance, splatBackground } from "./point_material.ts"
+import { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./follow.ts"
+import { themeColors } from "../theme/theme.ts"
+import { cssColor } from "./robot_model.ts"
+import { FRAME_BUDGET_MS, splatFallback } from "./rendering.ts"
 
-/**
- * @typedef {{ fps: number, frameMs: number, latencyP50: number | null, latencyP95: number | null,
- *   arrivalToFrameMs: number | null, drawCalls: number, points: number }} RenderStats
- * @typedef {{ now: number, dataNow: number, fixedFrame: string, camera: THREE.PerspectiveCamera }} FrameInfo
- *   `now`: performance.now() of the frame; `dataNow`: the data clock (a replay's playhead, else performance.now())
- */
+export interface RenderStats {
+    fps: number
+    frameMs: number
+    latencyP50: number | null
+    latencyP95: number | null
+    arrivalToFrameMs: number | null
+    drawCalls: number
+    points: number
+}
+
+/** `now`: performance.now() of the frame; `dataNow`: the data clock (a replay's playhead, else performance.now()) */
+export interface FrameInfo {
+    now: number
+    dataNow: number
+    fixedFrame: string
+    camera: THREE.PerspectiveCamera
+}
+
+export interface ViewerOptions {
+    clock?: () => number
+    grid?: boolean
+    antialias?: boolean
+    near?: number
+    far?: number
+    fov?: number
+    gridSize?: number
+    gridDivisions?: number
+    freeOrbit?: boolean
+}
+
+export interface PickResult {
+    point: THREE.Vector3
+    on: "points" | "mesh" | "ground"
+    object?: THREE.Object3D
+}
+
+/** OrbitControls' private damping state, cleared when the camera is placed directly. */
+interface OrbitControlsInternals {
+    _sphericalDelta?: THREE.Spherical
+    _panOffset?: THREE.Vector3
+    _scale?: number
+}
+
+const isPoints = (object: THREE.Object3D): object is THREE.Points => !!(object as Partial<THREE.Points>).isPoints
+const isMesh = (object: THREE.Object3D): object is THREE.Mesh => !!(object as Partial<THREE.Mesh>).isMesh
+const isLineSegments2 = (object: THREE.Object3D): boolean => !!(object as Partial<LineSegments2>).isLineSegments2
 
 /** The canvas renders at the screen's resolution, up to 2× (beyond that the extra pixels cost more than they show). */
 const pixelRatio = () => Math.min(2, globalThis.devicePixelRatio || 1)
 
 export class Viewer {
-    /** @type {THREE.WebGLRenderer} */
     renderer: THREE.WebGLRenderer
-    /** @type {CSS2DRenderer} */
     labels: CSS2DRenderer
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(60, 1, 0.05, 10000)
-    /** @type {OrbitControls} */
     controls: OrbitControls
-    /** @type {Store<RenderStats>} */
     stats: Store<RenderStats> = new Store({
         fps: 0,
         frameMs: 0,
@@ -47,7 +84,6 @@ export class Viewer {
     resolution = new THREE.Vector2(1, 1)
     fixedFrame = "world"
     /** where the camera follows (a point in the fixed frame); the React layer sets it each frame from followFrame */
-    /** @type {THREE.Vector3 | null} */
     followTarget: THREE.Vector3 | null = null
     /** a hidden view (display: none, a collapsed pane) draws nothing; what changed meanwhile is drawn once unpaused */
     paused = false
@@ -59,21 +95,21 @@ export class Viewer {
      */
     dataClock = () => performance.now()
 
-    #host
+    #host: HTMLElement
     #dirty = true
-    #listeners = new Set()
-    #grid = null
+    #listeners: Set<(frame: FrameInfo) => void> = new Set()
+    #grid: THREE.GridHelper | null = null
     #gridVisible = true
     #gridSize = 200
     #gridDivisions = 200
-    #frameTimes = []
-    #cpuTimes = []
-    #pendingData = []
-    #latencies = []
-    #arrivals = []
+    #frameTimes: number[] = []
+    #cpuTimes: number[] = []
+    #pendingData: { ts: number; arrival: number }[] = []
+    #latencies: number[] = []
+    #arrivals: number[] = []
     #lastStats = 0
     #lastDeclutter = 0
-    #clock
+    #clock: () => number
     #follow = new SmoothFollow()
     #lastFollow = new THREE.Vector3()
     #following = false
@@ -85,15 +121,14 @@ export class Viewer {
     #reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)") ?? null
     #lastFrame = 0
     #frameRequest = 0
-    #resizeObserver
+    #resizeObserver: ResizeObserver
     #disposed = false
-    #resetListeners = new Set()
+    #resetListeners: Set<() => void> = new Set()
     #slowSeconds = 0
 
     /**
-     * @param {HTMLElement} host the element the canvas fills (give it a size; it is watched for resizes)
-     * @param {{ clock?: () => number, grid?: boolean, antialias?: boolean, near?: number, far?: number, fov?: number,
-     *   gridSize?: number, gridDivisions?: number, freeOrbit?: boolean }} [options] `clock`: the clock message
+     * @param host the element the canvas fills (give it a size; it is watched for resizes)
+     * @param options `clock`: the clock message
      *   timestamps are in (ms, for latency; default Date.now). `near` / `far` / `fov`: the camera (defaults 0.05 m,
      *   10 km, 60°; a small model like a URDF wants near ≈ 0.001). `gridSize` (m) / `gridDivisions`: the ground grid
      *   (default 200 m in 1 m cells). `freeOrbit`: the camera may orbit below the ground (default: it stays above).
@@ -110,17 +145,7 @@ export class Viewer {
             gridSize = 200,
             gridDivisions = 200,
             freeOrbit = false,
-        }: {
-            clock?: () => number
-            grid?: boolean
-            antialias?: boolean
-            near?: number
-            far?: number
-            fov?: number
-            gridSize?: number
-            gridDivisions?: number
-            freeOrbit?: boolean
-        } = {},
+        }: ViewerOptions = {},
     ) {
         this.#host = host
         this.#clock = clock
@@ -163,7 +188,7 @@ export class Viewer {
         this.#frameRequest = requestAnimationFrame(this.#loop)
     }
 
-    #makeGrid(dark) {
+    #makeGrid(dark: boolean): THREE.GridHelper {
         const colors = themeColors()
         const grid = new THREE.GridHelper(
             this.#gridSize,
@@ -197,7 +222,7 @@ export class Viewer {
     }
 
     /** Shows or hides the ground grid. */
-    setGrid(visible) {
+    setGrid(visible: boolean) {
         this.#gridVisible = visible
         if (this.#grid) {
             this.#grid.visible = visible
@@ -207,10 +232,10 @@ export class Viewer {
 
     /** Hides scene labels that overlap a more important one (frame names give way to data labels). */
     #declutter() {
-        const elements = [...this.labels.domElement.querySelectorAll(".dr-scene-label")].filter(
+        const elements = [...this.labels.domElement.querySelectorAll<HTMLElement>(".dr-scene-label")].filter(
             (element) => element.style.display !== "none",
         )
-        const placed = []
+        const placed: DOMRect[] = []
         const ranked = elements
             .map((element) => ({
                 element,
@@ -237,8 +262,13 @@ export class Viewer {
      * The view as an image, now: runs the frame listeners, renders and reads the canvas in the same task (no
      * preserveDrawingBuffer needed). Returns a data URL (`type` default image/png).
      */
-    capture(type = "image/png") {
-        const info = { now: performance.now(), fixedFrame: this.fixedFrame, camera: this.camera }
+    capture(type = "image/png"): string {
+        const info = {
+            now: performance.now(),
+            dataNow: this.dataClock(),
+            fixedFrame: this.fixedFrame,
+            camera: this.camera,
+        }
         for (const listener of this.#listeners) {
             listener(info)
         }
@@ -252,15 +282,15 @@ export class Viewer {
     }
 
     /** Layers call this when a message changed what's drawn; the next frame draws it and times it. */
-    noteData(timestampMs) {
-        if (Number.isFinite(timestampMs)) {
+    noteData(timestampMs?: number) {
+        if (timestampMs !== undefined && Number.isFinite(timestampMs)) {
             this.#pendingData.push({ ts: timestampMs, arrival: performance.now() })
         }
         this.#dirty = true
     }
 
     /** `listener()` when the data jumped (a replay's seek): layers drop what they gathered over time. */
-    onReset(listener) {
+    onReset(listener: () => void): () => void {
         this.#resetListeners.add(listener)
         return () => this.#resetListeners.delete(listener)
     }
@@ -279,9 +309,8 @@ export class Viewer {
 
     /**
      * `listener(frame)` every animation frame, before rendering. Returns unsubscribe.
-     * @param {(frame: FrameInfo) => void} listener
      */
-    onFrame(listener: (frame: FrameInfo) => void) {
+    onFrame(listener: (frame: FrameInfo) => void): () => void {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }
@@ -289,9 +318,8 @@ export class Viewer {
     /**
      * The point in the scene (the fixed frame) under a screen point (client px): the nearest drawn cloud point within
      * a few pixels of the ray or the nearest mesh hit, else where the ray meets the ground (z = 0). Null on a miss.
-     * @returns {{ point: THREE.Vector3, on: "points" | "mesh" | "ground", object?: THREE.Object3D } | null}
      */
-    pick(clientX, clientY): { point: THREE.Vector3; on: "points" | "mesh" | "ground"; object?: THREE.Object3D } | null {
+    pick(clientX: number, clientY: number): PickResult | null {
         const rect = this.renderer.domElement.getBoundingClientRect()
         const ndc = new THREE.Vector2(
             ((clientX - rect.left) / rect.width) * 2 - 1,
@@ -302,15 +330,16 @@ export class Viewer {
         const { origin, direction } = raycaster.ray
         const PICK_PX = 6
         const slope = (PICK_PX * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * 2) / Math.max(1, rect.height)
-        let best = null
-        const meshes = []
+        // assigned inside visit(), so declared wide (not narrowed to null)
+        let best = null as (PickResult & { distance: number }) | null
+        const meshes: THREE.Mesh[] = []
         const point = new THREE.Vector3()
         const offset = new THREE.Vector3()
-        const visit = (object) => {
+        const visit = (object: THREE.Object3D) => {
             if (!object.visible || object.userData.noPick) {
                 return
             }
-            if (object.isPoints) {
+            if (isPoints(object)) {
                 const geometry = object.geometry
                 const position = geometry.getAttribute("position")
                 if (position) {
@@ -330,7 +359,7 @@ export class Viewer {
                         }
                     }
                 }
-            } else if (object.isMesh && !object.isLineSegments2) {
+            } else if (isMesh(object) && !isLineSegments2(object)) {
                 meshes.push(object)
             }
             for (const child of object.children) {
@@ -351,7 +380,7 @@ export class Viewer {
     }
 
     /** Looks at `target` from the current direction, `distance` away (from straight above: the default 3/4 view). */
-    frame(target, distance) {
+    frame(target: THREE.Vector3, distance: number) {
         const direction = this.camera.position.clone().sub(this.controls.target).normalize()
         if (!Number.isFinite(direction.x) || direction.lengthSq() === 0 || direction.z > 0.97) {
             direction.set(-1, -1, 0.9).normalize()
@@ -360,7 +389,7 @@ export class Viewer {
     }
 
     /** Frames everything drawn (dataBounds); false when nothing is drawn. */
-    frameAll() {
+    frameAll(): boolean {
         const box = this.dataBounds()
         if (!box) {
             return false
@@ -374,7 +403,7 @@ export class Viewer {
      * Straight down on the area around `center` (the drawn data within 15 m of it, 12-30 m across), or without one on
      * everything drawn (or the origin).
      */
-    topDownAround(center) {
+    topDownAround(center?: THREE.Vector3 | null) {
         const bounds = this.dataBounds()
         if (center) {
             let extent = 20
@@ -398,7 +427,7 @@ export class Viewer {
     }
 
     /** Straight down onto `target` from high enough that `extent` meters fit the shorter side of the view. */
-    topDown(target, extent) {
+    topDown(target: THREE.Vector3, extent: number) {
         const halfFov = THREE.MathUtils.degToRad(this.camera.fov) / 2
         const fit = Math.min(1, this.camera.aspect)
         const height = (extent / 2 / Math.tan(halfFov) / fit) * 1.1
@@ -407,8 +436,8 @@ export class Viewer {
     }
 
     /** Puts the camera at `position` looking at `target` now (no leftover damping, no follow glide). */
-    #place(target, position) {
-        const controls = this.controls
+    #place(target: THREE.Vector3, position: THREE.Vector3) {
+        const controls = this.controls as OrbitControls & OrbitControlsInternals
         controls._sphericalDelta?.set(0, 0, 0)
         controls._panOffset?.set(0, 0, 0)
         if (controls._scale !== undefined) {
@@ -444,22 +473,21 @@ export class Viewer {
     /**
      * Where the drawn data is (point clouds and meshes, not the grid or helpers): the 2nd-98th percentile box of a
      * sample of their points. Null when nothing is drawn.
-     * @returns {THREE.Box3 | null}
      */
     dataBounds(): THREE.Box3 | null {
-        const xs = [],
-            ys = [],
-            zs = []
+        const xs: number[] = [],
+            ys: number[] = [],
+            zs: number[] = []
         const point = new THREE.Vector3()
         this.scene.updateMatrixWorld()
         this.scene.traverseVisible((object) => {
-            const drawn = object.isPoints || (object.isMesh && !object.isLineSegments2)
+            const drawn = isPoints(object) || (isMesh(object) && !isLineSegments2(object))
             if (!drawn || object.userData.noPick) {
                 return
             }
-            const geometry = object.geometry
+            const geometry = object.geometry as THREE.BufferGeometry | undefined
             const position = geometry?.getAttribute("position")
-            if (!position) {
+            if (!geometry || !position) {
                 return
             }
             const start = geometry.drawRange.start
@@ -477,7 +505,7 @@ export class Viewer {
         if (!xs.length) {
             return null
         }
-        const range = (values) => {
+        const range = (values: number[]) => {
             values.sort((a, b) => a - b)
             return [
                 values[Math.floor(values.length * 0.02)],
@@ -518,7 +546,7 @@ export class Viewer {
         this.requestRender()
     }
 
-    #loop = (now) => {
+    #loop = (now: number) => {
         if (this.#disposed) {
             return
         }
@@ -528,7 +556,7 @@ export class Viewer {
         const reduced = !!this.#reducedMotion?.matches
         const following = !!this.followTarget && !this.followPaused.get().paused
         if (following) {
-            const target = this.followTarget
+            const target = this.followTarget!
             if (reduced) {
                 this.#follow.reset()
             }
@@ -614,8 +642,8 @@ export class Viewer {
         }
     }
 
-    #publishStats(now) {
-        const percentile = (values, p) => {
+    #publishStats(now: number) {
+        const percentile = (values: number[], p: number) => {
             if (!values.length) {
                 return null
             }
@@ -626,8 +654,9 @@ export class Viewer {
         let points = 0
         let splats = false
         this.scene.traverseVisible((object) => {
-            if (object.isPoints) {
-                splats ||= "SPLAT" in (object.material.defines ?? {})
+            if (isPoints(object)) {
+                const material = object.material as Partial<THREE.ShaderMaterial>
+                splats ||= "SPLAT" in (material.defines ?? {})
                 const geometry = object.geometry
                 points += Math.min(geometry.drawRange.count, geometry.getAttribute("position")?.count ?? 0)
             }

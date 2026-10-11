@@ -2,13 +2,13 @@
 // shaders sample. Ported from dim-controller core/render/gradients.ts.
 import * as THREE from "three"
 
-export { DEFAULT_GRADIENT, GRADIENTS, RAMPS, sampleGradient } from "../colormaps"
-import { DEFAULT_GRADIENT, DEFAULT_PALETTE, isPalette, PALETTES, RAMPS, sampleGradient } from "../colormaps"
+export { DEFAULT_GRADIENT, GRADIENTS, RAMPS, sampleGradient } from "../colormaps.ts"
+import { DEFAULT_GRADIENT, DEFAULT_PALETTE, isPalette, PALETTES, RAMPS, sampleGradient } from "../colormaps.ts"
 
-const textures = new Map()
+const textures: Map<string, THREE.DataTexture> = new Map()
 
-/** @returns {THREE.DataTexture} */
-export function gradientTexture(name): THREE.DataTexture {
+/** The ramp or palette `name` as a 256×1 texture (cached). */
+export function gradientTexture(name: string): THREE.DataTexture {
     let texture = textures.get(name)
     if (!texture) {
         const data = new Uint8Array(256 * 4)
@@ -33,7 +33,7 @@ export function gradientTexture(name): THREE.DataTexture {
 }
 
 /** CSS linear-gradient for a ramp or a palette (settings swatches). */
-export function gradientCss(name) {
+export function gradientCss(name: string): string {
     if (isPalette(name)) {
         const colors = (PALETTES[name] ?? PALETTES[DEFAULT_PALETTE]).colors
         return `linear-gradient(90deg, ${[...colors, ...colors.slice(0, -1).reverse()].join(", ")})`

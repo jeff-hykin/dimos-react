@@ -2,29 +2,50 @@
 // pairs (one edge each) with the edge weight in the first pose's orientation.w. Edges are colored by weight on a log
 // scale, nodes (each distinct endpoint) drawn as points.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { FatLines } from "../lines"
-import { sampleGradient } from "../gradients"
-import { applyLook, makePointMaterial } from "../point_material"
-import { themeColors } from "../../theme/theme"
-import { cssColor } from "../robot_model"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
-import { Field, Select, Slider, Toggle } from "../../components/controls"
+import { useStore } from "../store.ts"
+import { FatLines } from "../lines.ts"
+import { sampleGradient } from "../gradients.ts"
+import { applyLook, makePointMaterial } from "../point_material.ts"
+import { themeColors } from "../../theme/theme.ts"
+import { cssColor } from "../robot_model.ts"
+import { placeLayer, registerLayer, subscribeDecoded } from "./registry.ts"
+import type { LayerContext, LayerSettingsProps, Topic } from "./registry.ts"
+import { Field, Select, Slider, Toggle } from "../../components/controls.tsx"
+import type { Store } from "../store.ts"
+import type { FrameInfo } from "../viewer.ts"
 
-/** @typedef {{ width: number, nodes: boolean, nodeSize: number, gradient: string }} GraphSettings */
+export interface GraphSettings {
+    width: number
+    nodes: boolean
+    nodeSize: number
+    gradient: string
+}
+
+interface Point3 {
+    x: number
+    y: number
+    z: number
+}
+
+/** nav_msgs.Path as dimos sends a graph (decoded): poses in pairs, one edge each */
+interface GraphPath {
+    header?: { frame_id?: string }
+    poses?: { pose: { position: Point3; orientation?: { w?: number } } }[]
+}
 
 export class GraphLayer {
     root = new THREE.Group()
-    #edges
-    #nodes
-    #nodeMaterial
-    #stop
-    #unsubscribe
-    #frame = null
-    settings: any
-    context: any
+    #edges: FatLines
+    #nodes: THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial>
+    #nodeMaterial: THREE.ShaderMaterial
+    #stop: () => void = () => {}
+    #unsubscribe: () => void
+    #frame: string | null = null
+    settings: Store<GraphSettings>
+    context: LayerContext
 
-    constructor(context, topic, settings) {
+    /** `topic` null (a <Layer> given `data`): nothing to draw, this type has no setData */
+    constructor(context: LayerContext, topic: Topic | null, settings: Store<GraphSettings>) {
         this.context = context
         this.settings = settings
         this.#edges = new FatLines(context.viewer.resolution, { width: settings.get().width, vertexColors: true })
@@ -34,9 +55,11 @@ export class GraphLayer {
         this.root.add(this.#edges.object, this.#nodes)
         this.#unsubscribe = settings.subscribe(() => this.#restyle())
         this.#restyle()
-        this.#stop = subscribeDecoded(context, topic, { maxHz: 5, decodeAs: "nav_msgs.Path" }, (path, timestamp) =>
-            this.#onGraph(path, timestamp),
-        )
+        if (topic) {
+            this.#stop = subscribeDecoded(context, topic, { maxHz: 5, decodeAs: "nav_msgs.Path" }, (path, timestamp) =>
+                this.#onGraph(path, timestamp),
+            )
+        }
     }
 
     #restyle() {
@@ -62,11 +85,11 @@ export class GraphLayer {
         this.context.viewer.requestRender()
     }
 
-    #onGraph(path, timestamp) {
+    #onGraph(path: GraphPath, timestamp: number | undefined) {
         this.#frame = path.header?.frame_id ?? ""
         const poses = path.poses ?? []
         const edgeCount = Math.floor(poses.length / 2)
-        const logs = []
+        const logs: number[] = []
         for (let index = 0; index < edgeCount; index++) {
             const weight = poses[index * 2]?.pose?.orientation?.w ?? 1
             logs.push(Math.log10(Math.max(1e-6, Math.abs(weight))))
@@ -75,7 +98,7 @@ export class GraphLayer {
             high = Math.max(...logs, low + 1e-6)
         const gradient = this.settings.get().gradient
         this.#edges.clear()
-        const nodes = new Map()
+        const nodes = new Map<string, [number, number, number]>()
         const color = new THREE.Color()
         for (let index = 0; index < edgeCount; index++) {
             const a = poses[index * 2].pose.position,
@@ -109,7 +132,7 @@ export class GraphLayer {
         this.context.viewer.noteData(timestamp)
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (this.#frame !== null) {
             placeLayer(this.context, this.root, this.#frame, frame.fixedFrame)
         }
@@ -124,7 +147,7 @@ export class GraphLayer {
     }
 }
 
-export function GraphSettingsEditor({ settings }) {
+export function GraphSettingsEditor({ settings }: LayerSettingsProps<GraphSettings>) {
     const value = useStore(settings)
     return (
         <div className="dr-layer-settings-grid">
@@ -162,7 +185,7 @@ export function GraphSettingsEditor({ settings }) {
     )
 }
 
-registerLayer({
+registerLayer<GraphSettings>({
     id: "graph",
     label: "Graph (nodes + edges)",
     types: ["nav_msgs.LineSegments3D"],

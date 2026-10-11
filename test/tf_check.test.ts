@@ -1,20 +1,26 @@
 // The TF check (what's wrong with a tree) and the layer list: which topics become layers, what's on by default,
 // switching and persisting, the replay clock and seek.
 import { test } from "vitest"
-import { assert, assertEquals } from "./assert"
-import { TfTree } from "../src/three/tf"
-import { checkTf, confirmedIssues, TF_STALE_MS } from "../src/three/tf_check"
-import { LayerManager } from "../src/three/layers/manager"
-import { layerTypeFor } from "../src/three/layers/registry"
-import { Store } from "../src/three/store"
-import { memorySource } from "../src/data"
-import { cloudChanges, cloudOptions, cloudPreset } from "../src/three/cloud_quality"
-import { cameraInfoFor } from "../src/components/camera"
-import "../src/three/layers/index"
+import { assert, assertEquals } from "./assert.ts"
+import { TfTree } from "../src/three/tf.ts"
+import { checkTf, confirmedIssues, TF_STALE_MS } from "../src/three/tf_check.ts"
+import type { TfIssue } from "../src/three/tf_check.ts"
+import { LayerManager } from "../src/three/layers/manager.ts"
+import { layerTypeFor } from "../src/three/layers/registry.ts"
+import { Store } from "../src/three/store.ts"
+import { memorySource } from "../src/data.ts"
+import { cloudChanges, cloudOptions, cloudPreset } from "../src/three/cloud_quality.ts"
+import { cameraInfoFor } from "../src/components/camera.tsx"
+import "../src/three/layers/index.ts"
 
-const identity = [0, 0, 0, 1]
-const check = (tf, fixedFrame, layers = []) =>
-    checkTf({ snapshot: tf.snapshot(), fixedFrame, layers, placed: (frame) => tf.lookup(frame, fixedFrame) !== null })
+const identity: [number, number, number, number] = [0, 0, 0, 1]
+const check = (tf: TfTree, fixedFrame: string, layers: { name: string; frame: string }[] = []) =>
+    checkTf({
+        snapshot: tf.snapshot(),
+        fixedFrame,
+        layers,
+        placed: (frame: string) => tf.lookup(frame, fixedFrame) !== null,
+    })
 
 test("a healthy tree has no issues", () => {
     const tf = new TfTree()
@@ -58,15 +64,15 @@ test("a stopped transform is stale only while others keep updating", () => {
 })
 
 test("an issue shows once two checks in a row see it", () => {
-    const issue = { kind: "unplaced", summary: "x", detail: "", frames: ["camera"] }
+    const issue: TfIssue = { kind: "unplaced", summary: "x", detail: "", frames: ["camera"] }
     assertEquals(confirmedIssues([], [issue]), [])
     assertEquals(confirmedIssues([issue], [issue]), [issue])
 })
 
 test("the layer manager makes an entry per drawable topic, with type defaults, switches and persistence", () => {
-    const saved = new Map()
-    const persist = (key, defaults) => {
-        const store = new Store(saved.get(key) ?? defaults)
+    const saved = new Map<string, unknown>()
+    const persist = <T>(key: string, defaults: T): Store<T> => {
+        const store = new Store((saved.get(key) as T | undefined) ?? defaults)
         store.subscribe(() => saved.set(key, store.get()))
         return store
     }
@@ -98,8 +104,8 @@ test("the layer manager makes an entry per drawable topic, with type defaults, s
     const again = new LayerManager({ source, persist })
     again.setTopics([{ key: "dimos/lidar/sensor_msgs.PointCloud2" }])
     assertEquals(again.entries.get().list[0].enabled, false)
-    assertEquals(layerTypeFor("visualization_msgs.MarkerArray").id, "marker")
-    assertEquals(layerTypeFor("nav_msgs.OccupancyGrid").id, "occupancy")
+    assertEquals(layerTypeFor("visualization_msgs.MarkerArray")?.id, "marker")
+    assertEquals(layerTypeFor("nav_msgs.OccupancyGrid")?.id, "occupancy")
 })
 
 test("a replay source: its clock is the playhead and seek tells listeners", () => {
@@ -114,7 +120,7 @@ test("a replay source: its clock is the playhead and seek tells listeners", () =
     off()
     source.seek()
     assertEquals(seeks, 1)
-    const got = []
+    const got: (number | undefined)[] = []
     source.subscribe("dimos/odom/nav_msgs.Odometry", {}, (message) => got.push(message.timestamp))
     source.publish("dimos/odom/nav_msgs.Odometry", { pose: {} })
     assertEquals(got, [1000])
@@ -128,5 +134,5 @@ test("cloud presets turn into gateway options and in-place updates; a camera fin
         { key: "a", name: "/camera/color_info", type: "sensor_msgs.CameraInfo" },
         { key: "b", name: "/camera/depth_info", type: "sensor_msgs.CameraInfo" },
     ]
-    assertEquals(cameraInfoFor({ name: "/camera/color_image" }, infos).key, "a")
+    assertEquals(cameraInfoFor({ name: "/camera/color_image" }, infos)?.key, "a")
 })

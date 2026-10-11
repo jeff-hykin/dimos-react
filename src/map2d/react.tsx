@@ -7,27 +7,45 @@
 // `onMap(renderer)` hands over the renderer for buttons outside it: `renderer.recenter()` (follow again), `renderer.fit()`
 // (show everything). The renderer lives while the component is mounted; nothing is subscribed once it unmounts.
 import { useEffect, useMemo, useRef } from "react"
-import { cx } from "../cx"
-import { useDataSource } from "../data"
-import { Map2DRenderer } from "./renderer"
-import { DEFAULT_FOLLOW_FRAME } from "./math"
+import type { CSSProperties, ReactNode } from "react"
+import { cx } from "../cx.ts"
+import { useDataSource } from "../data.ts"
+import type { DataSource, Topic } from "../data.ts"
+import type { TfTree } from "../three/tf.ts"
+import { Map2DRenderer } from "./renderer.ts"
+import type { Map2DContext, Map2DFollowState, Map2DPick, Map2DStatus, RetainedMapData } from "./renderer.ts"
+import { DEFAULT_FOLLOW_FRAME } from "./math.ts"
+import type { MapView } from "./math.ts"
 
 /** each data source's last map data per topic, so a remounted map shows it at once */
-const retainedBySource = new WeakMap()
+const retainedBySource = new WeakMap<DataSource, Map<string, RetainedMapData>>()
 
-/**
- * @param {{ tf: import("../three/tf").TfTree, topic?: { key: string, name: string, type: string } | null,
- *   overlay?: { key: string, name: string, type: string } | null, path?: string | null, followFrame?: string,
- *   robotFrame?: string, fixedFrame?: string, view?: { centerX: number, centerY: number, metersPerPixel: number } | null,
- *   onView?: (view: object) => void, onFollow?: (follow: { following: boolean, waiting: boolean }) => void,
- *   onStatus?: (status: { info: string, problem: string }) => void,
- *   onPick?: (pick: { x: number, y: number, frame: string, event: PointerEvent }) => void,
- *   onMap?: (renderer: Map2DRenderer | null) => void, className?: string, style?: object, children?: any }} props
- *   `topic`: the base map (OccupancyGrid, or a PointCloud2 drawn as a height heatmap); `overlay`: a costmap over it;
- *   `path`: a nav_msgs.Path topic key; `followFrame`: the TF frame it follows (a pan stops following);
- *   `robotFrame`: where the robot arrow and trail go (default `followFrame`); `fixedFrame` (default: the TF tree's
- *   world-ish root); `view`: where to start (a remembered `onView`)
- */
+export interface Map2DProps {
+    tf: TfTree
+    /** the base map (OccupancyGrid, or a PointCloud2 drawn as a height heatmap) */
+    topic?: Topic | null
+    /** a costmap over it */
+    overlay?: Topic | null
+    /** a nav_msgs.Path topic key */
+    path?: string | null
+    /** the TF frame it follows (a pan stops following) */
+    followFrame?: string
+    /** where the robot arrow and trail go (default `followFrame`) */
+    robotFrame?: string
+    /** default: the TF tree's world-ish root */
+    fixedFrame?: string
+    /** where to start (a remembered `onView`) */
+    view?: MapView | null
+    onView?: (view: MapView) => void
+    onFollow?: (follow: Map2DFollowState) => void
+    onStatus?: (status: Map2DStatus) => void
+    onPick?: (pick: Map2DPick) => void
+    onMap?: (renderer: Map2DRenderer | null) => void
+    className?: string
+    style?: CSSProperties
+    children?: ReactNode
+}
+
 export function Map2D({
     tf,
     topic = null,
@@ -45,30 +63,15 @@ export function Map2D({
     className,
     style,
     children,
-}: {
-    tf: import("../three/tf").TfTree
-    topic?: { key: string; name: string; type: string } | null
-    overlay?: { key: string; name: string; type: string } | null
-    path?: string | null
-    followFrame?: string
-    robotFrame?: string
-    fixedFrame?: string
-    view?: { centerX: number; centerY: number; metersPerPixel: number } | null
-    onView?: (view: object) => void
-    onFollow?: (follow: { following: boolean; waiting: boolean }) => void
-    onStatus?: (status: { info: string; problem: string }) => void
-    onPick?: (pick: { x: number; y: number; frame: string; event: PointerEvent }) => void
-    onMap?: (renderer: Map2DRenderer | null) => void
-    className?: string
-    style?: object
-    children?: any
-}) {
+}: Map2DProps) {
     const source = useDataSource()
-    const canvas = useRef(null)
-    const renderer = useRef(null)
-    const props = useRef({})
-    props.current = { onView, onFollow, onStatus, onPick, onMap, fixedFrame, robotFrame, followFrame }
-    const map = useMemo(() => {
+    const canvas = useRef<HTMLCanvasElement>(null)
+    const renderer = useRef<Map2DRenderer | null>(null)
+    // the latest callbacks and frames, read by the long-lived renderer
+    const latest = { onView, onFollow, onStatus, onPick, onMap, fixedFrame, robotFrame, followFrame }
+    const props = useRef(latest)
+    props.current = latest
+    const map = useMemo((): Map2DContext => {
         let retained = retainedBySource.get(source)
         if (!retained) {
             retainedBySource.set(source, (retained = new Map()))
@@ -82,7 +85,8 @@ export function Map2D({
         }
     }, [source, tf])
     useEffect(() => {
-        const created = new Map2DRenderer(map, canvas.current, view, followFrame, {
+        // effects run after the commit: the canvas is mounted
+        const created = new Map2DRenderer(map, canvas.current!, view, followFrame, {
             onView: (next) => props.current.onView?.(next),
             onFollow: (next) => props.current.onFollow?.(next),
             onStatus: (next) => props.current.onStatus?.(next),

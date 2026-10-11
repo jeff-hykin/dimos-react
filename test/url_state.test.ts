@@ -1,8 +1,10 @@
 // URL state: pure helpers, and the round trip backend event → URL → rendered UI (with back/forward and deep links).
 import { test } from "vitest"
-import { assert, assertEquals } from "./assert"
+import { testGlobals } from "./fake_globals.ts"
+import { assert, assertEquals } from "./assert.ts"
 import { Window } from "happy-dom"
-import { applyUrlEvent, createMemoryWindow, createUrlStore, parseUrlState, urlWith } from "../src/url_state"
+import type { memorySource as MemorySource } from "../src/data.ts"
+import { applyUrlEvent, createMemoryWindow, createUrlStore, parseUrlState, urlWith } from "../src/url_state.tsx"
 
 test("parseUrlState / urlWith round trip (search and hash)", () => {
     const href = urlWith("http://localhost/apps/rec/?a=1", { tab: "map", t: 12.5, gone: null })
@@ -42,14 +44,14 @@ test("memory window history: push, back, forward, popstate", () => {
 
 test("backend event → URL → rendered UI, back/forward and deep link reproduce it", async () => {
     const dom = new Window({ url: "http://localhost/apps/demo/" })
-    globalThis.window = dom
-    globalThis.document = dom.document
-    globalThis.IS_REACT_ACT_ENVIRONMENT = true
+    testGlobals.window = dom
+    testGlobals.document = dom.document
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = true
     const React = await import("react")
     const { createRoot } = await import("react-dom/client")
     const { act, createElement: h } = React
-    const { UrlStateProvider, useUrlState } = await import("../src/url_state")
-    const { DataSourceProvider, memorySource } = await import("../src/data")
+    const { UrlStateProvider, useUrlState } = await import("../src/url_state.tsx")
+    const { DataSourceProvider, memorySource } = await import("../src/data.ts")
 
     function Screen() {
         const [tab, setTab] = useUrlState("tab", "overview")
@@ -62,7 +64,7 @@ test("backend event → URL → rendered UI, back/forward and deep link reproduc
             h("button", { id: "go-logs", onClick: () => setTab("logs") }, "logs"),
         )
     }
-    const mount = async (win, source) => {
+    const mount = async (win: ReturnType<typeof createMemoryWindow>, source: ReturnType<typeof MemorySource>) => {
         const host = document.createElement("div")
         document.body.append(host)
         const root = createRoot(host)
@@ -91,7 +93,7 @@ test("backend event → URL → rendered UI, back/forward and deep link reproduc
     assertEquals(view.text(), "tab:mapcount:3logs")
 
     // the UI writes the URL too; setting the default back removes the param
-    await act(async () => view.host.querySelector("#go-logs").click())
+    await act(async () => view.host.querySelector<HTMLButtonElement>("#go-logs")!.click())
     assertEquals(win.location.href, "http://localhost/apps/demo/?count=3&tab=logs")
     assertEquals(view.text(), "tab:logscount:3logs")
 

@@ -2,15 +2,26 @@
 // (zenoh-dimos-codecs' dimos_lcm_pointcloud2 thins to 1 point in round(1/quality), at most 1 in 16, and quantizes to
 // int16; `encodeOptions.quality` caps what the bandwidth allocator may pick, `minQuality` floors it). Per viewer (a
 // phone on cellular wants less than a desktop on the LAN): localStorage.
-import { readLocal, Store, writeLocal } from "./store"
+import { readLocal, Store, writeLocal } from "./store.ts"
+import type { DataSource, Message, SubscribeOptions, Subscription } from "../data.ts"
 
-/**
- * @typedef {"low" | "balanced" | "full"} CloudQuality
- * @typedef {{ id: CloudQuality, label: string, about: string, maxHz: number, quality: number, minQuality?: number }} CloudPreset
- * @typedef {{ hz: number, pointsPerSecond: number, bytesPerSecond: number }} CloudRate
- */
+export type CloudQuality = "low" | "balanced" | "full"
 
-/** @type {CloudPreset[]} */
+export interface CloudPreset {
+    id: CloudQuality
+    label: string
+    about: string
+    maxHz: number
+    quality: number
+    minQuality?: number
+}
+
+export interface CloudRate {
+    hz: number
+    pointsPerSecond: number
+    bytesPerSecond: number
+}
+
 export const CLOUD_PRESETS: CloudPreset[] = [
     {
         id: "low",
@@ -36,11 +47,12 @@ export const CLOUD_PRESETS: CloudPreset[] = [
     },
 ]
 
-/** @returns {CloudPreset} */
-export const cloudPreset = (id): CloudPreset => CLOUD_PRESETS.find((preset) => preset.id === id) ?? CLOUD_PRESETS[1]
+/** The preset with `id`, else Balanced. */
+export const cloudPreset = (id?: string | null): CloudPreset =>
+    CLOUD_PRESETS.find((preset) => preset.id === id) ?? CLOUD_PRESETS[1]
 
 /** The gateway subscription for a cloud at a preset. */
-export function cloudOptions(preset) {
+export function cloudOptions(preset: CloudPreset): SubscribeOptions {
     return {
         delivery: "latest",
         encoding: "dimos_lcm_pointcloud2",
@@ -51,27 +63,26 @@ export function cloudOptions(preset) {
 }
 
 /** What changes going to `to` (zenoh-gateway >= 0.5.1's Subscription.update: null removes an option). */
-export function cloudChanges(to) {
+export function cloudChanges(to: CloudPreset) {
     return { maxHz: to.maxHz, minQuality: to.minQuality ?? null, encodeOptions: { quality: to.quality } }
 }
 
 const QUALITY_KEY = "dimos-react.clouds.quality"
 
 /** topic key → this viewer's preset (missing = Balanced) */
-export const cloudQualities = new Store(readLocal(QUALITY_KEY, {}))
+export const cloudQualities = new Store(readLocal<Record<string, CloudQuality>>(QUALITY_KEY, {}))
 
-export function setCloudQuality(key, quality) {
+export function setCloudQuality(key: string, quality: CloudQuality) {
     cloudQualities.update({ [key]: quality })
     writeLocal(QUALITY_KEY, cloudQualities.get())
 }
 
-/** @returns {CloudQuality} */
-export const cloudQualityOf = (key): CloudQuality => cloudPreset(cloudQualities.get()[key]).id
+export const cloudQualityOf = (key: string): CloudQuality => cloudPreset(cloudQualities.get()[key]).id
 
 /** topic key → live rate of each cloud being drawn (gone when it stops) */
-export const cloudRates = new Store({})
+export const cloudRates = new Store<Record<string, CloudRate>>({})
 
-export function setCloudRate(key, rate) {
+export function setCloudRate(key: string, rate: CloudRate | null | undefined) {
     const next = { ...cloudRates.get() }
     if (rate) {
         next[key] = rate
@@ -81,30 +92,31 @@ export function setCloudRate(key, rate) {
     cloudRates.set(next)
 }
 
+/** A decoded cloud's `positions` (x, y, z, ...), if `value` has them. */
+const positionsOf = (value: unknown): ArrayLike<number> | undefined =>
+    (value as { positions?: ArrayLike<number> } | null | undefined)?.positions
+
 /**
  * One cloud's subscription at its preset: a preset change updates it in place where the gateway can (else opens the
  * new one, then closes the old), and it counts what arrives.
  */
 export class CloudStream {
-    #stop
-    #preset
+    #stop: Subscription
+    #preset: CloudPreset
     #closed = false
     #counted = { scans: 0, points: 0, bytes: 0, since: 0 }
-    onMessage: (message: any) => void
+    onMessage: (message: Message) => void
     key: string
-    source: { subscribe: Function }
+    source: Pick<DataSource, "subscribe">
 
     /**
-     * @param {{ subscribe: Function }} source a data source
-     * @param {string} key
-     * @param {CloudQuality} quality
-     * @param {(message: any) => void} onMessage
+     * @param source a data source
      */
     constructor(
-        source: { subscribe: Function },
+        source: Pick<DataSource, "subscribe">,
         key: string,
         quality: CloudQuality,
-        onMessage: (message: any) => void,
+        onMessage: (message: Message) => void,
         now = performance.now(),
     ) {
         this.source = source
@@ -115,13 +127,13 @@ export class CloudStream {
         this.#stop = this.#open()
     }
 
-    get quality() {
+    get quality(): CloudQuality {
         return this.#preset.id
     }
 
-    #open() {
+    #open(): Subscription {
         return this.source.subscribe(this.key, cloudOptions(this.#preset), (message) => {
-            const positions = message.decoded?.positions ?? message.value?.positions
+            const positions = positionsOf(message.decoded) ?? positionsOf(message.value)
             this.#counted.scans++
             this.#counted.points += positions ? positions.length / 3 : 0
             this.#counted.bytes += message.bytes?.byteLength ?? 0
@@ -129,7 +141,7 @@ export class CloudStream {
         })
     }
 
-    async setQuality(quality) {
+    async setQuality(quality: CloudQuality) {
         const preset = cloudPreset(quality)
         if (this.#closed || preset.id === this.#preset.id) {
             return
@@ -151,7 +163,7 @@ export class CloudStream {
         handle()
     }
 
-    /** scans, points and bytes a second since the last call @returns {CloudRate} */
+    /** scans, points and bytes a second since the last call */
     sample(now = performance.now()): CloudRate {
         const seconds = Math.max(1e-3, (now - this.#counted.since) / 1000)
         const rate = {
@@ -169,14 +181,14 @@ export class CloudStream {
     }
 }
 
-export const formatCount = (count) =>
+export const formatCount = (count: number) =>
     count >= 1e6
         ? `${(count / 1e6).toFixed(1)}M`
         : count >= 1000
           ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`
           : String(Math.round(count))
 
-export const formatBytes = (bytes) =>
+export const formatBytes = (bytes: number) =>
     bytes >= 1e6
         ? `${(bytes / 1e6).toFixed(1)} MB`
         : bytes >= 1000

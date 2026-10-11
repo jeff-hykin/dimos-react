@@ -1,8 +1,8 @@
 // The pure parts behind ViewPanel, ThumbStick and the camera views.
 import { test } from "vitest"
-import { assertEquals } from "./assert"
-import { clampPanelBox, shapeStick, smoothToward, swapTiles } from "../src/index"
-import { cameraTabs, pickCamera, retargetCameras, videoPreset, videoPresetChanges } from "../src/index"
+import { assertEquals } from "./assert.ts"
+import { clampPanelBox, shapeStick, smoothToward, swapTiles } from "../src/index.ts"
+import { cameraTabs, pickCamera, retargetCameras, videoPreset, videoPresetChanges } from "../src/index.ts"
 
 test("shapeStick: dead zone, one-axis sticks, full deflection", () => {
     assertEquals(shapeStick(5, 5, 100), { x: 0, y: 0 })
@@ -45,7 +45,7 @@ test("swapTiles swaps two regions", () => {
     assertEquals(swapTiles(["a", "b"], "a", "x"), ["a", "b"])
 })
 
-const topic = (name, type = "sensor_msgs.Image") => ({ key: `dimos${name}/${type}`, name, type })
+const topic = (name: string, type = "sensor_msgs.Image") => ({ key: `dimos${name}/${type}`, name, type })
 
 test("cameraTabs labels cameras by what tells them apart, color first", () => {
     const tabs = cameraTabs([topic("/spot/left/image"), topic("/spot/depth/image"), topic("/spot/right/image")])

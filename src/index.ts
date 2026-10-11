@@ -3,31 +3,31 @@
 //     import { h, AppProvider, Button, useUrlState } from "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/mod.js?external=react,react-dom,three"
 //
 // The 3D view (three.js) is its own entry, ./three.js, so apps without a 3D view never load three.
-export { cx } from "./cx"
-export * from "./theme/theme"
-export * from "./theme/provider"
-export { TOKENS_CSS } from "./theme/tokens"
-export { COMPONENT_CSS } from "./theme/css"
-export * from "./app_provider"
-export * from "./data"
-export * from "./url_state"
-export * from "./hooks"
+export { cx } from "./cx.ts"
+export * from "./theme/theme.ts"
+export * from "./theme/provider.tsx"
+export { TOKENS_CSS } from "./theme/tokens.ts"
+export { COMPONENT_CSS } from "./theme/css.ts"
+export * from "./app_provider.tsx"
+export * from "./data.ts"
+export * from "./url_state.tsx"
+export * from "./hooks.ts"
 export {
     decode as decodeLcm,
     encode as encodeLcm,
     fingerprint as lcmFingerprint,
     headerFrameId,
     schemas as lcmSchemas,
-} from "./lcm"
-export * from "./components/icon"
-export * from "./components/controls"
-export * from "./components/feedback"
-export * from "./components/layout"
-export * from "./components/data"
-export * from "./components/nav"
-export * from "./components/input_devices"
-export * from "./components/text"
-export * from "./components/media"
+} from "./lcm.ts"
+export * from "./components/icon.tsx"
+export * from "./components/controls.tsx"
+export * from "./components/feedback.tsx"
+export * from "./components/layout.tsx"
+export * from "./components/data.tsx"
+export * from "./components/nav.tsx"
+export * from "./components/input_devices.tsx"
+export * from "./components/text.tsx"
+export * from "./components/media.tsx"
 export {
     cyclePhase,
     DEFAULT_GRADIENT,
@@ -42,8 +42,9 @@ export {
     PALETTES,
     RAMPS,
     sampleGradient,
-} from "./colormaps"
-export * from "./components/view_panel"
-export * from "./components/thumbstick"
-export * from "./components/camera"
-export { Store, useStore } from "./three/store"
+} from "./colormaps.ts"
+export type { Palette, RampStop, Rgb } from "./colormaps.ts"
+export * from "./components/view_panel.tsx"
+export * from "./components/thumbstick.tsx"
+export * from "./components/camera.tsx"
+export { Store, useStore } from "./three/store.ts"

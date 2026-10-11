@@ -4,8 +4,8 @@
 // localStorage ("portal.theme" / "portal.corners", Desktop's origin, which an app under /apps/<name>/ shares), so a
 // change in Settings → Appearance is a `storage` event in every open app. Off Desktop the bundled copy of those tokens
 // (tokens.js) stands in. Components (css.js) use only the tokens, so they follow every skin.
-import { SKINS, TOKENS_CSS } from "./tokens"
-import { COMPONENT_CSS } from "./css"
+import { SKINS, TOKENS_CSS } from "./tokens.ts"
+import { COMPONENT_CSS } from "./css.ts"
 
 export { SKINS }
 
@@ -13,7 +13,45 @@ export const SKIN_KEY = "portal.theme"
 export const CORNERS_KEY = "portal.corners"
 export const DESKTOP_THEME_URL = "/theme.css"
 
-function stored(key) {
+/** Corners: "sharp", "rounded", or "theme" (the skin's own). */
+export type Corners = "sharp" | "rounded" | "theme"
+
+/** The theme's palette (themeColors()): CSS color strings, plus the mono / sans font stacks. */
+export interface ThemeColors {
+    bg: string
+    surface: string
+    raised: string
+    card: string
+    fg: string
+    mutedFg: string
+    border: string
+    primary: string
+    primaryFg: string
+    ok: string
+    warn: string
+    danger: string
+    info: string
+    sceneBg: string
+    sceneGrid: string
+    sceneGridMajor: string
+    axisX: string
+    axisY: string
+    axisZ: string
+    /** the four categorical colors */
+    cat: string[]
+    mono: string
+    sans: string
+}
+
+/** What applyTheme put in effect. */
+export interface AppliedTheme {
+    skin: string
+    corners: Corners
+    dark: boolean
+    square: boolean
+}
+
+function stored(key: string): string | null {
     try {
         return globalThis.localStorage?.getItem(key) ?? null
     } catch {
@@ -22,24 +60,24 @@ function stored(key) {
 }
 
 /** Whether this page is one of Desktop's apps (served at /apps/<name>/, so Desktop's /theme.css is there). */
-export function onDesktop() {
+export function onDesktop(): boolean {
     return !!globalThis.location?.pathname?.startsWith("/apps/")
 }
 
 /** Desktop's saved skin id ("portal", "research", "vibeslop", …); "portal" when nothing is saved. */
-export function desktopSkin() {
+export function desktopSkin(): string {
     return stored(SKIN_KEY) || "portal"
 }
 
 /** Desktop's corners setting: "sharp", "rounded", or "theme" (the skin's own). */
-export function desktopCorners() {
+export function desktopCorners(): Corners {
     const value = stored(CORNERS_KEY)
     return value === "sharp" || value === "rounded" ? value : "theme"
 }
 
 /** Adds a <style> (once per id) holding `css`; returns it. */
-function ensureStyle(id, css, { first = false } = {}) {
-    let style = document.querySelector(`style[data-dimos-react="${id}"]`)
+function ensureStyle(id: string, css: string, { first = false }: { first?: boolean } = {}): HTMLStyleElement {
+    let style = document.querySelector<HTMLStyleElement>(`style[data-dimos-react="${id}"]`)
     if (!style) {
         style = document.createElement("style")
         style.dataset.dimosReact = id
@@ -58,8 +96,7 @@ function ensureStyle(id, css, { first = false } = {}) {
 /**
  * Puts the theme's stylesheets in the page: Desktop's /theme.css (on Desktop, or `themeUrl`), else the bundled
  * tokens; then the components' CSS. Both go first in <head> so the app's own CSS still wins ties.
- * @param {{ themeUrl?: string | null, bundled?: boolean }} [options]
- * @returns {Promise<void>} resolves when the tokens are in effect
+ * @returns resolves when the tokens are in effect
  */
 export function installThemeCss({
     themeUrl = null,
@@ -75,16 +112,16 @@ export function installThemeCss({
         ensureStyle("tokens", TOKENS_CSS, { first: true })
         return Promise.resolve()
     }
-    let link = document.querySelector("link[data-dimos-react-theme]")
-    if (link && link.getAttribute("href") === url) {
+    const existing = document.querySelector("link[data-dimos-react-theme]")
+    if (existing && existing.getAttribute("href") === url) {
         return Promise.resolve()
     }
-    link?.remove()
-    link = document.createElement("link")
+    existing?.remove()
+    const link = document.createElement("link")
     link.rel = "stylesheet"
-    link.href = url
+    link.href = String(url) // url is null only with bundled: false off Desktop and no themeUrl
     link.dataset.dimosReactTheme = ""
-    const loaded = new Promise((resolve) => {
+    const loaded = new Promise<void>((resolve) => {
         link.addEventListener("load", () => resolve(), { once: true })
         link.addEventListener(
             "error",
@@ -103,18 +140,11 @@ export function installThemeCss({
 /**
  * Sets html[data-skin], html[data-corners] (Desktop's /theme.css keys off both) and html[data-dr-dark] (the
  * components' dark structural rules), and returns what is in effect.
- * @param {{ skin?: string, corners?: "sharp" | "rounded" | "theme" }} choice
- * @returns {{ skin: string, corners: string, dark: boolean, square: boolean }}
  */
 export function applyTheme({
     skin = "portal",
     corners = "theme",
-}: { skin?: string; corners?: "sharp" | "rounded" | "theme" } = {}): {
-    skin: string
-    corners: string
-    dark: boolean
-    square: boolean
-} {
+}: { skin?: string; corners?: Corners } = {}): AppliedTheme {
     const root = document.documentElement
     root.dataset.skin = skin
     if (corners === "theme") {
@@ -130,12 +160,9 @@ export function applyTheme({
     return { skin, corners, dark, square }
 }
 
-/**
- * Calls `listener()` whenever Desktop saves a new skin or corners (in its own page or another tab). Returns unsubscribe.
- * @param {() => void} listener
- */
-export function watchDesktopTheme(listener: () => void) {
-    const onStorage = (event) => {
+/** Calls `listener()` whenever Desktop saves a new skin or corners (in its own page or another tab). Returns unsubscribe. */
+export function watchDesktopTheme(listener: () => void): () => void {
+    const onStorage = (event: StorageEvent) => {
         if (event.key === null || event.key === SKIN_KEY || event.key === CORNERS_KEY) {
             listener()
         }
@@ -145,12 +172,12 @@ export function watchDesktopTheme(listener: () => void) {
 }
 
 /** The current palette, for canvases, charts and 3D scenes (read from the theme's variables). */
-export function themeColors() {
+export function themeColors(): Partial<ThemeColors> {
     if (typeof document === "undefined") {
         return {}
     }
     const style = getComputedStyle(document.body ?? document.documentElement)
-    const read = (name) => style.getPropertyValue(name).trim()
+    const read = (name: string) => style.getPropertyValue(name).trim()
     return {
         bg: read("--bg"),
         surface: read("--surface"),
@@ -182,7 +209,7 @@ export function themeColors() {
  * in now: `{type: "dimos-ready"}`, once, two frames later.
  */
 let readySent = false
-export function signalReady() {
+export function signalReady(): void {
     if (readySent || typeof window === "undefined" || window.parent === window) {
         return
     }
@@ -204,7 +231,7 @@ let insetsInstalled = false
  * Keeps `--dim-inset-top/bottom/left/right` on :root current: how much of the page Desktop's shell covers (its dock),
  * from the shell's `{type: "dimos-inset"}` messages; 0 outside Desktop.
  */
-export function installInsets() {
+export function installInsets(): void {
     if (insetsInstalled || typeof document === "undefined") {
         return
     }

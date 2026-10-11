@@ -11,17 +11,63 @@
 // the current params (null removes one), `clear` drops the others first, `replace` uses replaceState (no new history
 // entry). Params live in the query string (mode "search", default) or in the hash (mode "hash": #a=1&b=2).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from "react"
-import { useDataSource } from "./data"
+import type { ReactNode } from "react"
+import { useDataSource } from "./data.ts"
+import type { DataSource } from "./data.ts"
+
+/** Where the params live: the query string ("search") or the hash ("hash": #a=1&b=2). */
+export type UrlMode = "search" | "hash"
+
+/** The URL's params as a plain object of strings. */
+export type UrlParams = Record<string, string>
+
+/** Param changes: a value is written as a string (objects as JSON); null / undefined / "" remove the param. */
+export type UrlChanges = Record<string, unknown>
+
+/** How a change is written: `replace` uses replaceState (no new history entry), `clear` drops the other params. */
+export interface UrlSetOptions {
+    replace?: boolean
+    clear?: boolean
+}
+
+/** The parts of a window the URL store uses (the real window, or createMemoryWindow()). */
+export interface UrlWindow {
+    location: { readonly href: string }
+    history: {
+        readonly state: unknown
+        pushState(state: unknown, title: string, href: string): void
+        replaceState(state: unknown, title: string, href: string): void
+    }
+    addEventListener(type: string, listener: () => void): void
+    removeEventListener(type: string, listener: () => void): void
+}
+
+/** The URL as a store (createUrlStore). */
+export interface UrlStore {
+    mode: UrlMode
+    href(): string
+    /** the params (the same object until the URL changes) */
+    get(): UrlParams
+    subscribe(listener: () => void): () => void
+    /** true if the URL changed */
+    set(changes: UrlChanges, options?: UrlSetOptions): boolean
+    /** Applies a backend url event; true if the URL changed. */
+    applyEvent(event: unknown, options?: { eventType?: string }): boolean
+}
 
 /** The params of `href` as a plain object of strings. */
-export function parseUrlState(href, { mode = "search" } = {}) {
+export function parseUrlState(href: string, { mode = "search" }: { mode?: UrlMode } = {}): UrlParams {
     const url = new URL(href, "http://localhost/")
     const raw = mode === "hash" ? url.hash.replace(/^#/, "") : url.search
     return Object.fromEntries(new URLSearchParams(raw))
 }
 
 /** `href` with `changes` applied (null / undefined / "" remove a param; `clear` drops every other param first). */
-export function urlWith(href, changes, { mode = "search", clear = false } = {}) {
+export function urlWith(
+    href: string,
+    changes: UrlChanges | null | undefined,
+    { mode = "search", clear = false }: { mode?: UrlMode; clear?: boolean } = {},
+): string {
     const url = new URL(href, "http://localhost/")
     const params = new URLSearchParams(clear ? "" : mode === "hash" ? url.hash.replace(/^#/, "") : url.search)
     for (const [key, value] of Object.entries(changes ?? {})) {
@@ -41,31 +87,48 @@ export function urlWith(href, changes, { mode = "search", clear = false } = {}) 
     return url.href
 }
 
+/** A backend url event (`type` is "url" unless the provider says otherwise); `params` is an older name for `set`. */
+export interface UrlEvent {
+    type: string
+    set?: UrlChanges
+    params?: UrlChanges
+    replace?: boolean
+    clear?: boolean
+}
+
 /**
  * What a backend event does to the URL: `{ href, replace }`, or null if it isn't a url event (or changes nothing).
- * @param {string} href the current URL
- * @param {any} event
+ * @param href the current URL
+ * @param event a backend event (anything; only `{ type: eventType, … }` objects count)
  */
-export function applyUrlEvent(href: string, event: any, { mode = "search", eventType = "url" } = {}) {
-    if (!event || typeof event !== "object" || event.type !== eventType) {
+export function applyUrlEvent(
+    href: string,
+    event: unknown,
+    { mode = "search", eventType = "url" }: { mode?: UrlMode; eventType?: string } = {},
+): { href: string; replace: boolean } | null {
+    if (!event || typeof event !== "object" || (event as UrlEvent).type !== eventType) {
         return null
     }
-    const next = urlWith(href, event.set ?? event.params ?? {}, { mode, clear: !!event.clear })
+    const urlEvent = event as UrlEvent
+    const next = urlWith(href, urlEvent.set ?? urlEvent.params ?? {}, { mode, clear: !!urlEvent.clear })
     if (next === new URL(href, "http://localhost/").href) {
         return null
     }
-    return { href: next, replace: !!event.replace }
+    return { href: next, replace: !!urlEvent.replace }
 }
+
+/** What a memory window's listeners get: `{ type, state }` (the history entry's state). */
+export type MemoryWindowListener = (event: { type: string; state: unknown }) => void
 
 /**
  * A window stand-in with a working location + history (pushState, replaceState, back, forward, go → popstate), for
  * tests and server rendering.
  */
 export function createMemoryWindow(initialHref = "http://localhost/") {
-    const entries = [{ href: new URL(initialHref).href, state: null }]
+    const entries: { href: string; state: unknown }[] = [{ href: new URL(initialHref).href, state: null }]
     let index = 0
-    const listeners = new Map()
-    const fire = (type) => {
+    const listeners = new Map<string, Set<MemoryWindowListener>>()
+    const fire = (type: string) => {
         for (const listener of [...(listeners.get(type) ?? [])]) {
             listener({ type, state: entries[index].state })
         }
@@ -92,15 +155,15 @@ export function createMemoryWindow(initialHref = "http://localhost/") {
             get state() {
                 return entries[index].state
             },
-            pushState(state, _title, href) {
+            pushState(state: unknown, _title: string, href: string | URL) {
                 entries.splice(index + 1)
                 entries.push({ href: new URL(href, entries[index].href).href, state })
                 index = entries.length - 1
             },
-            replaceState(state, _title, href) {
+            replaceState(state: unknown, _title: string, href: string | URL) {
                 entries[index] = { href: new URL(href, entries[index].href).href, state }
             },
-            go(delta) {
+            go(delta: number) {
                 const next = Math.min(entries.length - 1, Math.max(0, index + delta))
                 if (next !== index) {
                     index = next
@@ -114,13 +177,13 @@ export function createMemoryWindow(initialHref = "http://localhost/") {
                 this.go(1)
             },
         },
-        addEventListener(type, listener) {
+        addEventListener(type: string, listener: MemoryWindowListener) {
             if (!listeners.has(type)) {
                 listeners.set(type, new Set())
             }
-            listeners.get(type).add(listener)
+            listeners.get(type)!.add(listener)
         },
-        removeEventListener(type, listener) {
+        removeEventListener(type: string, listener: MemoryWindowListener) {
             listeners.get(type)?.delete(listener)
         },
     }
@@ -131,12 +194,15 @@ export function createMemoryWindow(initialHref = "http://localhost/") {
  * The URL as a store: `get()` → params (the same object until the URL changes), `subscribe(listener)`,
  * `set(changes, { replace, clear })`, `applyEvent(event)`, `href()`. Follows back/forward (popstate, hashchange).
  */
-export function createUrlStore({ window: win = globalThis.window, mode = "search" } = {}) {
-    const listeners = new Set()
-    let lastHref = null
-    let lastParams = {}
+export function createUrlStore({
+    window: win = globalThis.window,
+    mode = "search",
+}: { window?: UrlWindow; mode?: UrlMode } = {}): UrlStore {
+    const listeners = new Set<() => void>()
+    let lastHref: string | null = null
+    let lastParams: UrlParams = {}
     const notify = () => listeners.forEach((listener) => listener())
-    const store = {
+    const store: UrlStore = {
         mode,
         href: () => win?.location?.href ?? "http://localhost/",
         get() {
@@ -171,7 +237,6 @@ export function createUrlStore({ window: win = globalThis.window, mode = "search
             notify()
             return true
         },
-        /** Applies a backend url event; true if the URL changed. */
         applyEvent(event, { eventType = "url" } = {}) {
             const change = applyUrlEvent(store.href(), event, { mode, eventType })
             if (!change) {
@@ -189,19 +254,34 @@ export function createUrlStore({ window: win = globalThis.window, mode = "search
  * Wires a data source's backend events to a URL store (non-React pages): every url event on the frontend topic
  * `topic` changes the URL. Returns unsubscribe.
  */
-export function bindUrlEvents(source, store, { topic = "events", eventType = "url" } = {}) {
+export function bindUrlEvents(
+    source: DataSource,
+    store: UrlStore,
+    { topic = "events", eventType = "url" }: { topic?: string; eventType?: string } = {},
+): () => void {
     return source.subscribeFrontend(topic, (event) => store.applyEvent(event, { eventType }))
 }
 
-const UrlStateContext = createContext(null)
-let defaultStore = null
+const UrlStateContext = createContext<UrlStore | null>(null)
+let defaultStore: UrlStore | null = null
 const getDefaultStore = () => (defaultStore ??= createUrlStore())
+
+export interface UrlStateProviderProps {
+    mode?: UrlMode
+    /** the window whose URL is the state (tests: createMemoryWindow()) */
+    window?: UrlWindow
+    /** a ready-made store */
+    store?: UrlStore
+    /** the frontend topic of the backend's url events, or false for none */
+    events?: string | boolean
+    eventType?: string
+    children?: ReactNode
+}
 
 /**
  * Provides the URL store below it and (unless `events={false}`) lets the app's backend change the URL with url events
  * on its `events` frontend topic (`events` may name another topic). `window` (tests: createMemoryWindow()) and
  * `mode` ("search" | "hash") pick where the params live; `store` passes a ready-made one.
- * @param {Record<string, any>} props
  */
 export function UrlStateProvider({
     mode = "search",
@@ -210,7 +290,7 @@ export function UrlStateProvider({
     events = "events",
     eventType = "url",
     children,
-}: Record<string, any>) {
+}: UrlStateProviderProps) {
     const store = useMemo(
         () => givenStore ?? createUrlStore({ window: win ?? globalThis.window, mode }),
         [givenStore, win, mode],
@@ -226,19 +306,27 @@ export function UrlStateProvider({
 }
 
 /** The URL store in effect (the provider's, else one over the real window). */
-export function useUrlStore() {
+export function useUrlStore(): UrlStore {
     return useContext(UrlStateContext) ?? getDefaultStore()
 }
 
 /** `[params, setParams(changes, { replace, clear })]`: every URL param, re-rendered on any URL change. */
-export function useUrlParams() {
+export function useUrlParams(): [UrlParams, (changes: UrlChanges, options?: UrlSetOptions) => boolean] {
     const store = useUrlStore()
     const params = useSyncExternalStore(store.subscribe, store.get, store.get)
-    const set = useCallback((changes, options) => store.set(changes, options), [store])
+    const set = useCallback((changes: UrlChanges, options?: UrlSetOptions) => store.set(changes, options), [store])
     return [params, set]
 }
 
-const CODECS = {
+/** How one param's value is read from and written to its text (`format` → null removes the param). */
+export interface UrlCodec<T = any> {
+    parse(text: string): T | undefined
+    format(value: T): string | null
+}
+
+export type UrlCodecName = "string" | "number" | "boolean" | "json"
+
+const CODECS: Record<UrlCodecName, UrlCodec> = {
     string: { parse: (text) => text, format: (value) => value },
     number: {
         parse: (text) => {
@@ -260,12 +348,34 @@ const CODECS = {
     },
 }
 
+export interface UseUrlStateOptions<T> {
+    codec?: UrlCodecName | UrlCodec<T>
+    replace?: boolean
+}
+
+/** useUrlState's setter: a value or `(old) => value`; options as UrlStore.set's. */
+export type UrlStateSetter<T> = (next: T | ((old: T) => T), options?: UrlSetOptions) => void
+
 /**
  * One URL param as state: `const [tab, setTab] = useUrlState("tab", "map")`. The default isn't written to the URL
  * (setting it back removes the param). `codec`: "string" (default) | "number" | "boolean" | "json" | { parse, format };
  * `replace: true` for values that change often (a scrubber, a camera pose) so they don't flood history.
  */
-export function useUrlState(key, defaultValue, { codec = "string", replace = false } = {}) {
+export function useUrlState<T = string>(
+    key: string,
+    defaultValue: T,
+    options?: UseUrlStateOptions<T>,
+): [T, UrlStateSetter<T>]
+export function useUrlState<T = string>(
+    key: string,
+    defaultValue?: T,
+    options?: UseUrlStateOptions<T>,
+): [T | undefined, UrlStateSetter<T | undefined>]
+export function useUrlState<T = string>(
+    key: string,
+    defaultValue?: T,
+    { codec = "string", replace = false }: UseUrlStateOptions<T> = {},
+): [T | undefined, UrlStateSetter<T>] {
     const store = useUrlStore()
     const { parse, format } = typeof codec === "string" ? CODECS[codec] : codec
     const raw = useSyncExternalStore(
@@ -273,12 +383,12 @@ export function useUrlState(key, defaultValue, { codec = "string", replace = fal
         () => store.get()[key],
         () => store.get()[key],
     )
-    const value = raw === undefined ? defaultValue : (parse(raw) ?? defaultValue)
+    const value: T | undefined = raw === undefined ? defaultValue : (parse(raw) ?? defaultValue)
     const latest = useRef(value)
     latest.current = value
     const set = useCallback(
-        (next, options = {}) => {
-            const resolved = typeof next === "function" ? next(latest.current) : next
+        (next: T | ((old: T) => T), options: UrlSetOptions = {}) => {
+            const resolved = typeof next === "function" ? (next as (old: T | undefined) => T)(latest.current) : next
             const same = JSON.stringify(resolved) === JSON.stringify(defaultValue)
             store.set({ [key]: same ? null : format(resolved) }, { replace, ...options })
         },

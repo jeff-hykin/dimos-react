@@ -5,11 +5,14 @@
 //
 //     h(CameraView, { topic: { key, name, type }, overlay: detectionsTopic, onInfo: (info) => … })
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { cx } from "../cx"
-import { useDataSource } from "../data"
-import { decode as decodeLcm } from "../lcm"
-import { Store, useStore } from "../three/store"
-import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawToImageData } from "./media"
+import type { ReactNode } from "react"
+import type { DepthImage, DepthLook } from "../camera/depth.ts"
+import { cx } from "../cx.ts"
+import { useDataSource } from "../data.ts"
+import type { DataSource, Message, Subscription, Topic } from "../data.ts"
+import { decode as decodeLcm } from "../lcm.ts"
+import { Store, useStore } from "../three/store.ts"
+import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawToImageData } from "./media.tsx"
 
 // ── latency ↔ quality presets (zenoh-gateway's video policy) ──
 
@@ -17,7 +20,27 @@ import { drawDetections2D, IMAGE_OVERLAY_TYPES, ImageView, normalizeFrame, rawTo
  * No preset sets maxHz: zenoh-gateway >= 0.5.1 encodes at min(maxHz, the source's rate), and each wants the camera's
  * own rate. playoutDelay is the browser side: how long the receiver may hold frames to play them out evenly.
  */
-export const VIDEO_PRESETS = [
+export interface VideoOptions {
+    maxResolution?: [number, number]
+    /** 0 drops frames before detail, 1 keeps the rate */
+    qualityToHzTradeoff?: number
+    minResolutionScale?: number
+    /** bits per second */
+    maxBitrate?: number
+    minQuality?: number
+    /** [min, max] ms the browser may hold frames to play them out evenly */
+    playoutDelay?: [number, number]
+}
+
+/** a latency ↔ quality preset: gateway subscription options */
+export interface VideoPreset {
+    id: string
+    label: string
+    about: string
+    options: VideoOptions
+}
+
+export const VIDEO_PRESETS: VideoPreset[] = [
     {
         id: "latency",
         label: "Low latency",
@@ -44,14 +67,14 @@ export const VIDEO_PRESETS = [
     },
 ]
 
-const RENAMED = { auto: "balanced", smooth: "latency", sharp: "quality" }
+const RENAMED: Record<string, string> = { auto: "balanced", smooth: "latency", sharp: "quality" }
 /** A preset by id (old names map to the nearest one; unknown → Balanced). */
-export const videoPreset = (id) =>
+export const videoPreset = (id: string | null | undefined): VideoPreset =>
     VIDEO_PRESETS.find((preset) => preset.id === (RENAMED[id ?? ""] ?? id)) ?? VIDEO_PRESETS[1]
 
 /** What `Subscription.update` needs to go from one preset to another: the new values, null for what only `from` set. */
-export function videoPresetChanges(from, to) {
-    const changes = {}
+export function videoPresetChanges(from: VideoPreset, to: VideoPreset): Record<string, unknown> {
+    const changes: Record<string, unknown> = {}
     for (const name of Object.keys(from.options)) {
         changes[name] = null
     }
@@ -59,7 +82,7 @@ export function videoPresetChanges(from, to) {
 }
 
 /** Whether options keep the browser in low-latency rendering (playoutDelay min 0, max <= 500 ms; default [0, 0]). */
-export function lowLatencyRendering(options) {
+export function lowLatencyRendering(options: VideoOptions): boolean {
     const [min, max] = options.playoutDelay ?? [0, 0]
     return min === 0 && max <= 500
 }
@@ -68,16 +91,21 @@ export function lowLatencyRendering(options) {
  * Whether a change can't be made in place: back to low-latency rendering from a buffered playout. Firefox freezes a
  * receiver for good once its render time drops back to 0, so that takes a fresh subscription (a new receiver).
  */
-export const needsNewReceiver = (from, to) => !lowLatencyRendering(from) && lowLatencyRendering(to)
+export const needsNewReceiver = (from: VideoOptions, to: VideoOptions): boolean =>
+    !lowLatencyRendering(from) && lowLatencyRendering(to)
 
 // ── which topics are cameras ──
 
-export const isImageTopic = (topic) =>
+export const isImageTopic = (topic: Pick<Topic, "type">): boolean =>
     topic.type === "sensor_msgs.Image" || topic.type === "sensor_msgs.CompressedImage"
-export const isDepthTopic = (topic) => /depth/i.test(topic.name)
+export const isDepthTopic = (topic: Pick<Topic, "name">): boolean => /depth/i.test(topic.name)
 
 /** The camera to show first: `preferred` topic names in order, else the first color image, else any image. */
-export function pickCamera(preferred, topics, exclude = new Set()) {
+export function pickCamera<T extends Topic>(
+    preferred: readonly string[] | null | undefined,
+    topics: readonly T[],
+    exclude: ReadonlySet<string> = new Set(),
+): T | null {
     const images = topics.filter((topic) => isImageTopic(topic) && !exclude.has(topic.key))
     for (const name of preferred ?? []) {
         const found = images.find((topic) => topic.name === name)
@@ -92,7 +120,11 @@ export function pickCamera(preferred, topics, exclude = new Set()) {
  * Panels (`{ key, picked? }`) pointed at what the bus has: a panel's picked topic when it's back, else a panel whose
  * topic isn't on the bus moves to a default camera no other panel shows. Null when nothing changes.
  */
-export function retargetCameras(panels, topics, preferred) {
+export function retargetCameras<P extends { key: string; picked?: string | null }>(
+    panels: readonly P[],
+    topics: readonly Topic[],
+    preferred?: readonly string[] | null,
+): P[] | null {
     const onBus = new Set(topics.filter(isImageTopic).map((topic) => topic.key))
     const used = new Set(panels.filter((panel) => onBus.has(panel.key)).map((panel) => panel.key))
     let changed = false
@@ -116,8 +148,14 @@ export function retargetCameras(panels, topics, preferred) {
     return changed ? next : null
 }
 
+export interface CameraTab<T extends Topic = Topic> {
+    topic: T
+    label: string
+    depth: boolean
+}
+
 /** Every image topic as a tab (`{ topic, label, depth }`), color first then depth, labeled by what tells them apart. */
-export function cameraTabs(topics) {
+export function cameraTabs<T extends Topic>(topics: readonly T[]): CameraTab<T>[] {
     const images = topics
         .filter(isImageTopic)
         .sort(
@@ -135,7 +173,7 @@ export function cameraTabs(topics) {
     }
     let tail = 0
     if (split.length > 1) {
-        const at = (parts) => parts[parts.length - 1 - tail]
+        const at = (parts: string[]) => parts[parts.length - 1 - tail]
         while (split.every((parts) => parts.length - shared - tail > 1 && at(parts) === at(split[0]))) {
             tail++
         }
@@ -152,14 +190,18 @@ export function cameraTabs(topics) {
 }
 
 /** The CameraInfo topic for an image topic: `overrides[name]`, else the one sharing the longest leading part of the name. */
-export function cameraInfoFor(image, topics, overrides = {}) {
+export function cameraInfoFor<T extends Topic>(
+    image: Pick<Topic, "name">,
+    topics: readonly T[],
+    overrides: Record<string, string> = {},
+): T | null {
     const infos = topics.filter((topic) => topic.type === "sensor_msgs.CameraInfo")
     const wanted = overrides[image.name]
     if (wanted) {
         return infos.find((topic) => topic.name === wanted) ?? null
     }
     const parts = image.name.split("/")
-    let best = null
+    let best: T | null = null
     let bestScore = -1
     for (const info of infos) {
         const other = info.name.split("/")
@@ -178,7 +220,35 @@ export function cameraInfoFor(image, topics, overrides = {}) {
 
 // ── shared streams ──
 
-const readLocal = (key, fallback) => {
+/** a color stream's latest state: a live track (`stream`) or a replay's decoded frame (`image`) */
+export interface VideoState {
+    stream: MediaStream | null
+    image: ImageBitmap | ImageData | null
+    width: number
+    height: number
+    fps: number
+}
+
+/** one topic's shared subscription (CameraStreams.acquire) */
+export interface CameraStreamHandle {
+    users: number
+    /** ends the subscription (a source's Subscription once open) */
+    stop: (() => void) & Partial<Pick<Subscription, "update">>
+    video: Store<VideoState>
+    depth: Store<{ image: DepthImage | null }>
+    quality: Store<{ quality: string }>
+    element: HTMLVideoElement | null
+    ticket: number
+    newest: number
+}
+
+/** a message as zenoh-gateway's video channel delivers it: a live track, or a source's frame */
+type CameraMessage = Message & {
+    mediaStream?: MediaStream
+    video?: { width?: number; height?: number }
+}
+
+const readLocal = <T,>(key: string, fallback: T): T => {
     try {
         const raw = globalThis.localStorage?.getItem(key)
         return raw ? JSON.parse(raw) : fallback
@@ -186,7 +256,7 @@ const readLocal = (key, fallback) => {
         return fallback
     }
 }
-const writeLocal = (key, value) => {
+const writeLocal = (key: string, value: unknown) => {
     try {
         globalThis.localStorage?.setItem(key, JSON.stringify(value))
     } catch {
@@ -204,19 +274,19 @@ const writeLocal = (key, value) => {
  * into `video.image` (an ImageBitmap or ImageData).
  */
 export class CameraStreams {
-    #sources = new Map()
+    #sources = new Map<string, CameraStreamHandle>()
     storageKey: string
-    source: any
-    constructor(source, { storageKey = "dr.video.quality" } = {}) {
+    source: DataSource
+    constructor(source: DataSource, { storageKey = "dr.video.quality" }: { storageKey?: string } = {}) {
         this.source = source
         this.storageKey = storageKey
     }
 
-    qualityOf(key) {
-        return videoPreset(readLocal(this.storageKey, {})[key]).id
+    qualityOf(key: string): string {
+        return videoPreset(readLocal<Record<string, string>>(this.storageKey, {})[key]).id
     }
 
-    acquire(topic) {
+    acquire(topic: Topic): CameraStreamHandle {
         let handle = this.#sources.get(topic.key)
         if (handle) {
             handle.users++
@@ -225,8 +295,8 @@ export class CameraStreams {
         handle = {
             users: 1,
             stop: () => {},
-            video: new Store({ stream: null, image: null, width: 0, height: 0, fps: 0 }),
-            depth: new Store({ image: null }),
+            video: new Store<VideoState>({ stream: null, image: null, width: 0, height: 0, fps: 0 }),
+            depth: new Store<{ image: DepthImage | null }>({ image: null }),
             quality: new Store({ quality: isDepthTopic(topic) ? "balanced" : this.qualityOf(topic.key) }),
             element: null,
             ticket: 0,
@@ -237,12 +307,12 @@ export class CameraStreams {
         return handle
     }
 
-    #open(topic, handle) {
+    #open(topic: Topic, handle: CameraStreamHandle) {
         const { video, depth } = handle
         const prefix = topic.type === "sensor_msgs.CompressedImage" ? "dimos_lcm_compressed_" : "dimos_lcm_"
         let frames = 0
         let since = performance.now()
-        const fpsNow = (state) => {
+        const fpsNow = (state: VideoState) => {
             frames++
             const now = performance.now()
             if (now - since > 1000) {
@@ -258,7 +328,9 @@ export class CameraStreams {
                 topic.key,
                 { delivery: "latest", maxHz: 15, encoding: `${prefix}depth` },
                 (message) => {
-                    const image = message.decoded ?? message.value ?? lcmValue(message, topic.type)
+                    const image = (message.decoded ??
+                        message.value ??
+                        lcmValue(message, topic.type)) as DepthImage | null
                     if (image?.data) {
                         depth.set({ image })
                     }
@@ -269,8 +341,10 @@ export class CameraStreams {
         handle.stop = this.source.subscribe(
             topic.key,
             { delivery: "latest", ...videoPreset(handle.quality.get().quality).options, encoding: `${prefix}image` },
-            async (message) => {
-                let decoded =
+            async (received) => {
+                const message = received as CameraMessage
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a source's frame: any of the forms above
+                let decoded: any =
                     message.decoded ?? message.value ?? (message.mediaStream ? null : lcmValue(message, topic.type))
                 if (!message.mediaStream && decoded && !decoded.bitmap && !decoded.image) {
                     // a replay's frame: decoded here, and a slower older one must not replace a newer one
@@ -305,8 +379,8 @@ export class CameraStreams {
      * Another preset for a color topic: saved for this viewer, and the running subscription takes it in place; a
      * gateway that refuses, or a change back to low-latency rendering, gets a fresh subscription instead.
      */
-    setQuality(topic, quality) {
-        writeLocal(this.storageKey, { ...readLocal(this.storageKey, {}), [topic.key]: quality })
+    setQuality(topic: Topic, quality: string): void {
+        writeLocal(this.storageKey, { ...readLocal<Record<string, string>>(this.storageKey, {}), [topic.key]: quality })
         const handle = this.#sources.get(topic.key)
         const previous = handle?.quality.get().quality
         if (!handle || isDepthTopic(topic) || previous === quality) {
@@ -334,7 +408,7 @@ export class CameraStreams {
     }
 
     /** A muted, playing <video> of the stream (not in the document), e.g. for a three.js VideoTexture. */
-    element(handle) {
+    element(handle: CameraStreamHandle): HTMLVideoElement {
         if (!handle.element) {
             const element = document.createElement("video")
             element.muted = true
@@ -356,7 +430,7 @@ export class CameraStreams {
         return handle.element
     }
 
-    release(topic) {
+    release(topic: Topic): void {
         const handle = this.#sources.get(topic.key)
         if (!handle || --handle.users > 0) {
             return
@@ -371,7 +445,7 @@ export class CameraStreams {
 }
 
 /** A message's LCM payload decoded as `type` (null when it isn't one). */
-function lcmValue(message, type) {
+function lcmValue(message: Message, type: string) {
     if (!message.bytes || !type) {
         return null
     }
@@ -383,7 +457,7 @@ function lcmValue(message, type) {
 }
 
 /** A frame → ImageBitmap (jpeg/png/webp) or ImageData (raw pixels), or null. */
-async function framePicture(value) {
+async function framePicture(value: unknown): Promise<ImageBitmap | ImageData | null> {
     const frame = normalizeFrame(value)
     if (!frame || frame.kind === "depth") {
         return null
@@ -398,11 +472,11 @@ async function framePicture(value) {
     return rawToImageData(frame)
 }
 
-const StreamsContext = createContext(null)
-const sharedStreams = new WeakMap()
+const StreamsContext = createContext<CameraStreams | null>(null)
+const sharedStreams = new WeakMap<DataSource, CameraStreams>()
 
 /** The shared CameraStreams of a data source (what useCameraStreams gives without a provider; the 3D view's too). */
-export function cameraStreamsFor(source) {
+export function cameraStreamsFor(source: DataSource): CameraStreams {
     let streams = sharedStreams.get(source)
     if (!streams) {
         streams = new CameraStreams(source)
@@ -411,13 +485,18 @@ export function cameraStreamsFor(source) {
     return streams
 }
 
+export interface CameraStreamsProviderProps {
+    streams: CameraStreams
+    children?: ReactNode
+}
+
 /** Makes `streams` (a CameraStreams, e.g. with the app's own storageKey) the one every CameraView below uses. */
-export function CameraStreamsProvider({ streams, children }) {
+export function CameraStreamsProvider({ streams, children }: CameraStreamsProviderProps) {
     return <StreamsContext.Provider value={streams}>{children}</StreamsContext.Provider>
 }
 
 /** The page's CameraStreams for the current data source (the nearest CameraStreamsProvider's, else one per source). */
-export function useCameraStreams() {
+export function useCameraStreams(): CameraStreams {
     const given = useContext(StreamsContext)
     const source = useDataSource()
     return useMemo(() => {
@@ -426,9 +505,9 @@ export function useCameraStreams() {
 }
 
 /** A topic's stream handle while mounted (null topic: none). */
-export function useCameraStream(topic) {
+export function useCameraStream(topic: Topic | null | undefined): CameraStreamHandle | null {
     const streams = useCameraStreams()
-    const [handle, setHandle] = useState(null)
+    const [handle, setHandle] = useState<CameraStreamHandle | null>(null)
     useEffect(() => {
         if (!topic) {
             setHandle(null)
@@ -441,16 +520,37 @@ export function useCameraStream(topic) {
     return handle
 }
 
-const idleStore = new Store({ quality: "balanced" })
+const idleStore = new Store<{ quality: string }>({ quality: "balanced" })
 /** A color topic's preset as the shared stream has it, and a setter (saved for this viewer). */
-export function useVideoQuality(topic) {
+export function useVideoQuality(topic: Topic | null | undefined): [string, (next: string) => void] {
     const streams = useCameraStreams()
     const handle = useCameraStream(topic && !isDepthTopic(topic) ? topic : null)
     const { quality } = useStore(handle?.quality ?? idleStore)
-    return [quality, (next) => topic && streams.setQuality(topic, next)]
+    return [quality, (next: string) => topic && streams.setQuality(topic, next)]
 }
 
 // ── views ──
+
+/** what a CameraView reports about its picture */
+export interface CameraViewInfo {
+    width: number
+    height: number
+    fps: number
+    range: [number, number] | null
+}
+
+export interface CameraViewProps {
+    topic: Topic | null
+    /** a 2D detection topic drawn over it */
+    overlay?: Pick<Topic, "key" | "type"> | null
+    /** crops to cover instead of letterboxing */
+    fill?: boolean
+    /** null near/far = automatic */
+    depthLook?: Partial<DepthLook>
+    onInfo?: (info: CameraViewInfo) => void
+    className?: string
+    children?: ReactNode
+}
 
 /**
  * A camera topic's live picture filling its positioned parent. On Desktop's zenoh-gateway a color topic is the
@@ -458,8 +558,6 @@ export function useVideoQuality(topic) {
  * another source (a replay delivering frames), is drawn by ImageView (depth through a colormap). `overlay`: a 2D
  * detection topic drawn over it; `fill` crops to cover instead of letterboxing; `depthLook` `{ colormap, near, far }`
  * (null near/far = automatic); `onInfo({ width, height, fps, range })`.
- * @param {{ topic: { key: string, name: string, type: string } | null, overlay?: { key: string, type: string } | null,
- *   fill?: boolean, depthLook?: object, onInfo?: (info: object) => void, className?: string, children?: any }} props
  */
 export function CameraView({
     topic,
@@ -469,15 +567,7 @@ export function CameraView({
     onInfo,
     className,
     children,
-}: {
-    topic: { key: string; name: string; type: string } | null
-    overlay?: { key: string; type: string } | null
-    fill?: boolean
-    depthLook?: object
-    onInfo?: (info: object) => void
-    className?: string
-    children?: any
-}) {
+}: CameraViewProps) {
     const source = useDataSource()
     const depth = topic ? isDepthTopic(topic) : false
     const video = source.kind === "zenoh" && topic && !depth
@@ -521,12 +611,19 @@ export function CameraView({
     )
 }
 
-function VideoView({ topic, overlay, fill, onInfo, className, children }) {
+function VideoView({
+    topic,
+    overlay,
+    fill,
+    onInfo,
+    className,
+    children,
+}: Omit<CameraViewProps, "topic" | "depthLook"> & { topic: Topic }) {
     const source = useDataSource()
     const handle = useCameraStream(topic)
-    const video = useRef(null)
-    const overlayCanvas = useRef(null)
-    const info = useRef({ width: 0, height: 0, fps: 0, range: null })
+    const video = useRef<HTMLVideoElement>(null)
+    const overlayCanvas = useRef<HTMLCanvasElement>(null)
+    const info = useRef<CameraViewInfo>({ width: 0, height: 0, fps: 0, range: null })
     const report = useRef(onInfo)
     report.current = onInfo
     useEffect(() => {
@@ -546,7 +643,10 @@ function VideoView({ topic, overlay, fill, onInfo, className, children }) {
             }
         }
         apply()
-        return handle.video.subscribe(apply)
+        const unsubscribe = handle.video.subscribe(apply)
+        return () => {
+            unsubscribe()
+        }
     }, [handle])
     useEffect(() => {
         const canvas = overlayCanvas.current
@@ -564,7 +664,7 @@ function VideoView({ topic, overlay, fill, onInfo, className, children }) {
             }
             clear()
             try {
-                drawDetections2D(canvas.getContext("2d"), message.value ?? decodeLcm(overlay.type, message.bytes))
+                drawDetections2D(canvas.getContext("2d")!, message.value ?? decodeLcm(overlay.type, message.bytes))
             } catch {
                 // a message it can't read: blank
             }
@@ -591,28 +691,25 @@ function VideoView({ topic, overlay, fill, onInfo, className, children }) {
     )
 }
 
+export interface CameraTabsProps<T extends Topic = Topic> {
+    topics: T[]
+    /** the shown topic key */
+    value: string
+    onChange: (topic: T) => void
+    /** a label for a picked topic that isn't on the bus */
+    gone?: string | null
+    className?: string
+}
+
 /**
  * Tabs for the image topics on the bus (a panel header's camera picker). `value`: the shown topic key; `gone`: a
  * label for a picked topic that isn't on the bus.
- * @param {{ topics: any[], value: string, onChange: (topic: any) => void, gone?: string | null, className?: string }} props
  */
-export function CameraTabs({
-    topics,
-    value,
-    onChange,
-    gone,
-    className,
-}: {
-    topics: any[]
-    value: string
-    onChange: (topic: any) => void
-    gone?: string | null
-    className?: string
-}) {
+export function CameraTabs<T extends Topic>({ topics, value, onChange, gone, className }: CameraTabsProps<T>) {
     const tabs = cameraTabs(topics)
-    const row = useRef(null)
+    const row = useRef<HTMLDivElement>(null)
     useEffect(() => {
-        const tab = row.current?.querySelector("[aria-selected=true]")
+        const tab = row.current?.querySelector<HTMLElement>("[aria-selected=true]")
         const element = row.current
         if (
             tab &&

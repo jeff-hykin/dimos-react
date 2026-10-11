@@ -1,33 +1,46 @@
 // Editors for how points look: the point-style picker (a card per style) and the full look editor (style, size, color
 // mode, gradient, range, opacity) every point layer's settings use. Settings → Rendering pages use StylePicker and
 // CubeShadePicker for the page-wide defaults (the `rendering` store).
-import { cx } from "../cx"
-import { useStore } from "./store"
-import { GradientPicker } from "./gradient_picker"
-import { CUBE_SHADES, POINT_STYLES } from "./point_material"
-import { rendering, splatFallback } from "./rendering"
-import { ColorSwatch } from "../components/input_devices"
-import { Button, Field, NumberInput, Select, Slider } from "../components/controls"
+import { cx } from "../cx.ts"
+import { useStore } from "./store.ts"
+import { GradientPicker } from "./gradient_picker.tsx"
+import { CUBE_SHADES, POINT_STYLES } from "./point_material.ts"
+import { rendering, splatFallback } from "./rendering.ts"
+import { ColorSwatch } from "../components/input_devices.tsx"
+import { Button, Field, NumberInput, Select, Slider } from "../components/controls.tsx"
+import type { NumberInputProps, SelectProps } from "../components/controls.tsx"
+import type { ColorMode, CubeShade, PointLook, PointStyle } from "./point_material.ts"
 
 /**
- * A card per point style with a one-line description; `withDefault` adds a "default · <style>" card that follows
- * the page-wide default (Settings → Rendering).
- * @param {{ value: string, onChange: (style: string) => void, withDefault?: string, className?: string }} props
+ * A point look as the editors see it: `style` may also be "default" (follow the page-wide default style), and the
+ * fields the editor always shows are set.
  */
-export function StylePicker({
-    value,
-    onChange,
-    withDefault,
-    className,
-}: {
+export interface EditablePointLook extends Omit<PointLook, "style" | "gradient" | "solid"> {
+    style: string
+    gradient: string
+    solid: string
+}
+
+type StyleOption = [style: string, label: string, about: string]
+
+export interface StylePickerProps {
     value: string
     onChange: (style: string) => void
     withDefault?: string
     className?: string
-}) {
-    const options = [
-        ...(withDefault ? [["default", `default · ${withDefault}`, "follow the page's default style"]] : []),
-        ...Object.entries(POINT_STYLES).map(([style, info]) => [style, info.label, info.about]),
+}
+
+/**
+ * A card per point style with a one-line description; `withDefault` adds a "default · <style>" card that follows
+ * the page-wide default (Settings → Rendering).
+ */
+export function StylePicker({ value, onChange, withDefault, className }: StylePickerProps) {
+    const fallback: StyleOption[] = withDefault
+        ? [["default", `default · ${withDefault}`, "follow the page's default style"]]
+        : []
+    const options: StyleOption[] = [
+        ...fallback,
+        ...Object.entries(POINT_STYLES).map(([style, info]): StyleOption => [style, info.label, info.about]),
     ]
     return (
         <span className={cx("dr-style-picker", className)} role="radiogroup">
@@ -51,12 +64,13 @@ export function StylePicker({
 }
 
 /** The page-wide cube shading (the `rendering` store), as a Select. */
-export function CubeShadePicker(props) {
+export function CubeShadePicker(props: Partial<SelectProps<CubeShade>>) {
     const { cubeShade } = useStore(rendering)
     return (
         <Select
             value={cubeShade}
-            options={Object.entries(CUBE_SHADES).map(([id, shade]) => ({ value: id, label: shade.label }))}
+            // Object.entries widens CUBE_SHADES' keys to string
+            options={Object.entries(CUBE_SHADES).map(([id, shade]) => ({ value: id as CubeShade, label: shade.label }))}
             onChange={(next) => rendering.update({ cubeShade: next })}
             {...props}
         />
@@ -80,7 +94,11 @@ export function RenderingSettings() {
                         : "every point layer that keeps its style on default"
                 }
             >
-                <StylePicker value={value.pointStyle} onChange={(pointStyle) => rendering.update({ pointStyle })} />
+                <StylePicker
+                    value={value.pointStyle}
+                    // no withDefault: the picker only offers POINT_STYLES' keys
+                    onChange={(pointStyle) => rendering.update({ pointStyle: pointStyle as PointStyle })}
+                />
             </Field>
             {fallback.active ? (
                 <Button size="sm" onClick={() => splatFallback.set({ active: false, frameMs: 0 })}>
@@ -94,12 +112,16 @@ export function RenderingSettings() {
     )
 }
 
+export interface PointLookEditorProps {
+    look: EditablePointLook
+    onChange: (look: EditablePointLook) => void
+}
+
 /**
  * Edits a point look (style, size, color mode, gradient, axis, range, opacity). Used by every layer that draws points.
- * @param {{ look: object, onChange: (look: object) => void }} props
  */
-export function PointLookEditor({ look, onChange }: { look: object; onChange: (look: object) => void }) {
-    const set = (patch) => onChange({ ...look, ...patch })
+export function PointLookEditor({ look, onChange }: PointLookEditorProps) {
+    const set = (patch: Partial<EditablePointLook>) => onChange({ ...look, ...patch })
     const global = useStore(rendering)
     const shown = look.style === "default" ? global.pointStyle : look.style
     return (
@@ -122,7 +144,7 @@ export function PointLookEditor({ look, onChange }: { look: object; onChange: (l
                 />
             </Field>
             <Field label="Color">
-                <Select
+                <Select<ColorMode>
                     value={look.colorMode}
                     options={[
                         ["height", "by height"],
@@ -142,7 +164,7 @@ export function PointLookEditor({ look, onChange }: { look: object; onChange: (l
                     <GradientPicker key="gradients" value={look.gradient} onChange={(gradient) => set({ gradient })} />,
                     look.colorMode === "height" ? (
                         <Field label="Axis" key="axis">
-                            <Select
+                            <Select<0 | 1 | 2>
                                 value={look.axis}
                                 options={[
                                     [2, "z (height)"],
@@ -175,8 +197,14 @@ export function PointLookEditor({ look, onChange }: { look: object; onChange: (l
     )
 }
 
+export interface RangeInputProps extends Omit<NumberInputProps, "value" | "onChange" | "placeholder"> {
+    value?: number | null
+    onChange: (value: number | null) => void
+    placeholder?: string
+}
+
 /** A number or nothing (null = automatic): empty input clears it. */
-export function RangeInput({ value, onChange, placeholder = "auto", ...rest }) {
+export function RangeInput({ value, onChange, placeholder = "auto", ...rest }: RangeInputProps) {
     return (
         <NumberInput
             value={value}

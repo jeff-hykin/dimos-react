@@ -9,10 +9,10 @@ import {
     PALETTE_NAMES,
     paletteAt,
     PALETTES,
-} from "../src/colormaps"
+} from "../src/colormaps.ts"
 
-const distance = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
-const hex = (color) => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16))
+const distance = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+const hex = (color: string) => [1, 3, 5].map((at) => parseInt(color.slice(at, at + 2), 16))
 
 test("the cycle repeats every period, below zero too", () => {
     strictEqual(DEFAULT_PERIOD, 9)

@@ -1,16 +1,32 @@
 // vision_msgs.Detection2DArray / Detection2D / BoundingBox2DArray over a camera image: a box and "class score" per
 // detection, in the image's pixel coordinates (camera panels draw registered overlays on a canvas over the picture).
-import { cssColor } from "../robot_model"
-import { themeColors } from "../../theme/theme"
-import { registerOverlay } from "./registry"
-import { colorFor } from "./path"
+import { cssColor } from "../robot_model.ts"
+import { themeColors } from "../../theme/theme.ts"
+import { registerOverlay } from "./registry.ts"
+import { colorFor } from "./path.tsx"
+
+interface BoundingBox2DMessage {
+    center?: { position?: { x: number; y: number } }
+    size_x?: number
+    size_y?: number
+}
+interface Detection2DMessage {
+    id?: string
+    bbox?: BoundingBox2DMessage
+    results?: { hypothesis?: { class_id?: string; score?: number } }[]
+}
+/** A decoded Detection2DArray, Detection2D or BoundingBox2DArray (the fields the overlay reads). */
+export interface Detection2DMessages extends Detection2DMessage {
+    detections?: Detection2DMessage[]
+    boxes?: BoundingBox2DMessage[]
+}
 
 registerOverlay({
     id: "detection2d",
     label: "2D detections",
     types: ["vision_msgs.Detection2DArray", "vision_msgs.Detection2D", "vision_msgs.BoundingBox2DArray"],
-    draw(context, message) {
-        const boxes = message.detections ?? message.boxes?.map((bbox) => ({ bbox })) ?? [message]
+    draw(context, message: Detection2DMessages) {
+        const boxes: Detection2DMessage[] = message.detections ?? message.boxes?.map((bbox) => ({ bbox })) ?? [message]
         const textColor = `#${cssColor(themeColors().bg, "black").getHexString()}`
         context.lineWidth = Math.max(2, context.canvas.width / 400)
         context.font = `${Math.max(12, context.canvas.width / 60)}px ui-sans-serif, system-ui`

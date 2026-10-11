@@ -1,29 +1,26 @@
 // <Icon name="close" />: the shared dimOS line icons (24-unit grid, stroke = currentColor).
-import { cx } from "../cx"
-import { ICONS } from "../icons_data"
+import type { SVGAttributes } from "react"
+import { cx } from "../cx.ts"
+import { ICONS } from "../icons_data.ts"
 
 export { ICONS }
 
-/**
- * @param {{ name: string, size?: number, strokeWidth?: number, className?: string, title?: string, path?: string }} props
- *   `path`: your own SVG path data instead of a named icon
- */
-export function Icon({
-    name,
-    size = 18,
-    strokeWidth = 1.8,
-    className,
-    title,
-    path,
-    ...rest
-}: {
+const ICON_PATHS: Record<string, string | undefined> = ICONS
+
+export interface IconProps extends Omit<SVGAttributes<SVGSVGElement>, "name" | "path"> {
+    /** a key of ICONS */
     name: string
+    /** px */
     size?: number
     strokeWidth?: number
-    className?: string
+    /** an accessible name (an unnamed icon is aria-hidden) */
     title?: string
+    /** your own SVG path data instead of a named icon */
     path?: string
-}) {
+}
+
+/** A dimOS line icon by `name` (or your own `path`). */
+export function Icon({ name, size = 18, strokeWidth = 1.8, className, title, path, ...rest }: IconProps) {
     return (
         <svg
             className={cx("dr-icon", className)}
@@ -40,7 +37,7 @@ export function Icon({
             {...rest}
         >
             {title ? <title>{title}</title> : null}
-            <path d={path ?? ICONS[name] ?? ""} />
+            <path d={path ?? ICON_PATHS[name] ?? ""} />
         </svg>
     )
 }

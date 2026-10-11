@@ -4,7 +4,8 @@
 // capture, another app or tab, the page hiding, a rotation, releaseAllThumbSticks()) zeroes the stick at once, never
 // eased.
 import { useEffect, useRef, useState } from "react"
-import { cx } from "../cx"
+import type { CSSProperties, HTMLAttributes, PointerEvent as ReactPointerEvent, ReactNode } from "react"
+import { cx } from "../cx.ts"
 
 /** below this share of the radius a resting thumb sends nothing */
 export const STICK_DEAD_ZONE = 0.12
@@ -13,9 +14,9 @@ export const STICK_EXPO = 1.6
 /** how quickly a held stick's output follows the thumb (time constant, ms) */
 export const STICK_SMOOTH_MS = 70
 
-const clean = (value) => Math.round(value * 1000) / 1000 || 0
+const clean = (value: number) => Math.round(value * 1000) / 1000 || 0
 
-function shapeAxis(value) {
+function shapeAxis(value: number) {
     const size = Math.min(1, Math.abs(value))
     if (size <= STICK_DEAD_ZONE) {
         return 0
@@ -26,9 +27,8 @@ function shapeAxis(value) {
 /**
  * The thumb's offset from the stick's center (px, screen y down) → `{ x, y }` in -1..1 (up = +y). `axes` "xy" uses a
  * radial dead zone (no snapping to an axis); "x" / "y" look at that axis alone.
- * @param {number} dx @param {number} dy @param {number} radius @param {"xy" | "x" | "y"} [axes]
  */
-export function shapeStick(dx: number, dy: number, radius: number, axes: "xy" | "x" | "y" = "xy") {
+export function shapeStick(dx: number, dy: number, radius: number, axes: StickAxes = "xy"): StickValue {
     if (!(radius > 0)) {
         return { x: 0, y: 0 }
     }
@@ -54,12 +54,18 @@ export function shapeStick(dx: number, dy: number, radius: number, axes: "xy" | 
  * One easing step: `current` toward `target` over `dtMs` (exponential, time constant `tauMs`). Snaps when close; a
  * target of exactly zero is returned as zero (releasing is never eased).
  */
-export function smoothToward(current, target, dtMs, tauMs = STICK_SMOOTH_MS) {
+export function smoothToward(current: number, target: number, dtMs: number, tauMs: number = STICK_SMOOTH_MS): number {
     if (target === 0) {
         return 0
     }
     const next = current + (target - current) * (1 - Math.exp(-Math.max(0, dtMs) / tauMs))
     return Math.abs(next - target) < 0.005 ? target : clean(next)
+}
+
+export type StickAxes = "xy" | "x" | "y"
+export interface StickValue {
+    x: number
+    y: number
 }
 
 const releases = new EventTarget()
@@ -68,14 +74,20 @@ export function releaseAllThumbSticks() {
     releases.dispatchEvent(new Event("release"))
 }
 
-/**
- * A thumb stick zone (size it with CSS: it fills its box; the ring's size is `--dr-stick`).
- * @param {{ onMove: (x: number, y: number) => void, axes?: "xy" | "x" | "y", label?: string, className?: string,
- *   style?: object, shape?: (dx: number, dy: number, radius: number, axes: "xy" | "x" | "y") => { x: number, y: number },
- *   smooth?: (current: number, target: number, dtMs: number) => number } & Record<string, any>} props
- *   `onMove(x, y)`: shaped -1..1 values (y up), eased while held, zero at once on release; `shape(dx, dy, radius, axes)`
- *   and `smooth(current, target, dtMs)` replace the built-in dead zone + expo and easing
- */
+export interface ThumbStickProps extends HTMLAttributes<HTMLDivElement> {
+    /** shaped -1..1 values (y up), eased while held, zero at once on release */
+    onMove: (x: number, y: number) => void
+    axes?: StickAxes
+    label?: string
+    className?: string
+    style?: CSSProperties
+    /** replaces the built-in dead zone + expo */
+    shape?: (dx: number, dy: number, radius: number, axes: StickAxes) => StickValue
+    /** replaces the built-in easing */
+    smooth?: (current: number, target: number, dtMs: number) => number
+}
+
+/** A thumb stick zone (size it with CSS: it fills its box; the ring's size is `--dr-stick`). */
 export function ThumbStick({
     onMove,
     axes = "xy",
@@ -85,23 +97,27 @@ export function ThumbStick({
     className,
     style,
     ...rest
-}: {
-    onMove: (x: number, y: number) => void
-    axes?: "xy" | "x" | "y"
-    label?: string
-    className?: string
-    style?: object
-    shape?: (dx: number, dy: number, radius: number, axes: "xy" | "x" | "y") => { x: number; y: number }
-    smooth?: (current: number, target: number, dtMs: number) => number
-} & Record<string, any>) {
-    const zone = useRef(null)
-    const base = useRef(null)
+}: ThumbStickProps) {
+    const zone = useRef<HTMLDivElement>(null)
+    const base = useRef<HTMLDivElement>(null)
     const onMoveRef = useRef(onMove)
     onMoveRef.current = onMove
     const latest = useRef({ shape, smooth })
     latest.current = { shape, smooth }
-    const [view, setView] = useState({ active: false, origin: null, knob: { x: 0, y: 0 } })
-    const live = useRef({
+    const [view, setView] = useState<{ active: boolean; origin: StickValue | null; knob: StickValue }>({
+        active: false,
+        origin: null,
+        knob: { x: 0, y: 0 },
+    })
+    const live = useRef<{
+        pointer: number | null
+        origin: StickValue
+        radius: number
+        target: StickValue
+        current: StickValue
+        frame: number
+        last: number
+    }>({
         pointer: null,
         origin: { x: 0, y: 0 },
         radius: 1,
@@ -110,7 +126,7 @@ export function ThumbStick({
         frame: 0,
         last: 0,
     })
-    const emit = (x, y) => {
+    const emit = (x: number, y: number) => {
         const state = live.current
         if (x !== state.current.x || y !== state.current.y) {
             state.current = { x, y }
@@ -132,7 +148,7 @@ export function ThumbStick({
     }
     const releaseRef = useRef(release)
     releaseRef.current = release
-    const step = (now) => {
+    const step = (now: number) => {
         const state = live.current
         if (state.pointer === null) {
             return
@@ -145,7 +161,7 @@ export function ThumbStick({
         )
         state.frame = requestAnimationFrame(step)
     }
-    const track = (clientX, clientY) => {
+    const track = (clientX: number, clientY: number) => {
         const state = live.current
         let dx = clientX - state.origin.x
         let dy = clientY - state.origin.y
@@ -165,40 +181,40 @@ export function ThumbStick({
         }
         setView((old) => ({ ...old, knob: { x: dx, y: dy } }))
     }
-    const down = (event) => {
+    const down = (event: ReactPointerEvent<HTMLDivElement>) => {
         const state = live.current
         if (state.pointer !== null || (event.pointerType === "mouse" && event.button !== 0)) {
             return
         }
         event.preventDefault()
-        const box = zone.current.getBoundingClientRect()
-        const ring = base.current.offsetWidth / 2 || 60
+        const box = zone.current!.getBoundingClientRect()
+        const ring = base.current!.offsetWidth / 2 || 60
         state.radius = ring
         const x = Math.max(box.left + ring, Math.min(box.right - ring, event.clientX))
         const y = Math.max(box.top + ring, Math.min(box.bottom - ring, event.clientY))
         state.origin = { x, y }
         state.pointer = event.pointerId
         state.last = 0
-        zone.current.setPointerCapture?.(event.pointerId)
+        zone.current!.setPointerCapture?.(event.pointerId)
         setView({ active: true, origin: { x: x - box.left, y: y - box.top }, knob: { x: 0, y: 0 } })
         track(event.clientX, event.clientY)
         state.frame = requestAnimationFrame(step)
     }
-    const move = (event) => {
+    const move = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (event.pointerId === live.current.pointer) {
             event.preventDefault()
             track(event.clientX, event.clientY)
         }
     }
-    const up = (event) => {
+    const up = (event: ReactPointerEvent<HTMLDivElement>) => {
         if (event.pointerId === live.current.pointer) {
             release()
         }
     }
     useEffect(() => {
-        const element = zone.current
+        const element = zone.current!
         const letGo = () => releaseRef.current()
-        const touchEnd = (event) => {
+        const touchEnd = (event: TouchEvent) => {
             if (event.targetTouches.length === 0) {
                 letGo()
             }
@@ -254,18 +270,21 @@ export function ThumbStick({
     )
 }
 
-/**
- * Keyboard keys in rows, lit while held: `rows` = [[{ label: "Q", down: false }, null (a gap), …], …].
- * @param {{ rows: ({ label: any, down?: boolean, wide?: boolean, title?: string } | null)[][], className?: string }} props
- */
-export function KeyPad({
-    rows = [],
-    className,
-    ...rest
-}: {
-    rows: ({ label: any; down?: boolean; wide?: boolean; title?: string } | null)[][]
+export interface KeyPadKey {
+    label: ReactNode
+    down?: boolean
+    wide?: boolean
+    title?: string
+}
+
+export interface KeyPadProps extends HTMLAttributes<HTMLDivElement> {
+    /** null is a gap */
+    rows?: (KeyPadKey | null)[][]
     className?: string
-}) {
+}
+
+/** Keyboard keys in rows, lit while held: `rows` = [[{ label: "Q", down: false }, null (a gap), …], …]. */
+export function KeyPad({ rows = [], className, ...rest }: KeyPadProps) {
     return (
         <div className={cx("dr-keypad", className)} {...rest}>
             {rows.map((row, index) => (
@@ -279,8 +298,17 @@ export function KeyPad({
     )
 }
 
+export interface KeyCapProps extends HTMLAttributes<HTMLSpanElement> {
+    label: ReactNode
+    down?: boolean
+    empty?: boolean
+    wide?: boolean
+    title?: string
+    className?: string
+}
+
 /** One key: `label`, `down` lights it; `empty` keeps its place invisible. */
-export function KeyCap({ label, down = false, empty = false, title, className, ...rest }) {
+export function KeyCap({ label, down = false, empty = false, title, className, ...rest }: KeyCapProps) {
     return (
         <span
             className={cx("dr-keycap", down && "dr-keycap--down", empty && "dr-keycap--empty", className)}

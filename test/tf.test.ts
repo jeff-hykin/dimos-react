@@ -1,16 +1,19 @@
 // TF math: the transform tree (lookups, inverses, separate trees, defaults, problems) and the follow camera's spring.
 import { test } from "vitest"
-import { assert, assertAlmostEquals, assertEquals } from "./assert"
-import { Quaternion, Vector3 } from "three"
-import { TfTree } from "../src/three/tf"
-import { PanGate, SmoothFollow } from "../src/three/follow"
+import { assert, assertAlmostEquals, assertEquals } from "./assert.ts"
+import { Matrix4, Quaternion, Vector3 } from "three"
+import { TfTree } from "../src/three/tf.ts"
+import { PanGate, SmoothFollow } from "../src/three/follow.ts"
 
-const yaw = (radians) => {
+const yaw = (radians: number): [number, number, number, number] => {
     const q = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), radians)
     return [q.x, q.y, q.z, q.w]
 }
-const position = (matrix) => new Vector3().setFromMatrixPosition(matrix)
-const near = (actual, expected, label) => {
+const position = (matrix: Matrix4 | null) => {
+    assert(matrix, "no transform")
+    return new Vector3().setFromMatrixPosition(matrix)
+}
+const near = (actual: Vector3, expected: readonly number[], label: string) => {
     assertAlmostEquals(actual.x, expected[0], 1e-9, `${label} x`)
     assertAlmostEquals(actual.y, expected[1], 1e-9, `${label} y`)
     assertAlmostEquals(actual.z, expected[2], 1e-9, `${label} z`)
@@ -25,7 +28,7 @@ test("lookup composes a chain of transforms", () => {
     near(position(tf.lookup("lidar", "world")), [1, 3, 0.5], "lidar in world")
     near(position(tf.lookup("base_link", "world")), [1, 2, 0], "base in world")
     // a point in the lidar frame
-    const point = new Vector3(1, 0, 0).applyMatrix4(tf.lookup("lidar", "world"))
+    const point = new Vector3(1, 0, 0).applyMatrix4(tf.lookup("lidar", "world")!)
     near(point, [1, 4, 0.5], "lidar point")
 })
 
@@ -33,7 +36,7 @@ test("lookup in the inverse direction undoes it", () => {
     const tf = new TfTree()
     tf.set("world", "base_link", [3, 4, 0], yaw(Math.PI / 2))
     near(position(tf.lookup("world", "base_link")), [-4, 3, 0], "world origin in base_link")
-    const roundTrip = tf.lookup("world", "base_link").clone().multiply(tf.lookup("base_link", "world"))
+    const roundTrip = tf.lookup("world", "base_link")!.clone().multiply(tf.lookup("base_link", "world")!)
     near(position(roundTrip), [0, 0, 0], "round trip")
     // siblings: camera relative to lidar through their shared parent
     tf.set("base_link", "lidar", [1, 0, 0], [0, 0, 0, 1])
@@ -141,5 +144,6 @@ test("PanGate undoes small pans and pauses following on a deliberate one", () =>
     assertEquals(gate.step([0.05, 0, 0], 1).action, "undo")
     const verdict = gate.step([0.2, 0, 0], 1)
     assertEquals(verdict.action, "pause")
+    assert(verdict.action === "pause")
     assertEquals(verdict.restore, [0.05, 0, 0])
 })

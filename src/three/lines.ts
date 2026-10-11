@@ -5,37 +5,40 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js"
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js"
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js"
 
+export interface FatLinesOptions {
+    width: number
+    color?: THREE.ColorRepresentation
+    vertexColors?: boolean
+    capacity?: number
+    opacity?: number
+    dashed?: boolean
+    worldUnits?: boolean
+}
+
+/** A segment color: any { r, g, b } in 0-1 (a THREE.Color fits). */
+export interface RgbColor {
+    r: number
+    g: number
+    b: number
+}
+
 export class FatLines {
-    /** @type {LineSegments2} */
     object: LineSegments2
-    /** @type {LineMaterial} */
     material: LineMaterial
     #geometry = new LineSegmentsGeometry()
-    #positions = null
-    #colors = null
-    #positionBuffer = null
-    #colorBuffer = null
+    /** allocated by the constructor */
+    #positions: Float32Array | null = null
+    #colors: Float32Array | null = null
+    #positionBuffer: THREE.InstancedInterleavedBuffer | null = null
+    #colorBuffer: THREE.InstancedInterleavedBuffer | null = null
     #capacity = 0
     #dirtyFrom = 0
     count = 0
 
     /**
-     * @param {THREE.Vector2} resolution the view size in CSS px (Viewer.resolution), shared so widths stay in px
-     * @param {{ width: number, color?: THREE.ColorRepresentation, vertexColors?: boolean, capacity?: number,
-     *   opacity?: number, dashed?: boolean, worldUnits?: boolean }} options
+     * @param resolution the view size in CSS px (Viewer.resolution), shared so widths stay in px
      */
-    constructor(
-        resolution: THREE.Vector2,
-        options: {
-            width: number
-            color?: THREE.ColorRepresentation
-            vertexColors?: boolean
-            capacity?: number
-            opacity?: number
-            dashed?: boolean
-            worldUnits?: boolean
-        },
-    ) {
+    constructor(resolution: THREE.Vector2, options: FatLinesOptions) {
         this.material = new LineMaterial({
             linewidth: options.width,
             color: options.vertexColors ? 0xffffff : (options.color ?? 0xffffff),
@@ -51,36 +54,32 @@ export class FatLines {
         this.#allocate(options.capacity ?? 64, !!options.vertexColors)
     }
 
-    #allocate(capacity, withColors) {
+    #allocate(capacity: number, withColors: boolean) {
         const positions = new Float32Array(capacity * 6)
         if (this.#positions) {
             positions.set(this.#positions.subarray(0, this.count * 6))
         }
         this.#positions = positions
         this.#dirtyFrom = 0
-        this.#positionBuffer = new THREE.InstancedInterleavedBuffer(positions, 6, 1).setUsage(THREE.DynamicDrawUsage)
-        this.#geometry.setAttribute("instanceStart", new THREE.InterleavedBufferAttribute(this.#positionBuffer, 3, 0))
-        this.#geometry.setAttribute("instanceEnd", new THREE.InterleavedBufferAttribute(this.#positionBuffer, 3, 3))
+        const positionBuffer = new THREE.InstancedInterleavedBuffer(positions, 6, 1).setUsage(THREE.DynamicDrawUsage)
+        this.#positionBuffer = positionBuffer
+        this.#geometry.setAttribute("instanceStart", new THREE.InterleavedBufferAttribute(positionBuffer, 3, 0))
+        this.#geometry.setAttribute("instanceEnd", new THREE.InterleavedBufferAttribute(positionBuffer, 3, 3))
         if (withColors) {
             const colors = new Float32Array(capacity * 6)
             if (this.#colors) {
                 colors.set(this.#colors.subarray(0, this.count * 6))
             }
             this.#colors = colors
-            this.#colorBuffer = new THREE.InstancedInterleavedBuffer(colors, 6, 1).setUsage(THREE.DynamicDrawUsage)
-            this.#geometry.setAttribute(
-                "instanceColorStart",
-                new THREE.InterleavedBufferAttribute(this.#colorBuffer, 3, 0),
-            )
-            this.#geometry.setAttribute(
-                "instanceColorEnd",
-                new THREE.InterleavedBufferAttribute(this.#colorBuffer, 3, 3),
-            )
+            const colorBuffer = new THREE.InstancedInterleavedBuffer(colors, 6, 1).setUsage(THREE.DynamicDrawUsage)
+            this.#colorBuffer = colorBuffer
+            this.#geometry.setAttribute("instanceColorStart", new THREE.InterleavedBufferAttribute(colorBuffer, 3, 0))
+            this.#geometry.setAttribute("instanceColorEnd", new THREE.InterleavedBufferAttribute(colorBuffer, 3, 3))
         }
         this.#capacity = capacity
     }
 
-    #reserve(count) {
+    #reserve(count: number) {
         if (count > this.#capacity) {
             this.#allocate(Math.max(count, this.#capacity * 2), this.#colors !== null)
         }
@@ -93,11 +92,11 @@ export class FatLines {
     }
 
     /** Appends one segment (and its color when the lines have vertex colors). */
-    push(ax, ay, az, bx, by, bz, color) {
+    push(ax: number, ay: number, az: number, bx: number, by: number, bz: number, color?: RgbColor | null) {
         this.#reserve(this.count + 1)
         this.#dirtyFrom = Math.min(this.#dirtyFrom, this.count)
         const at = this.count * 6
-        const positions = this.#positions
+        const positions = this.#positions!
         positions[at] = ax
         positions[at + 1] = ay
         positions[at + 2] = az
@@ -114,9 +113,9 @@ export class FatLines {
     }
 
     /** Drops the oldest `count` segments (a trail over its limit). */
-    shift(count) {
+    shift(count: number) {
         count = Math.min(count, this.count)
-        this.#positions.copyWithin(0, count * 6, this.count * 6)
+        this.#positions!.copyWithin(0, count * 6, this.count * 6)
         this.#colors?.copyWithin(0, count * 6, this.count * 6)
         this.count -= count
         this.#dirtyFrom = 0
@@ -144,7 +143,12 @@ export class FatLines {
 }
 
 /** Twelve edges of a box centered at the origin with full sizes (x, y, z), pushed into `lines` through `matrix`. */
-export function pushBox(lines, matrix, size, color) {
+export function pushBox(
+    lines: FatLines,
+    matrix: THREE.Matrix4,
+    size: { x: number; y: number; z: number },
+    color?: RgbColor | null,
+) {
     const hx = size.x / 2,
         hy = size.y / 2,
         hz = size.z / 2

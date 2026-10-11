@@ -1,8 +1,8 @@
 // Demo: an image view (a moving color frame, a depth frame through a colormap) and a recording's playback bar.
 import { useEffect, useMemo, useState } from "react"
-import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../src/index"
+import { Card, DEPTH_COLORMAPS, ImageView, PlaybackBar, Select, Toggle } from "../../src/index.ts"
 
-function colorFrame(phase) {
+function colorFrame(phase: number) {
     const [width, height] = [160, 100]
     const data = new Uint8Array(width * height * 3)
     for (let y = 0; y < height; y++) {
@@ -13,7 +13,7 @@ function colorFrame(phase) {
             data[o + 2] = (y * 255) / height
         }
     }
-    return { kind: "image", width, height, encoding: "rgb8", data }
+    return { kind: "image" as const, width, height, encoding: "rgb8", data }
 }
 
 function depthFrame() {
@@ -25,11 +25,11 @@ function depthFrame() {
             values[y * width + x] = r < 6 ? 0 : 600 + r * 40
         }
     }
-    return { kind: "depth", width, height, encoding: "16UC1", data: new Uint8Array(values.buffer) }
+    return { kind: "depth" as const, width, height, encoding: "16UC1", data: new Uint8Array(values.buffer) }
 }
 
-function ticks(rate, gaps = []) {
-    const times = []
+function ticks(rate: number, gaps: [number, number][] = []) {
+    const times: number[] = []
     for (let t = 0; t <= 184; t += 1 / rate) {
         if (!gaps.some(([a, b]) => t >= a && t <= b)) {
             times.push(t)
@@ -37,6 +37,13 @@ function ticks(rate, gaps = []) {
     }
     return times
 }
+
+/** each lane: id, meta, message rate (Hz), gaps (s) */
+const LANES: [id: "lidar" | "odom" | "tf", meta: string, rate: number, gaps: [number, number][]][] = [
+    ["lidar", "point cloud", 10, [[60, 75]]],
+    ["odom", "pose", 4, []],
+    ["tf", "tf", 2, [[120, 184]]],
+]
 
 export function MediaSection() {
     const [phase, setPhase] = useState(0)
@@ -64,12 +71,7 @@ export function MediaSection() {
     const color = useMemo(() => colorFrame(phase), [phase])
     const depth = useMemo(() => depthFrame(), [])
     const lanes = useMemo(
-        () =>
-            [
-                ["lidar", "point cloud", 10, [[60, 75]]],
-                ["odom", "pose", 4, []],
-                ["tf", "tf", 2, [[120, 184]]],
-            ].map(([id, meta, rate, gaps]) => ({ id, meta, rate, times: ticks(rate, gaps) })),
+        () => LANES.map(([id, meta, rate, gaps]) => ({ id, meta, rate, times: ticks(rate, gaps) })),
         [],
     )
     return (

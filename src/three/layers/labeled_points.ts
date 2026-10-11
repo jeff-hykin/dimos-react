@@ -2,12 +2,38 @@
 // fingerprint) and geometry_msgs.PointStamped (a clicked point, a goal). A sphere and a text label each, colored by
 // kind from the theme (--entity-person / --entity-object / --entity-location, else --danger / --ok / --info).
 import * as THREE from "three"
-import { LabelPool } from "../labels"
-import { cssColor } from "../robot_model"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
-import { colorFor } from "./path"
+import { LabelPool } from "../labels.ts"
+import { cssColor } from "../robot_model.ts"
+import { placeLayer, registerLayer, subscribeDecoded, type LayerContext, type Topic } from "./registry.ts"
+import type { FrameInfo } from "../viewer.ts"
+import { colorFor } from "./path.tsx"
 
-const ENTITY_COLORS = {
+/** One entity in an EntityMarkers message (dimos's JSON). */
+export interface EntityMarker {
+    id: string | number
+    type: string
+    label: unknown
+    x: number
+    y: number
+    z: number
+}
+
+/** A point as drawn: a sphere and a label at `position`, colored by `color` (any CSS color or token). */
+export interface LabeledPoint {
+    label: string
+    color: string
+    position: THREE.Vector3
+}
+
+/** A point from props, placed through TF from `frame` (the fixed frame when absent). */
+export interface LabeledPointData {
+    label?: string
+    position?: [number, number, number]
+    frame?: string
+    color?: string
+}
+
+const ENTITY_COLORS: Record<string, string> = {
     person: "var(--entity-person, var(--danger))",
     object: "var(--entity-object, var(--ok))",
     location: "var(--entity-location, var(--info, var(--primary)))",
@@ -15,9 +41,9 @@ const ENTITY_COLORS = {
 const OTHER = "var(--muted-fg)"
 
 /** EntityMarkers bytes (u32 big-endian length + JSON) → `{ label, color, position }[]`. */
-export function entitiesOf(bytes) {
+export function entitiesOf(bytes: Uint8Array): LabeledPoint[] {
     const length = new DataView(bytes.buffer, bytes.byteOffset).getUint32(0)
-    const list = JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + length)))
+    const list: EntityMarker[] = JSON.parse(new TextDecoder().decode(bytes.subarray(4, 4 + length)))
     return list.map((entity) => ({
         label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
         color: ENTITY_COLORS[entity.type] ?? OTHER,
@@ -27,25 +53,31 @@ export function entitiesOf(bytes) {
 
 const sphere = new THREE.SphereGeometry(1, 16, 12)
 
+/** A decoded geometry_msgs.PointStamped (the fields the layer reads). */
+interface PointStampedMessage {
+    header?: { frame_id?: string }
+    point?: { x?: number; y?: number; z?: number }
+}
+
 export class LabeledPoints {
     root = new THREE.Group()
     #labels = new LabelPool()
-    #spheres
-    #stop = () => {}
-    #frame = null
-    #show
+    #spheres: THREE.InstancedMesh<THREE.SphereGeometry, THREE.MeshLambertMaterial>
+    #stop: () => void = () => {}
+    #frame: string | null = null
+    #show: (entities: LabeledPoint[], frame: string, timestamp: number | undefined) => void
     /** props data: `[{ label, position: [x, y, z], frame, color }]`, each placed through TF every frame */
-    #data = null
+    #data: LabeledPointData[] | null = null
     #placed = ""
-    context: any
+    context: LayerContext
 
-    constructor(context, topic) {
+    constructor(context: LayerContext, topic: Topic | null) {
         this.context = context
         this.#spheres = new THREE.InstancedMesh(sphere, new THREE.MeshLambertMaterial(), 256)
         this.#spheres.count = 0
         this.#spheres.frustumCulled = false
         this.root.add(this.#spheres, this.#labels.group)
-        const show = (this.#show = (entities, frame, timestamp) => {
+        const show = (this.#show = (entities: LabeledPoint[], frame: string, timestamp: number | undefined) => {
             this.#frame = frame
             this.#labels.begin()
             const matrix = new THREE.Matrix4()
@@ -77,7 +109,7 @@ export class LabeledPoints {
                 try {
                     show(
                         Array.isArray(message.value)
-                            ? message.value.map((entity) => ({
+                            ? message.value.map((entity: EntityMarker) => ({
                                   label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
                                   color: ENTITY_COLORS[entity.type] ?? OTHER,
                                   position: new THREE.Vector3(entity.x, entity.y, entity.z),
@@ -87,37 +119,42 @@ export class LabeledPoints {
                         message.timestamp,
                     )
                 } catch (error) {
-                    context.setStatus({ problem: `cannot decode: ${error?.message ?? error}` })
+                    context.setStatus({ problem: `cannot decode: ${(error as Error | undefined)?.message ?? error}` })
                 }
             })
         } else {
-            this.#stop = subscribeDecoded(context, topic, { maxHz: 10 }, (message, timestamp) => {
-                const point = message.point ?? {}
-                show(
-                    [
-                        {
-                            label: topic.name,
-                            color: `#${colorFor(topic.name).getHexString()}`,
-                            position: new THREE.Vector3(point.x, point.y, point.z),
-                        },
-                    ],
-                    message.header?.frame_id ?? "",
-                    timestamp,
-                )
-            })
+            this.#stop = subscribeDecoded(
+                context,
+                topic,
+                { maxHz: 10 },
+                (message: PointStampedMessage, timestamp: number | undefined) => {
+                    const point = message.point ?? {}
+                    show(
+                        [
+                            {
+                                label: topic.name,
+                                color: `#${colorFor(topic.name).getHexString()}`,
+                                position: new THREE.Vector3(point.x, point.y, point.z),
+                            },
+                        ],
+                        message.header?.frame_id ?? "",
+                        timestamp,
+                    )
+                },
+            )
         }
     }
 
     /** Points from props (no topic): `[{ label, position: [x, y, z], frame, color }]`. */
-    setData(data) {
-        this.#data = Array.isArray(data) ? data : []
+    setData(data: unknown) {
+        this.#data = Array.isArray(data) ? (data as LabeledPointData[]) : []
         this.#placed = ""
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (this.#data) {
             // each point through its own frame; redrawn only when where they land changed
-            const entities = []
+            const entities: LabeledPoint[] = []
             for (const item of this.#data) {
                 const position = new THREE.Vector3(...(item.position ?? [0, 0, 0]))
                 const matrix =

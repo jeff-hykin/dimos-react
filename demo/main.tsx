@@ -20,7 +20,6 @@ import {
     Fab,
     Field,
     FloatingPanel,
-    h,
     Heading,
     Hud,
     Icon,
@@ -64,14 +63,16 @@ import {
     useToast,
     useUrlParams,
     useUrlState,
-} from "../src/index"
+} from "../src/index.ts"
+import type { Corners } from "../src/index.ts"
 import { useState } from "react"
-import { DataSection } from "./sections/data"
-import { NavSection } from "./sections/nav"
-import { InputDevicesSection } from "./sections/input_devices"
-import { SceneSection } from "./sections/scene"
-import { MediaSection } from "./sections/media"
-import { ViewsSection } from "./sections/views"
+import type { ComponentType } from "react"
+import { DataSection } from "./sections/data.tsx"
+import { NavSection } from "./sections/nav.tsx"
+import { InputDevicesSection } from "./sections/input_devices.tsx"
+import { SceneSection } from "./sections/scene.tsx"
+import { MediaSection } from "./sections/media.tsx"
+import { ViewsSection } from "./sections/views.tsx"
 
 const source = memorySource({
     topics: ["dimos/odom/nav_msgs.Odometry", "dimos/lidar/sensor_msgs.PointCloud2", "dimos/tf/tf2_msgs.TFMessage"],
@@ -82,9 +83,9 @@ function ControlsSection() {
     const [search, setSearch] = useState("lidar")
     const [notes, setNotes] = useState("Waypoint 3 is behind the door.")
     const [speed, setSpeed] = useState(0.6)
-    const [range, setRange] = useState([0.2, 1.4])
+    const [range, setRange] = useState<[number, number]>([0.2, 1.4])
     const [count, setCount] = useState(12)
-    const [rangeMax, setRangeMax] = useState(null)
+    const [rangeMax, setRangeMax] = useState<number | null>(null)
     const [mode, setMode] = useState("accumulate")
     const [checks, setChecks] = useState({ grid: true, labels: false })
     const [follow, setFollow] = useState(true)
@@ -566,7 +567,7 @@ function LayoutSection() {
     )
 }
 
-const SECTIONS = [
+const SECTIONS: [id: string, label: string, Section: ComponentType][] = [
     ["controls", "Controls", ControlsSection],
     ["feedback", "Feedback", FeedbackSection],
     ["layout", "Layout", LayoutSection],
@@ -636,7 +637,7 @@ function Demo() {
 function Root() {
     // the skin comes from the URL (a link per skin); with no ?skin= it follows Desktop's saved choice, live
     const [skin] = useUrlState("skin")
-    const [corners] = useUrlState("corners")
+    const [corners] = useUrlState<Corners>("corners")
     return (
         <AppProvider source={source} url={false} theme={{ skin, corners }}>
             <Demo />
@@ -654,7 +655,7 @@ style.textContent = `
 .demo-target { display: flex; align-items: center; justify-content: center; height: 120px; border: 1px dashed var(--border-strong); border-radius: var(--radius); color: var(--muted-fg); background: var(--scene-bg); }
 `
 document.head.append(style)
-createRoot(document.getElementById("root")).render(
+createRoot(document.getElementById("root")!).render(
     <UrlStateProvider events={false}>
         <Root />
     </UrlStateProvider>,

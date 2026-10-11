@@ -14,17 +14,17 @@ import {
     ResizeHandle,
     StickIndicator,
     ThumbStick,
-} from "../../src/index"
+} from "../../src/index.ts"
 
 export function InputDevicesSection() {
     const [stick, setStick] = useState({ x: 0, y: 0 })
     const [pad, setPad] = useState("—")
-    const [files, setFiles] = useState([])
+    const [files, setFiles] = useState<File[]>([])
     const [color, setColor] = useState("#7fd4ff")
     const [thumb, setThumb] = useState({ x: 0, y: 0 })
     const [held, setHeld] = useState(false)
     const [box, setBox] = useState({ width: 220, height: 90 })
-    const [dragBox, setDragBox] = useState(null)
+    const [dragBox, setDragBox] = useState<{ width: number; height: number } | null>(null)
     return (
         <div className="demo-grid">
             <Card title="ThumbStick · StickIndicator">
@@ -58,7 +58,12 @@ export function InputDevicesSection() {
                     <ResizeHandle
                         onResize={({ dx, dy, done }) => {
                             const next = { width: Math.max(120, box.width + dx), height: Math.max(60, box.height + dy) }
-                            done ? (setBox(next), setDragBox(null)) : setDragBox(next)
+                            if (done) {
+                                setBox(next)
+                                setDragBox(null)
+                            } else {
+                                setDragBox(next)
+                            }
                         }}
                     />
                 </div>

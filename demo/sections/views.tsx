@@ -10,23 +10,23 @@ import {
     releaseAllThumbSticks,
     ThumbStick,
     ViewPanel,
-} from "../../src/index"
-import { DataSourceProvider, memorySource, Select } from "../../src/index"
-import { Map2D, TfTree } from "../../src/three"
+} from "../../src/index.ts"
+import { DataSourceProvider, memorySource, Select } from "../../src/index.ts"
+import { Map2D, TfTree } from "../../src/three.ts"
 
 export function ViewsSection() {
     const [order, setOrder] = useState(["camera", "scene", "map"])
-    const [maximized, setMaximized] = useState(null)
-    const [box, setBox] = useState({ x: 24, y: 24 })
+    const [maximized, setMaximized] = useState<string | null>(null)
+    const [box, setBox] = useState<{ x: number; y: number; width?: number; height?: number }>({ x: 24, y: 24 })
     const [stick, setStick] = useState({ left: [0, 0], right: [0, 0] })
-    const tileRect = (region) => {
+    const tileRect = (region: string) => {
         if (maximized) {
             return region === maximized ? { x: 0, y: 0, width: 600, height: 220 } : null
         }
         const index = order.indexOf(region)
         return { x: index * 204, y: 0, width: 196, height: 220 }
     }
-    const tile = (region, title) => (
+    const tile = (region: string, title: string) => (
         <ViewPanel
             key={region}
             placement="dock"
@@ -137,7 +137,7 @@ export function ViewsSection() {
 function DemoMap() {
     const source = useMemo(() => memorySource(), [])
     const tf = useMemo(() => new TfTree(), [])
-    const [pick, setPick] = useState(null)
+    const [pick, setPick] = useState<string | null>(null)
     useEffect(() => {
         const width = 160,
             height = 120

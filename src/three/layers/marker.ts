@@ -2,11 +2,12 @@
 // box and is reported). Markers are kept by (ns, id), replaced on ADD, removed on DELETE/DELETEALL or when their
 // lifetime runs out (on the data clock, so a paused replay keeps them), and each is placed by its own header's frame.
 import * as THREE from "three"
-import { disposeTree } from "../robot_model"
-import { FatLines } from "../lines"
-import { LabelPool } from "../labels"
-import { registerLayer, rgba, subscribeDecoded } from "./registry"
-import { poseMatrix } from "./pose"
+import { disposeTree } from "../robot_model.ts"
+import { FatLines } from "../lines.ts"
+import { LabelPool } from "../labels.ts"
+import { registerLayer, rgba, subscribeDecoded, type LayerContext, type Topic } from "./registry.ts"
+import type { FrameInfo } from "../viewer.ts"
+import { poseMatrix } from "./pose.tsx"
 
 export const MARKER_TYPE = {
     ARROW: 0,
@@ -24,19 +25,51 @@ export const MARKER_TYPE = {
 }
 const ACTION = { ADD: 0, DELETE: 2, DELETEALL: 3 }
 
+type PointMessage = { x: number; y: number; z: number }
+type ColorMessage = Parameters<typeof rgba>[0]
+
+/** A decoded visualization_msgs.Marker (the fields the layer reads). */
+export interface MarkerMessage {
+    header?: { frame_id?: string }
+    ns?: string
+    id?: number
+    type?: number
+    action?: number
+    pose?: Parameters<typeof poseMatrix>[0]
+    scale?: { x?: number; y?: number; z?: number }
+    color?: ColorMessage
+    lifetime?: { sec?: number; nsec?: number }
+    points?: PointMessage[]
+    colors?: ColorMessage[]
+    text?: string
+}
+
+/** A decoded Marker or MarkerArray. */
+export interface MarkerMessages extends MarkerMessage {
+    markers?: MarkerMessage[]
+}
+
+interface KeptMarker {
+    object: THREE.Object3D
+    frame: string
+    pose: THREE.Matrix4
+    expiresAt: number
+    label?: { text: string; color: string }
+}
+
 const unitBox = new THREE.BoxGeometry(1, 1, 1)
 const unitSphere = new THREE.SphereGeometry(0.5, 20, 14)
 // three's cylinders run along Y; markers' along Z
 const unitCylinder = new THREE.CylinderGeometry(0.5, 0.5, 1, 24).rotateX(Math.PI / 2)
 const unitCone = new THREE.ConeGeometry(0.5, 1, 20)
-const shared = new Set([unitBox, unitSphere, unitCylinder, unitCone])
+const shared: Set<THREE.BufferGeometry> = new Set([unitBox, unitSphere, unitCylinder, unitCone])
 
-function material(color) {
+function material(color: ColorMessage): THREE.MeshLambertMaterial {
     const { color: rgb, alpha } = rgba(color)
     return new THREE.MeshLambertMaterial({ color: rgb, transparent: alpha < 1, opacity: alpha, side: THREE.DoubleSide })
 }
 
-function arrow(marker) {
+function arrow(marker: MarkerMessage): THREE.Group {
     const group = new THREE.Group()
     const scale = marker.scale ?? {}
     let start = new THREE.Vector3(),
@@ -44,7 +77,7 @@ function arrow(marker) {
     let shaft = scale.y || 0.05,
         head = scale.z || 0.1,
         headLength = 0
-    if ((marker.points ?? []).length >= 2) {
+    if (marker.points && marker.points.length >= 2) {
         // points form: start→end, scale = shaft diameter, head diameter, head length
         start = new THREE.Vector3(marker.points[0].x, marker.points[0].y, marker.points[0].z)
         end = new THREE.Vector3(marker.points[1].x, marker.points[1].y, marker.points[1].z)
@@ -71,34 +104,40 @@ function arrow(marker) {
     return wrapper
 }
 
-const pointsOf = (marker) => (marker.points ?? []).map((point) => new THREE.Vector3(point.x, point.y, point.z))
+const pointsOf = (marker: MarkerMessage): THREE.Vector3[] =>
+    (marker.points ?? []).map((point) => new THREE.Vector3(point.x, point.y, point.z))
 
-function colorsOf(marker, count) {
+function colorsOf(marker: MarkerMessage, count: number): THREE.Color[] | null {
     const list = marker.colors ?? []
     return list.length === count ? list.map((color) => rgba(color).color) : null
 }
 
 export class MarkerLayer {
     root = new THREE.Group()
-    #kept = new Map()
+    #kept: Map<string, KeptMarker> = new Map()
     #labels = new LabelPool()
-    #stop
+    #stop: () => void
     #unsupported = 0
-    context: any
+    context: LayerContext
 
-    constructor(context, topic) {
+    constructor(context: LayerContext, topic: Topic) {
         this.context = context
         this.root.add(this.#labels.group)
         const isArray = topic.type === "visualization_msgs.MarkerArray"
-        this.#stop = subscribeDecoded(context, topic, { maxHz: 30, reliable: isArray }, (message, timestamp) => {
-            for (const marker of isArray ? (message.markers ?? []) : [message]) {
-                this.#apply(marker)
-            }
-            context.viewer.noteData(timestamp)
-        })
+        this.#stop = subscribeDecoded(
+            context,
+            topic,
+            { maxHz: 30, reliable: isArray },
+            (message: MarkerMessages, timestamp: number | undefined) => {
+                for (const marker of isArray ? (message.markers ?? []) : [message]) {
+                    this.#apply(marker)
+                }
+                context.viewer.noteData(timestamp)
+            },
+        )
     }
 
-    #apply(marker) {
+    #apply(marker: MarkerMessage) {
         const key = `${marker.ns}/${marker.id}`
         if (marker.action === ACTION.DELETEALL) {
             for (const [other] of this.#kept) {
@@ -118,7 +157,7 @@ export class MarkerLayer {
         }
         object.matrixAutoUpdate = false
         const lifetime = (marker.lifetime?.sec ?? 0) + (marker.lifetime?.nsec ?? 0) / 1e9
-        const kept = {
+        const kept: KeptMarker = {
             object,
             frame: marker.header?.frame_id ?? "",
             pose: poseMatrix(marker.pose),
@@ -132,9 +171,9 @@ export class MarkerLayer {
         this.root.add(object)
     }
 
-    #build(marker) {
+    #build(marker: MarkerMessage): THREE.Group | null {
         const scale = marker.scale ?? { x: 1, y: 1, z: 1 }
-        const sized = (geometry) => {
+        const sized = (geometry: THREE.BufferGeometry) => {
             const mesh = new THREE.Mesh(geometry, material(marker.color))
             mesh.scale.set(scale.x || 1e-3, scale.y || 1e-3, scale.z || 1e-3)
             const group = new THREE.Group()
@@ -259,15 +298,17 @@ export class MarkerLayer {
         return null
     }
 
-    #remove(key) {
+    #remove(key: string) {
         const kept = this.#kept.get(key)
         if (!kept) {
             return
         }
         this.#kept.delete(key)
         kept.object.traverse((child) => {
-            if (child.geometry && shared.has(child.geometry)) {
-                child.geometry = null
+            // a shared unit geometry is detached so disposeTree leaves it alone
+            const holder = child as { geometry?: THREE.BufferGeometry | null }
+            if (holder.geometry && shared.has(holder.geometry)) {
+                holder.geometry = null
             }
         })
         disposeTree(kept.object)
@@ -281,8 +322,8 @@ export class MarkerLayer {
         this.context.viewer.requestRender()
     }
 
-    update(frame) {
-        const missing = new Set()
+    update(frame: FrameInfo) {
+        const missing: Set<string> = new Set()
         this.#labels.begin()
         const scratch = new THREE.Vector3()
         for (const [key, kept] of this.#kept) {
@@ -325,5 +366,10 @@ registerLayer({
     label: "Markers",
     types: ["visualization_msgs.Marker", "visualization_msgs.MarkerArray"],
     defaults: {},
-    create: (context, topic) => new MarkerLayer(context, topic),
+    create: (context, topic) => {
+        if (!topic) {
+            throw new Error("the marker layer draws a topic (it has no setData)")
+        }
+        return new MarkerLayer(context, topic)
+    },
 })

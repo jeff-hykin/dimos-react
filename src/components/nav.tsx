@@ -1,18 +1,27 @@
 // Navigation and overlays: tabs, segmented controls, menus, context menus, popovers, tooltips, sidebars, a nav
 // rail, a stepper, breadcrumbs and a command palette.
 import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import type {
+    ButtonHTMLAttributes,
+    CSSProperties,
+    HTMLAttributes,
+    Key,
+    KeyboardEvent as ReactKeyboardEvent,
+    MouseEvent as ReactMouseEvent,
+    ReactNode,
+} from "react"
 import { createPortal } from "react-dom"
-import { cx } from "../cx"
-import { Icon } from "./icon"
-import { useEscape, useHotkeys } from "../hooks"
+import { cx } from "../cx.ts"
+import { Icon } from "./icon.tsx"
+import { useEscape, useHotkeys } from "../hooks.ts"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
-function useControllable(value, initial, onChange) {
+function useControllable<T>(value: T | undefined, initial: T, onChange?: (next: T) => void): [T, (next: T) => void] {
     const [inner, setInner] = useState(initial)
     const controlled = value !== undefined
     const set = useCallback(
-        (next) => {
+        (next: T) => {
             if (!controlled) {
                 setInner(next)
             }
@@ -23,18 +32,39 @@ function useControllable(value, initial, onChange) {
     return [controlled ? value : inner, set]
 }
 
+/** A Tabs / Segmented choice. */
+export interface ChoiceItem<T extends string | number = string> {
+    value: T
+    label?: ReactNode
+    icon?: string
+    badge?: ReactNode
+    disabled?: boolean
+    title?: string
+    /** more attributes for this item's button, e.g. data-* */
+    props?: ButtonHTMLAttributes<HTMLButtonElement> & {
+        [data: `data-${string}`]: string | number | boolean | undefined
+    }
+}
+/**
+ * A choice as given: a string (value and label), a [value, label] pair, or a ChoiceItem. A pair built by `.map()` types
+ * as an array rather than a tuple, so any array is taken (its first item is the value).
+ */
+export type ChoiceInput<T extends string | number> =
+    (T & string) | readonly [T, ReactNode?] | readonly NoInfer<T | ReactNode>[] | ChoiceItem<T>
+
 /** [[value, label]] or [{ value, label, … }] → [{ value, label, … }] */
-const normalizeItems = (items = []) =>
-    items.map((item) =>
+const normalizeItems = <T extends string | number>(items: readonly ChoiceInput<T>[] = []): ChoiceItem<T>[] =>
+    items.map((item): ChoiceItem<T> =>
         Array.isArray(item)
             ? { value: item[0], label: item[1] }
             : typeof item === "string"
               ? { value: item, label: item }
-              : item,
+              : // Array.isArray doesn't narrow readonly arrays away, so name what's left
+                (item as ChoiceItem<T>),
     )
 
 /** Renders into document.body (nothing during server rendering). */
-function Portal({ children }) {
+function Portal({ children }: { children?: ReactNode }) {
     const [mounted, setMounted] = useState(false)
     useEffect(() => setMounted(true), [])
     return mounted && typeof document !== "undefined" ? createPortal(children, document.body) : null
@@ -42,12 +72,27 @@ function Portal({ children }) {
 
 // ── Tabs / Segmented ──
 
-function choiceGroup(
-    baseClass,
-    { items, value, onChange, variant, size, vertical = false, className, label, ...rest },
+export interface TabsProps<T extends string | number = string> extends Omit<
+    HTMLAttributes<HTMLDivElement>,
+    "onChange"
+> {
+    items: readonly ChoiceInput<T>[]
+    value: T
+    onChange?: (value: T) => void
+    variant?: "line" | "pill"
+    size?: "sm" | "md"
+    /** stacks them (↑/↓ move) */
+    vertical?: boolean
+    /** the tab list's accessible name */
+    label?: string
+}
+
+function choiceGroup<T extends string | number>(
+    baseClass: string,
+    { items, value, onChange, variant, size, vertical = false, className, label, ...rest }: TabsProps<T>,
 ) {
     const list = normalizeItems(items)
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
         const index = list.findIndex((item) => item.value === value)
         const [next, back] = vertical ? ["ArrowDown", "ArrowUp"] : ["ArrowRight", "ArrowLeft"]
         const delta = event.key === next ? 1 : event.key === back ? -1 : 0
@@ -60,7 +105,7 @@ function choiceGroup(
             if (!next.disabled) {
                 onChange?.(next.value)
                 const escaped = globalThis.CSS?.escape ? globalThis.CSS.escape(String(next.value)) : String(next.value)
-                event.currentTarget.querySelector(`[data-value="${escaped}"]`)?.focus()
+                event.currentTarget.querySelector<HTMLElement>(`[data-value="${escaped}"]`)?.focus()
                 break
             }
         }
@@ -111,40 +156,38 @@ function choiceGroup(
 /**
  * Tabs: `items` as [{ value, label, icon, badge, disabled, title, props }] or [[value, label]] (`props`: more
  * attributes for that item's button, e.g. data-*). `vertical` stacks them (↑/↓ move).
- * @param {{ items: any[], value: any, onChange?: (value: any) => void, variant?: "line" | "pill", size?: "sm" | "md",
- *   vertical?: boolean, className?: string, label?: string }} props
  */
-export function Tabs({
-    variant = "line",
-    ...props
-}: {
-    items: any[]
-    value: any
-    onChange?: (value: any) => void
-    variant?: "line" | "pill"
-    size?: "sm" | "md"
-    vertical?: boolean
-    className?: string
-    label?: string
-}) {
+export function Tabs<T extends string | number = string>({ variant = "line", ...props }: TabsProps<T>) {
     return choiceGroup("dr-tabs", { variant, ...props })
 }
 
 /** A compact segmented control (same API as Tabs). */
-export function Segmented(props) {
+export function Segmented<T extends string | number = string>(props: TabsProps<T>) {
     return choiceGroup("dr-segmented", props)
 }
 
 // ── Popover ──
 
+type Side = "top" | "bottom" | "left" | "right"
+/** A side of the anchor, optionally aligned to its start or end (default: centered). */
+export type Placement = Side | `${Side}-${"start" | "center" | "end"}`
+
+/** The anchor's box (a DOMRect, or a point as a zero-size rect). */
+export type AnchorRect = Pick<DOMRect, "left" | "right" | "top" | "bottom" | "width" | "height">
+
 /** Where to put a `floating` box of size (w, h) next to an anchor rect, kept on screen. */
-export function placeFloating(anchor, size, placement = "bottom-start", gap = 6) {
+export function placeFloating(
+    anchor: AnchorRect,
+    size: { width: number; height: number },
+    placement: Placement = "bottom-start",
+    gap = 6,
+): { x: number; y: number; side: string } {
     const [side, align = "center"] = placement.split("-")
-    let x = 0
-    let y = 0
+    let x: number
+    let y: number
     const vw = globalThis.innerWidth ?? 1024
     const vh = globalThis.innerHeight ?? 768
-    const along = (start, length, own) =>
+    const along = (start: number, length: number, own: number) =>
         align === "start" ? start : align === "end" ? start + length - own : start + (length - own) / 2
     let actualSide = side
     if (side === "bottom" && anchor.bottom + gap + size.height > vh && anchor.top - gap - size.height > 0) {
@@ -170,9 +213,26 @@ export function placeFloating(anchor, size, placement = "bottom-start", gap = 6)
     }
 }
 
+interface FloatingProps extends HTMLAttributes<HTMLDivElement> {
+    anchor?: HTMLElement | null
+    point?: { x: number; y: number }
+    placement?: Placement
+    onClose?: () => void
+}
+
 /** A floating box positioned at an anchor element or a point, in a portal; closes on outside click / Escape. */
-function Floating({ anchor, point, placement, onClose, className, children, role = "dialog", style, ...rest }) {
-    const box = useRef(null)
+function Floating({
+    anchor,
+    point,
+    placement,
+    onClose,
+    className,
+    children,
+    role = "dialog",
+    style,
+    ...rest
+}: FloatingProps) {
+    const box = useRef<HTMLDivElement | null>(null)
     const [position, setPosition] = useState({ x: -9999, y: -9999 })
     const place = useRef(() => {})
     place.current = () => {
@@ -189,7 +249,7 @@ function Floating({ anchor, point, placement, onClose, className, children, role
         }
     }
     // the box mounts a render later (Portal), so it places itself once it exists
-    const setBox = useCallback((element) => {
+    const setBox = useCallback((element: HTMLDivElement | null) => {
         box.current = element
         if (element) {
             place.current()
@@ -206,8 +266,9 @@ function Floating({ anchor, point, placement, onClose, className, children, role
         }
     }, [anchor, point?.x, point?.y, placement])
     useEffect(() => {
-        const onDown = (event) => {
-            if (box.current?.contains(event.target) || anchor?.contains?.(event.target)) {
+        const onDown = (event: PointerEvent) => {
+            const target = event.target instanceof Node ? event.target : null
+            if (box.current?.contains(target) || anchor?.contains?.(target)) {
                 return
             }
             onClose?.()
@@ -234,12 +295,32 @@ function Floating({ anchor, point, placement, onClose, className, children, role
     )
 }
 
-/**
- * A popover anchored to its trigger.
- * @param {{ trigger: any, children: any, open?: boolean, onOpenChange?: (open: boolean) => void, defaultOpen?: boolean,
- *   placement?: string, className?: string, style?: object }} props
- *   `trigger`: an element (gets onClick + ref) or `(props) => element`
- */
+/** What a Popover / Menu gives its trigger (spread them onto the element that opens it). */
+export interface TriggerProps {
+    ref: (element: HTMLElement | null) => void
+    onClick: () => void
+    "aria-expanded": boolean
+    "aria-haspopup": "dialog" | "menu"
+    onKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void
+}
+
+/** An element (gets onClick + ref), `(props) => element`, or other content (wrapped in a span / button). */
+export type Trigger = ReactNode | ((props: TriggerProps & { open: boolean }) => ReactNode)
+
+export interface PopoverProps {
+    /** an element (gets onClick + ref) or `(props) => element` */
+    trigger: Trigger
+    /** content, or `({ close }) => content` */
+    children: ReactNode | ((api: { close: () => void }) => ReactNode)
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    defaultOpen?: boolean
+    placement?: Placement
+    className?: string
+    style?: CSSProperties
+}
+
+/** A popover anchored to its trigger. `trigger`: an element (gets onClick + ref) or `(props) => element`. */
 export function Popover({
     trigger,
     children,
@@ -249,19 +330,10 @@ export function Popover({
     placement = "bottom-start",
     className,
     style,
-}: {
-    trigger: any
-    children: any
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-    defaultOpen?: boolean
-    placement?: string
-    className?: string
-    style?: object
-}) {
+}: PopoverProps) {
     const [isOpen, setOpen] = useControllable(open, defaultOpen, onOpenChange)
-    const [anchor, setAnchor] = useState(null)
-    const triggerProps = {
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+    const triggerProps: TriggerProps = {
         ref: setAnchor,
         onClick: () => setOpen(!isOpen),
         "aria-expanded": isOpen,
@@ -270,7 +342,7 @@ export function Popover({
     const triggerElement =
         typeof trigger === "function" ? (
             trigger({ ...triggerProps, open: isOpen })
-        ) : isValidElement(trigger) ? (
+        ) : isValidElement<Partial<TriggerProps>>(trigger) ? (
             cloneElement(trigger, triggerProps)
         ) : (
             <span {...triggerProps}>{trigger}</span>
@@ -295,37 +367,68 @@ export function Popover({
 
 // ── Menu ──
 
+/** A menu entry that does something. Its `data-*` / `aria-*` keys (and `id`) go on its button. */
+export interface MenuAction {
+    label: ReactNode
+    icon?: string
+    onSelect?: () => void
+    danger?: boolean
+    disabled?: boolean
+    /** makes it a checkbox item (a check when true) */
+    checked?: boolean
+    shortcut?: ReactNode
+    title?: string
+    /** stays open after a pick */
+    keepOpen?: boolean
+    key?: Key
+    id?: string
+    separator?: false
+    heading?: undefined
+    [dataOrAria: `data-${string}` | `aria-${string}`]: string | number | boolean | undefined
+}
+/** A line between groups of items ("-" does the same). */
+export interface MenuSeparator {
+    separator: true
+    heading?: undefined
+}
+/** A group's title (not clickable). */
+export interface MenuHeading {
+    heading: ReactNode
+    separator?: false
+}
+export type MenuItem = MenuAction | MenuSeparator | MenuHeading | "-"
+
+/** A heading (one with no heading text renders as an action, as it always has). */
+const isHeading = (item: MenuAction | MenuHeading): item is MenuHeading => !!item.heading
+
 /** A menu item's own DOM attributes: its `data-*` (a test id) and `aria-*` keys, and `id`. */
-function domProps(item) {
+function domProps(item: MenuAction): Record<string, unknown> {
     return Object.fromEntries(
         Object.entries(item).filter(([key]) => key === "id" || key.startsWith("data-") || key.startsWith("aria-")),
     )
 }
 
+export interface MenuListProps {
+    items: readonly MenuItem[]
+    onClose?: () => void
+    autoFocus?: boolean
+}
+
 /**
  * A menu's items in place (inside a Popover, a panel): what Menu and MenuAt show. `items` as for Menu; `onClose` after
  * a pick (unless the item `keepOpen`s).
- * @param {{ items: any[], onClose?: () => void, autoFocus?: boolean }} props
  */
-export function MenuList({
-    items,
-    onClose,
-    autoFocus = true,
-}: {
-    items: any[]
-    onClose?: () => void
-    autoFocus?: boolean
-}) {
-    const list = useRef(null)
-    const focusable = () => [...(list.current?.querySelectorAll(".dr-menu__item:not([disabled])") ?? [])]
+export function MenuList({ items, onClose, autoFocus = true }: MenuListProps) {
+    const list = useRef<HTMLDivElement>(null)
+    const focusable = () => [...(list.current?.querySelectorAll<HTMLElement>(".dr-menu__item:not([disabled])") ?? [])]
     useEffect(() => {
         if (autoFocus) {
             focusable()[0]?.focus()
         }
     }, [])
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
         const elements = focusable()
-        const index = elements.indexOf(document.activeElement)
+        const index = elements.findIndex((element) => element === document.activeElement)
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault()
             const delta = event.key === "ArrowDown" ? 1 : -1
@@ -344,7 +447,7 @@ export function MenuList({
                 if (item === "-" || item?.separator) {
                     return <div key={index} className="dr-menu__sep" role="separator" />
                 }
-                if (item.heading) {
+                if (isHeading(item)) {
                     return (
                         <div key={index} className="dr-menu__heading">
                             {item.heading}
@@ -386,46 +489,21 @@ export function MenuList({
     )
 }
 
-/**
- * A dropdown menu. An item's `data-*` / `aria-*` keys (and `id`) go on its button, like other components' DOM props.
- * @param {{ items: ({ label: any, icon?: string, onSelect?: () => void, danger?: boolean, disabled?: boolean,
- *   checked?: boolean, shortcut?: string, title?: string, keepOpen?: boolean, [dataOrAria: string]: any } | "-" |
- *   { heading: any })[],
- *   trigger: any, placement?: string, open?: boolean, onOpenChange?: (open: boolean) => void, className?: string }} props
- */
-export function Menu({
-    items,
-    trigger,
-    placement = "bottom-start",
-    open,
-    onOpenChange,
-    className,
-}: {
-    items: (
-        | {
-              label: any
-              icon?: string
-              onSelect?: () => void
-              danger?: boolean
-              disabled?: boolean
-              checked?: boolean
-              shortcut?: string
-              title?: string
-              keepOpen?: boolean
-              [dataOrAria: string]: any
-          }
-        | "-"
-        | { heading: any }
-    )[]
-    trigger: any
-    placement?: string
+export interface MenuProps {
+    items: readonly MenuItem[]
+    /** an element (gets onClick + ref), `(props) => element`, or a button's content (default: a ⋯ icon) */
+    trigger?: Trigger
+    placement?: Placement
     open?: boolean
     onOpenChange?: (open: boolean) => void
     className?: string
-}) {
+}
+
+/** A dropdown menu. An item's `data-*` / `aria-*` keys (and `id`) go on its button, like other components' DOM props. */
+export function Menu({ items, trigger, placement = "bottom-start", open, onOpenChange, className }: MenuProps) {
     const [isOpen, setOpen] = useControllable(open, false, onOpenChange)
-    const [anchor, setAnchor] = useState(null)
-    const triggerProps = {
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null)
+    const triggerProps: TriggerProps = {
         ref: setAnchor,
         onClick: () => setOpen(!isOpen),
         "aria-expanded": isOpen,
@@ -440,7 +518,7 @@ export function Menu({
     const triggerElement =
         typeof trigger === "function" ? (
             trigger({ ...triggerProps, open: isOpen })
-        ) : isValidElement(trigger) ? (
+        ) : isValidElement<Partial<TriggerProps>>(trigger) ? (
             cloneElement(trigger, triggerProps)
         ) : (
             <button type="button" className="dr-menu-trigger" {...triggerProps}>
@@ -469,25 +547,17 @@ export function Menu({
     )
 }
 
-/**
- * Right-click (or long-press on touch) opens a menu at the pointer.
- * @param {{ items: any[] | ((event: any) => any[]), children: any, disabled?: boolean, className?: string }} props
- */
-export function ContextMenu({
-    items,
-    children,
-    disabled,
-    className,
-    ...rest
-}: {
-    items: any[] | ((event: any) => any[])
-    children: any
+export interface ContextMenuProps extends HTMLAttributes<HTMLDivElement> {
+    /** the items, or `(event) => items` for where it was opened (none: no menu) */
+    items: readonly MenuItem[] | ((event: ReactMouseEvent<HTMLDivElement>) => readonly MenuItem[] | null | undefined)
     disabled?: boolean
-    className?: string
-}) {
-    const [menu, setMenu] = useState(null)
-    const press = useRef(null)
-    const openAt = (event, x, y) => {
+}
+
+/** Right-click (or long-press on touch) opens a menu at the pointer. */
+export function ContextMenu({ items, children, disabled, className, ...rest }: ContextMenuProps) {
+    const [menu, setMenu] = useState<{ x: number; y: number; items: readonly MenuItem[] } | null>(null)
+    const press = useRef<ReturnType<typeof setTimeout>>(undefined)
+    const openAt = (event: ReactMouseEvent<HTMLDivElement>, x: number, y: number) => {
         const list = typeof items === "function" ? items(event) : items
         if (list?.length) {
             setMenu({ x, y, items: list })
@@ -530,23 +600,18 @@ export function ContextMenu({
     )
 }
 
+export interface MenuAtProps extends HTMLAttributes<HTMLDivElement> {
+    x: number
+    y: number
+    items?: readonly MenuItem[]
+    onClose: () => void
+}
+
 /**
  * A menu open at a screen point, for triggers ContextMenu can't tell apart (a 3D view's right click that isn't a
  * right-drag pan, say). `children` go above the items (a heading line, or an inline form instead of `items`).
- * @param {{ x: number, y: number, items?: any[], onClose: () => void, children?: any, className?: string } & Record<string, any>} props
  */
-export function MenuAt({
-    x,
-    y,
-    items = [],
-    onClose,
-    children,
-    className,
-    ...rest
-}: { x: number; y: number; items?: any[]; onClose: () => void; children?: any; className?: string } & Record<
-    string,
-    any
->) {
+export function MenuAt({ x, y, items = [], onClose, children, className, ...rest }: MenuAtProps) {
     return (
         <Floating point={{ x, y }} onClose={onClose} role="presentation" className={className} {...rest}>
             {children}
@@ -557,26 +622,21 @@ export function MenuAt({
 
 // ── Tooltip ──
 
-/**
- * A hover / focus tooltip.
- * @param {{ content: any, children: any, delay?: number, placement?: string, disabled?: boolean }} props
- */
-export function Tooltip({
-    content,
-    children,
-    delay = 350,
-    placement = "top",
-    disabled,
-}: {
-    content: any
-    children: any
+export interface TooltipProps {
+    content: ReactNode
+    /** an element (gets the hover / focus handlers and a ref), or content to wrap in a span */
+    children: ReactNode
+    /** ms */
     delay?: number
-    placement?: string
+    placement?: Placement
     disabled?: boolean
-}) {
-    const [anchor, setAnchor] = useState(null)
+}
+
+/** A hover / focus tooltip. */
+export function Tooltip({ content, children, delay = 350, placement = "top", disabled }: TooltipProps) {
+    const [anchor, setAnchor] = useState<HTMLElement | null>(null)
     const [open, setOpen] = useState(false)
-    const timer = useRef(null)
+    const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
     useEffect(() => () => clearTimeout(timer.current), [])
     const show = () => {
         clearTimeout(timer.current)
@@ -587,7 +647,7 @@ export function Tooltip({
         setOpen(false)
     }
     const handlers = { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide }
-    const child = isValidElement(children) ? (
+    const child = isValidElement<typeof handlers & { ref?: (element: HTMLElement | null) => void }>(children) ? (
         cloneElement(children, { ref: setAnchor, ...handlers })
     ) : (
         <span ref={setAnchor} {...handlers}>
@@ -606,8 +666,16 @@ export function Tooltip({
     )
 }
 
-function TooltipBox({ anchor, placement, children }) {
-    const box = useRef(null)
+function TooltipBox({
+    anchor,
+    placement,
+    children,
+}: {
+    anchor: HTMLElement
+    placement: Placement
+    children: ReactNode
+}) {
+    const box = useRef<HTMLDivElement>(null)
     const [position, setPosition] = useState({ x: -9999, y: -9999 })
     useIsoLayoutEffect(() => {
         if (box.current) {
@@ -632,12 +700,23 @@ function TooltipBox({ anchor, placement, children }) {
 
 // ── Sidebar / NavRail ──
 
-/**
- * A collapsible side panel with titled sections.
- * @param {{ title?: any, sections?: { title?: any, content: any, key?: string }[], children?: any, collapsed?: boolean,
- *   onCollapsedChange?: (collapsed: boolean) => void, side?: "left" | "right", width?: number | string,
- *   footer?: any, className?: string, style?: object }} props
- */
+export interface SidebarSection {
+    title?: ReactNode
+    content: ReactNode
+    key?: Key
+}
+
+export interface SidebarProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
+    title?: ReactNode
+    sections?: SidebarSection[]
+    collapsed?: boolean
+    onCollapsedChange?: (collapsed: boolean) => void
+    side?: "left" | "right"
+    width?: number | string
+    footer?: ReactNode
+}
+
+/** A collapsible side panel with titled sections. */
 export function Sidebar({
     title,
     sections,
@@ -650,18 +729,7 @@ export function Sidebar({
     className,
     style,
     ...rest
-}: {
-    title?: any
-    sections?: { title?: any; content: any; key?: string }[]
-    children?: any
-    collapsed?: boolean
-    onCollapsedChange?: (collapsed: boolean) => void
-    side?: "left" | "right"
-    width?: number | string
-    footer?: any
-    className?: string
-    style?: object
-}) {
+}: SidebarProps) {
     const [isCollapsed, setCollapsed] = useControllable(collapsed, false, onCollapsedChange)
     return (
         <aside
@@ -699,12 +767,24 @@ export function Sidebar({
     )
 }
 
-/**
- * A vertical icon rail (Desktop's left rail, the Controller's panel switcher).
- * @param {{ items: { value: any, icon: string, label: string, badge?: any, disabled?: boolean }[], value: any,
- *   onChange?: (value: any) => void, showLabels?: boolean, footer?: any, className?: string }} props
- */
-export function NavRail({
+export interface NavRailItem<T extends Key = string> {
+    value: T
+    icon: string
+    label: string
+    badge?: ReactNode
+    disabled?: boolean
+}
+
+export interface NavRailProps<T extends Key = string> extends Omit<HTMLAttributes<HTMLElement>, "onChange"> {
+    items: NavRailItem<T>[]
+    value: T
+    onChange?: (value: T) => void
+    showLabels?: boolean
+    footer?: ReactNode
+}
+
+/** A vertical icon rail (Desktop's left rail, the Controller's panel switcher). */
+export function NavRail<T extends Key = string>({
     items = [],
     value,
     onChange,
@@ -712,14 +792,7 @@ export function NavRail({
     footer,
     className,
     ...rest
-}: {
-    items: { value: any; icon: string; label: string; badge?: any; disabled?: boolean }[]
-    value: any
-    onChange?: (value: any) => void
-    showLabels?: boolean
-    footer?: any
-    className?: string
-}) {
+}: NavRailProps<T>) {
     return (
         <nav className={cx("dr-navrail", showLabels && "dr-navrail--labels", className)} {...rest}>
             <div className="dr-navrail__items">
@@ -752,27 +825,30 @@ export function NavRail({
 
 // ── Stepper ──
 
-/**
- * Wizard steps, or a process's progress (a launch, an install).
- * @param {{ steps: { label: any, description?: any, state?: "done" | "current" | "todo" | "failed", key?: any }[],
- *   current?: number, onStep?: (index: number) => void, vertical?: boolean, className?: string }} props
- *   `onStep`: lets the user go back to a finished step. A step's own `state` wins over `current` (a process that
- *   reports each step, one of which may have failed).
- */
-export function Stepper({
-    steps = [],
-    current = 0,
-    onStep,
-    vertical = false,
-    className,
-    ...rest
-}: {
-    steps: { label: any; description?: any; state?: "done" | "current" | "todo" | "failed"; key?: any }[]
+export type StepState = "done" | "current" | "todo" | "failed"
+
+export interface Step {
+    label: ReactNode
+    description?: ReactNode
+    /** wins over `current` (a process that reports each step, one of which may have failed) */
+    state?: StepState
+    key?: Key
+}
+
+export interface StepperProps extends HTMLAttributes<HTMLOListElement> {
+    steps: Step[]
+    /** the current step's index */
     current?: number
+    /** lets the user go back to a finished step */
     onStep?: (index: number) => void
     vertical?: boolean
-    className?: string
-}) {
+}
+
+/**
+ * Wizard steps, or a process's progress (a launch, an install). `onStep`: lets the user go back to a finished step. A
+ * step's own `state` wins over `current` (a process that reports each step, one of which may have failed).
+ */
+export function Stepper({ steps = [], current = 0, onStep, vertical = false, className, ...rest }: StepperProps) {
     return (
         <ol className={cx("dr-stepper", vertical && "dr-stepper--vertical", className)} {...rest}>
             {steps.map((step, index) => {
@@ -790,7 +866,7 @@ export function Stepper({
                             <Mark
                                 className="dr-stepper__mark"
                                 type={clickable ? "button" : undefined}
-                                onClick={clickable ? () => onStep(index) : undefined}
+                                onClick={clickable ? () => onStep?.(index) : undefined}
                             >
                                 {state === "done" ? (
                                     <Icon name="check" size={12} />
@@ -814,17 +890,19 @@ export function Stepper({
 
 // ── Breadcrumbs ──
 
-/**
- * @param {{ items: { label: any, onClick?: () => void, href?: string }[], className?: string }} props
- */
-export function Breadcrumbs({
-    items = [],
-    className,
-    ...rest
-}: {
-    items: { label: any; onClick?: () => void; href?: string }[]
-    className?: string
-}) {
+export interface Crumb {
+    label: ReactNode
+    onClick?: () => void
+    href?: string
+}
+
+export interface BreadcrumbsProps extends HTMLAttributes<HTMLElement> {
+    /** the last one is the current page */
+    items: Crumb[]
+}
+
+/** Where you are: links back up a path, then the current page. */
+export function Breadcrumbs({ items = [], className, ...rest }: BreadcrumbsProps) {
     return (
         <nav className={cx("dr-breadcrumbs", className)} aria-label="Breadcrumb" {...rest}>
             {items.map((item, index) => {
@@ -841,7 +919,7 @@ export function Breadcrumbs({
                             item.onClick
                                 ? (event) => {
                                       event.preventDefault()
-                                      item.onClick()
+                                      item.onClick?.()
                                   }
                                 : undefined
                         }
@@ -865,7 +943,7 @@ export function Breadcrumbs({
 // ── CommandPalette ──
 
 /** Fuzzy score of `query` in `text` (higher = better; -1 = no match). */
-export function fuzzyScore(query, text) {
+export function fuzzyScore(query: string, text: unknown): number {
     const needle = query.toLowerCase().trim()
     const hay = String(text).toLowerCase()
     if (!needle) {
@@ -890,33 +968,29 @@ export function fuzzyScore(query, text) {
     return score
 }
 
-/**
- * ⌘K-style command list.
- * @param {{ open: boolean, onClose: () => void, commands: { id: string, label: string, group?: string, shortcut?: string,
- *   icon?: string, keywords?: string, run: () => void }[], placeholder?: string }} props
- */
-export function CommandPalette({
-    open,
-    onClose,
-    commands = [],
-    placeholder = "Type a command…",
-}: {
+export interface Command {
+    id: string
+    label: string
+    group?: string
+    shortcut?: string
+    icon?: string
+    /** more words to match */
+    keywords?: string
+    run: () => void
+}
+
+export interface CommandPaletteProps {
     open: boolean
     onClose: () => void
-    commands: {
-        id: string
-        label: string
-        group?: string
-        shortcut?: string
-        icon?: string
-        keywords?: string
-        run: () => void
-    }[]
+    commands: Command[]
     placeholder?: string
-}) {
+}
+
+/** ⌘K-style command list. */
+export function CommandPalette({ open, onClose, commands = [], placeholder = "Type a command…" }: CommandPaletteProps) {
     const [query, setQuery] = useState("")
     const [active, setActive] = useState(0)
-    const input = useRef(null)
+    const input = useRef<HTMLInputElement>(null)
     useEffect(() => {
         if (open) {
             setQuery("")
@@ -940,11 +1014,11 @@ export function CommandPalette({
     if (!open) {
         return null
     }
-    const run = (command) => {
+    const run = (command: Command | undefined) => {
         onClose?.()
         command?.run?.()
     }
-    const onKeyDown = (event) => {
+    const onKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
         if (event.key === "ArrowDown") {
             event.preventDefault()
             setActive((index) => Math.min(matches.length - 1, index + 1))
@@ -956,7 +1030,7 @@ export function CommandPalette({
             run(matches[active])
         }
     }
-    let lastGroup = null
+    let lastGroup: string | null | undefined = null
     return (
         <Portal>
             <div
@@ -1021,7 +1095,7 @@ export function CommandPalette({
 
 /**
  * `const palette = useCommandPalette()` → `{ open, setOpen, toggle }`, opened with mod+k (⌘K / Ctrl+K).
- * Render `h(CommandPalette, { open: palette.open, onClose: () => palette.setOpen(false), commands })`.
+ * Render `<CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} commands={commands} />`.
  */
 export function useCommandPalette(hotkey = "mod+k") {
     const [open, setOpen] = useState(false)

@@ -1,11 +1,17 @@
 // A picker for the point-cloud color gradients: a swatch per gradient (GRADIENTS), the chosen one outlined.
-import { cx } from "../cx"
-import { gradientCss, GRADIENTS } from "./gradients"
+import { cx } from "../cx.ts"
+import { gradientCss, GRADIENTS } from "./gradients.ts"
 
-/**
- * @param {{ value: string, onChange?: (name: string) => void, gradients?: string[], disabled?: boolean,
- *   className?: string } & Record<string, any>} props
- */
+import type { HTMLAttributes } from "react"
+
+export interface GradientPickerProps extends Omit<HTMLAttributes<HTMLDivElement>, "onChange"> {
+    value: string
+    onChange?: (name: string) => void
+    gradients?: string[]
+    disabled?: boolean
+    className?: string
+}
+
 export function GradientPicker({
     value,
     onChange,
@@ -13,13 +19,7 @@ export function GradientPicker({
     disabled,
     className,
     ...rest
-}: {
-    value: string
-    onChange?: (name: string) => void
-    gradients?: string[]
-    disabled?: boolean
-    className?: string
-} & Record<string, any>) {
+}: GradientPickerProps) {
     return (
         <div className={cx("dr-gradient-picker", className)} role="radiogroup" aria-label="Gradient" {...rest}>
             {gradients.map((name) => (

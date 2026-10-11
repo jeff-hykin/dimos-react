@@ -2,37 +2,38 @@
 // layer's frame_id with no path in the tree, and dynamic transforms that stopped while others keep coming. Pure (no
 // DOM): `checkTf({ snapshot: tf.snapshot(), fixedFrame, layers, placed })`.
 
-/**
- * @typedef {"cycle" | "twoParents" | "separateTrees" | "fixedFrame" | "unplaced" | "stale"} TfIssueKind
- * @typedef {{ kind: TfIssueKind, summary: string, detail: string, frames: string[] }} TfIssue
- */
+import type { TfSnapshot } from "./tf.ts"
+
+export type TfIssueKind = "cycle" | "twoParents" | "separateTrees" | "fixedFrame" | "unplaced" | "stale"
+
+export interface TfIssue {
+    kind: TfIssueKind
+    summary: string
+    detail: string
+    frames: string[]
+}
+
+export interface CheckTfInput {
+    snapshot: TfSnapshot
+    fixedFrame: string
+    layers?: { name: string; frame: string }[]
+    placed: (frame: string) => boolean
+}
 
 /** A dynamic transform this much older than its newest sibling has stopped (static ones are exempt). */
 export const TF_STALE_MS = 2000
 
-const list = (names, max = 3) =>
+const list = (names: string[], max = 3) =>
     names.length > max ? `${names.slice(0, max).join(", ")}, +${names.length - max}` : names.join(", ")
-const seconds = (ms) => `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`
+const seconds = (ms: number) => `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`
 
 /**
- * @param {{ snapshot: any, fixedFrame: string, layers?: { name: string, frame: string }[],
- *   placed: (frame: string) => boolean }} input `layers`: the drawn layers' data frames; `placed(frame)`: whether
- *   it can be placed in the fixed frame (tf.lookup(frame, fixedFrame) !== null)
- * @returns {TfIssue[]}
+ * @param input `layers`: the drawn layers' data frames; `placed(frame)`: whether it can be placed in the fixed frame
+ *   (tf.lookup(frame, fixedFrame) !== null)
  */
-export function checkTf({
-    snapshot,
-    fixedFrame,
-    layers = [],
-    placed,
-}: {
-    snapshot: any
-    fixedFrame: string
-    layers?: { name: string; frame: string }[]
-    placed: (frame: string) => boolean
-}): TfIssue[] {
+export function checkTf({ snapshot, fixedFrame, layers = [], placed }: CheckTfInput): TfIssue[] {
     const { edges, problems } = snapshot
-    const issues = []
+    const issues: TfIssue[] = []
     const cycle = [...problems.cycle].sort()
     if (cycle.length) {
         issues.push({
@@ -55,10 +56,10 @@ export function checkTf({
         })
     }
     const parentOf = new Map(edges.map((edge) => [edge.child, edge.parent]))
-    const rootOf = (frame) => {
+    const rootOf = (frame: string) => {
         let at = frame
         for (let step = 0; step <= parentOf.size && parentOf.has(at); step++) {
-            at = parentOf.get(at)
+            at = parentOf.get(at)!
         }
         return at
     }
@@ -84,7 +85,7 @@ export function checkTf({
             frames: problems.roots,
         })
     }
-    const unplaced = new Map()
+    const unplaced: Map<string, string[]> = new Map()
     for (const { name, frame } of layers) {
         if (frame && !placed(frame)) {
             unplaced.set(frame, [...(unplaced.get(frame) ?? []), name])
@@ -127,10 +128,11 @@ export function checkTf({
     return issues
 }
 
-const keyOf = (issue) => `${issue.kind}:${issue.kind === "separateTrees" ? issue.summary : issue.frames.join(",")}`
+const keyOf = (issue: TfIssue) =>
+    `${issue.kind}:${issue.kind === "separateTrees" ? issue.summary : issue.frames.join(",")}`
 
 /** The issues in `next` that were also in `previous`: a problem must last two checks to be shown. */
-export function confirmedIssues(previous, next) {
+export function confirmedIssues(previous: TfIssue[], next: TfIssue[]): TfIssue[] {
     const seen = new Set(previous.map(keyOf))
     return next.filter((issue) => seen.has(keyOf(issue)))
 }

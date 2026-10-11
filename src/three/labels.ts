@@ -5,11 +5,10 @@ import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js"
 
 export class LabelPool {
     group = new THREE.Group()
-    #labels = []
+    #labels: CSS2DObject[] = []
     #used = 0
     className: string
 
-    /** @param {string} [className] */
     constructor(className: string = "dr-scene-label") {
         this.className = className
     }
@@ -20,11 +19,9 @@ export class LabelPool {
     }
 
     /**
-     * @param {string} text
-     * @param {THREE.Vector3} position
-     * @param {string} [color] any CSS color (a token like "var(--warn)" works)
+     * @param color any CSS color (a token like "var(--warn)" works)
      */
-    place(text: string, position: THREE.Vector3, color: string) {
+    place(text: string, position: THREE.Vector3, color?: string): CSS2DObject {
         let label = this.#labels[this.#used]
         if (!label) {
             const element = document.createElement("div")

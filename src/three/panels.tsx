@@ -9,38 +9,39 @@
 //     h(LayersPanel, { manager: layers })
 //     h(TfPanel, { tf, fixedFrame, onFixedFrame, issues, onHover: setHovered })
 import { useEffect, useMemo, useRef, useState } from "react"
-import { cx } from "../cx"
-import { useDataSource } from "../data"
-import { useStore } from "./store"
-import { LayerManager } from "./layers/manager"
-import { Badge, Field, Select, Toggle } from "../components/controls"
-import { Icon } from "../components/icon"
-import { Alert, EmptyState } from "../components/feedback"
+import type { ReactNode } from "react"
+import { cx } from "../cx.ts"
+import { useDataSource } from "../data.ts"
+import { useStore } from "./store.ts"
+import { LayerManager } from "./layers/manager.ts"
+import { Badge, Field, Select, Toggle } from "../components/controls.tsx"
+import { Icon } from "../components/icon.tsx"
+import { Alert, EmptyState } from "../components/feedback.tsx"
+import type { LayerEntry } from "./layers/manager.ts"
+import type { TfTree, TfSnapshot } from "./tf.ts"
+import type { TfIssue } from "./tf_check.ts"
 
-/**
- * A LayerManager for the data source in effect, watching its topics while mounted.
- * @param {{ persist?: (key: string, defaults: object) => any, storagePrefix?: string, filter?: string,
- *   intervalMs?: number }} [options]
- * @returns {LayerManager}
- */
+export interface UseLayerManagerOptions {
+    persist?: ConstructorParameters<typeof LayerManager>[0]["persist"]
+    storagePrefix?: string
+    filter?: string
+    intervalMs?: number
+}
+
+/** A LayerManager for the data source in effect, watching its topics while mounted. */
 export function useLayerManager({
     persist,
     storagePrefix,
     filter,
     intervalMs,
-}: {
-    persist?: (key: string, defaults: object) => any
-    storagePrefix?: string
-    filter?: string
-    intervalMs?: number
-} = {}): LayerManager {
+}: UseLayerManagerOptions = {}): LayerManager {
     const source = useDataSource()
     const manager = useMemo(() => new LayerManager({ source, persist, storagePrefix }), [source, storagePrefix])
     useEffect(() => manager.watch({ filter, intervalMs }), [manager, filter, intervalMs])
     return manager
 }
 
-function LayerRow({ manager, entry }) {
+function LayerRow({ manager, entry }: { manager: LayerManager; entry: LayerEntry }) {
     const [open, setOpen] = useState(false)
     const Settings = entry.type.Settings
     const status = entry.status
@@ -94,20 +95,11 @@ function LayerRow({ manager, entry }) {
 /**
  * Every drawable topic, grouped by layer type: a switch (on = subscribed), live info or the problem, and the layer's
  * settings behind a disclosure; then the topics nothing draws.
- * @param {{ manager: LayerManager, emptyText?: string, className?: string }} props
  */
-export function LayersPanel({
-    manager,
-    emptyText,
-    className,
-}: {
-    manager: LayerManager
-    emptyText?: string
-    className?: string
-}) {
+export function LayersPanel({ manager, emptyText, className }: LayersPanelProps) {
     const { list } = useStore(manager.entries)
     const { list: topics } = useStore(manager.topics)
-    const groups = new Map()
+    const groups = new Map<string, LayerEntry[]>()
     for (const entry of list) {
         groups.set(entry.type.label, [...(groups.get(entry.type.label) ?? []), entry])
     }
@@ -145,7 +137,31 @@ export function LayersPanel({
     )
 }
 
-function TreeRows({ snapshot, frame, depth, seen, hovered, flagged, onHover, rows }) {
+export interface LayersPanelProps {
+    manager: LayerManager
+    emptyText?: string
+    className?: string
+}
+
+function TreeRows({
+    snapshot,
+    frame,
+    depth,
+    seen,
+    hovered,
+    flagged,
+    onHover,
+    rows,
+}: {
+    snapshot: TfSnapshot
+    frame: string
+    depth: number
+    seen: Set<string>
+    hovered: string | null
+    flagged: Set<string>
+    onHover?: (frame: string | null) => void
+    rows: ReactNode[]
+}) {
     if (seen.has(frame) || depth > 64) {
         return
     }
@@ -182,13 +198,23 @@ function TreeRows({ snapshot, frame, depth, seen, hovered, flagged, onHover, row
     }
 }
 
+export interface TfPanelProps {
+    tf: TfTree
+    fixedFrame?: string
+    activeFixedFrame?: string
+    onFixedFrame?: (frame: string) => void
+    issues?: TfIssue[]
+    robotFrame?: string
+    robotFound?: boolean
+    hovered?: string | null
+    hoveredPlaced?: boolean
+    onHover?: (frame: string | null) => void
+    className?: string
+}
+
 /**
  * The TF tree as an indented list (age per edge, stale and flagged frames marked), what's wrong with it, and which
  * frame the view is fixed to (`fixedFrame` = the choice, "" = auto; `activeFixedFrame` = the one in use).
- * @param {{ tf: import("./tf").TfTree, fixedFrame?: string, activeFixedFrame?: string,
- *   onFixedFrame?: (frame: string) => void, issues?: import("./tf_check").TfIssue[], robotFrame?: string,
- *   robotFound?: boolean, hovered?: string | null, hoveredPlaced?: boolean, onHover?: (frame: string | null) => void,
- *   className?: string }} props
  */
 export function TfPanel({
     tf,
@@ -202,19 +228,7 @@ export function TfPanel({
     hoveredPlaced = true,
     onHover,
     className,
-}: {
-    tf: import("./tf").TfTree
-    fixedFrame?: string
-    activeFixedFrame?: string
-    onFixedFrame?: (frame: string) => void
-    issues?: import("./tf_check").TfIssue[]
-    robotFrame?: string
-    robotFound?: boolean
-    hovered?: string | null
-    hoveredPlaced?: boolean
-    onHover?: (frame: string | null) => void
-    className?: string
-}) {
+}: TfPanelProps) {
     const [snapshot, setSnapshot] = useState(() => tf.snapshot())
     useEffect(() => {
         const timer = setInterval(() => setSnapshot(tf.snapshot()), 1000)
@@ -223,7 +237,7 @@ export function TfPanel({
     // the highlight goes with the panel
     useEffect(() => () => onHover?.(null), [])
     const flagged = new Set(issues.flatMap((issue) => issue.frames))
-    const tree = useRef(null)
+    const tree = useRef<HTMLDivElement>(null)
     const scrolled = useRef(false)
     useEffect(() => {
         const first = tree.current?.querySelector(".dr-tf-frame--flagged")
@@ -233,7 +247,7 @@ export function TfPanel({
         }
     })
     const active = activeFixedFrame ?? (fixedFrame || tf.defaultFixedFrame())
-    const rows = []
+    const rows: ReactNode[] = []
     for (const root of snapshot.problems.roots) {
         TreeRows({ snapshot, frame: root, depth: 0, seen: new Set(), hovered, flagged, onHover, rows })
     }
@@ -275,20 +289,17 @@ export function TfPanel({
     )
 }
 
+export interface TfFootnoteProps {
+    issues: TfIssue[]
+    onOpen?: () => void
+    className?: string
+}
+
 /**
  * A quiet one-line note over the view's corner when the TF tree is broken; nothing when it's fine. `onOpen`: e.g.
  * open the TF panel, where the frames involved are marked.
- * @param {{ issues: import("./tf_check").TfIssue[], onOpen?: () => void, className?: string }} props
  */
-export function TfFootnote({
-    issues,
-    onOpen,
-    className,
-}: {
-    issues: import("./tf_check").TfIssue[]
-    onOpen?: () => void
-    className?: string
-}) {
+export function TfFootnote({ issues, onOpen, className }: TfFootnoteProps) {
     if (!issues?.length) {
         return null
     }

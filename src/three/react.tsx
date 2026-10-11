@@ -11,38 +11,87 @@
 //         h(Pose, { topic: "dimos/odom/nav_msgs.Odometry", trail: true }),
 //         h(RobotModel, { kind: "dog", frame: "base_link" }))
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import type { DependencyList, HTMLAttributes, MutableRefObject, ReactNode } from "react"
 import * as THREE from "three"
-import { cx } from "../cx"
-import { decodeMessage, parseKey, useDataSource, useTopicList } from "../data"
-import { cameraStreamsFor } from "../components/camera"
-import { Viewer } from "./viewer"
-import { TfTree } from "./tf"
-import { cssColor, disposeTree, robotModel } from "./robot_model"
-import { Store, useStore } from "./store"
-import { IconButton, Select } from "../components/controls"
-import "./layers/index"
-import { defaultSettings, layerTypeById, RobotPose } from "./layers/registry"
-import { CLOUD_DEFAULTS, CloudLayer } from "./layers/pointcloud"
-import { POSE_DEFAULTS, PoseLayer } from "./layers/pose"
-import { PathLayer } from "./layers/path"
-import { PoseArrayLayer } from "./layers/pose_array"
-import { TF_DEFAULTS, TfFramesLayer } from "./layers/tf_frames"
-import { checkTf, confirmedIssues } from "./tf_check"
-import { FrameHighlighter } from "./frame_highlight"
-import { poseMatrix as poseMatrixOf } from "./layers/pose"
+import { cx } from "../cx.ts"
+import { decodeMessage, parseKey, useDataSource, useTopicList } from "../data.ts"
+import { cameraStreamsFor } from "../components/camera.tsx"
+import { Viewer } from "./viewer.ts"
+import { TfTree } from "./tf.ts"
+import { cssColor, disposeTree, robotModel } from "./robot_model.ts"
+import { Store, useStore } from "./store.ts"
+import { IconButton, Select } from "../components/controls.tsx"
+import "./layers/index.ts"
+import { defaultSettings, layerTypeById, RobotPose } from "./layers/registry.ts"
+import { CLOUD_DEFAULTS, CloudLayer } from "./layers/pointcloud.tsx"
+import { POSE_DEFAULTS, PoseLayer } from "./layers/pose.tsx"
+import { PathLayer } from "./layers/path.tsx"
+import { PoseArrayLayer } from "./layers/pose_array.tsx"
+import { TF_DEFAULTS, TfFramesLayer } from "./layers/tf_frames.tsx"
+import { checkTf, confirmedIssues } from "./tf_check.ts"
+import { FrameHighlighter } from "./frame_highlight.ts"
+import { poseMatrix as poseMatrixOf } from "./layers/pose.tsx"
+import type { CameraStreams } from "../components/camera.tsx"
+import type { SelectProps } from "../components/controls.tsx"
+import type { FrameInfo, RenderStats } from "./viewer.ts"
+import type { LayerContext, LayerInstance, LayerStatus, LayerType, Topic } from "./layers/registry.ts"
+import type { CheckTfInput } from "./tf_check.ts"
+import type { LayerEntry, LayerManager } from "./layers/manager.ts"
+import type { TfIssue } from "./tf_check.ts"
 
-export { pointCloud2ToPositions } from "./layers/pointcloud"
-export { poseMatrix, poseOf } from "./layers/pose"
-export { colorFor } from "./layers/path"
+export { pointCloud2ToPositions } from "./layers/pointcloud.tsx"
+export { poseMatrix, poseOf } from "./layers/pose.tsx"
+export { colorFor } from "./layers/path.tsx"
 
-const SceneContext = createContext({ viewer: null, tf: null, fixedFrame: "world" })
+/** Where the robot and the followed frame were found, last frame (a Scene3D's `frameInfo` Store). */
+export interface SceneFrameInfo {
+    fixedFrame: string
+    robotFound: boolean
+    followFound: boolean
+    following: boolean
+}
+
+/** A Scene3D's camera actions. */
+export interface SceneActions {
+    recenter(): void
+    topDown(): void
+}
+
+/** A mounted Scene3D, as its layers see it. */
+export interface Scene {
+    viewer: Viewer
+    tf: TfTree
+    fixedFrame: string
+    source: LayerContext["source"]
+    video: CameraStreams
+    robotPose: RobotPose
+    options: LayerContext["options"]
+    topics: () => Topic[]
+    frameInfo: Store<SceneFrameInfo>
+    actions: SceneActions
+}
+
+/** What useScene gives: a mounted Scene, or (outside a Scene3D, or before its viewer mounts) no viewer yet. */
+export type SceneContextValue =
+    | Scene
+    | ({ viewer: null; tf: TfTree | null; fixedFrame: string } & Partial<Omit<Scene, "viewer" | "tf" | "fixedFrame">>)
+
+/** What a custom layer's `create` (useLayer) returns. */
+export interface SceneLayer {
+    root?: THREE.Object3D
+    update?(frame: FrameInfo): void
+    reset?(): void
+    dispose?(): void
+}
+
+const SceneContext = createContext<SceneContextValue>({ viewer: null, tf: null, fixedFrame: "world" })
 
 /**
  * The enclosing Scene3D: `{ viewer, tf, fixedFrame, source, video, robotPose, options, frameInfo, actions }` (viewer
  * is null until it has mounted). `frameInfo`: a Store of `{ fixedFrame, robotFound, followFound, following }`;
  * `actions`: `{ recenter(), topDown() }`.
  */
-export function useScene() {
+export function useScene(): SceneContextValue {
     return useContext(SceneContext)
 }
 
@@ -67,15 +116,23 @@ export function useSceneActions() {
 }
 
 /** Calls `callback(frame)` every animation frame of the enclosing scene (frame: { now, dataNow, fixedFrame, camera }). */
-export function useSceneFrame(callback) {
+export function useSceneFrame(callback: (frame: FrameInfo) => void) {
     const viewer = useViewer()
     const ref = useRef(callback)
     ref.current = callback
-    useEffect(() => viewer?.onFrame((frame) => ref.current(frame)), [viewer])
+    useEffect(() => {
+        const off = viewer?.onFrame((frame) => ref.current(frame))
+        return () => {
+            off?.()
+        }
+    }, [viewer])
 }
 
 /** The TF tree's frame names, re-rendered (at most every `throttleMs`) when the tree changes. */
-export function useTfFrames({ throttleMs = 500, tf: given } = {}) {
+export function useTfFrames({
+    throttleMs = 500,
+    tf: given,
+}: { throttleMs?: number; tf?: TfTree | null } = {}): string[] {
     const context = useTf()
     const tf = given ?? context
     const [frames, setFrames] = useState(() => tf?.frames() ?? [])
@@ -83,10 +140,10 @@ export function useTfFrames({ throttleMs = 500, tf: given } = {}) {
         if (!tf) {
             return
         }
-        let timer = null
+        let timer: ReturnType<typeof setTimeout> | undefined = undefined
         let last = ""
         const read = () => {
-            timer = null
+            timer = undefined
             const next = tf.frames()
             const signature = next.join("\n")
             if (signature !== last) {
@@ -112,14 +169,18 @@ export function useTfFrames({ throttleMs = 500, tf: given } = {}) {
  * removed on cleanup, `update` runs every frame, `reset` on a replay's seek. Re-created when `deps` change; returns a
  * ref to the live layer (push new data into it from your own effects instead of re-creating it).
  */
-export function useLayer(create, deps = []) {
+export function useLayer<L extends SceneLayer>(
+    create: (scene: Scene) => L | null,
+    deps: DependencyList = [],
+): MutableRefObject<L | null> {
     const scene = useScene()
     const { viewer, tf } = scene
-    const ref = useRef(null)
+    const ref = useRef<L | null>(null)
     useEffect(() => {
-        if (!viewer) {
+        if (!scene.viewer) {
             return
         }
+        const viewer = scene.viewer
         const layer = create(scene)
         if (!layer) {
             return
@@ -127,8 +188,8 @@ export function useLayer(create, deps = []) {
         if (layer.root) {
             viewer.scene.add(layer.root)
         }
-        const offFrame = layer.update ? viewer.onFrame((frame) => layer.update(frame)) : null
-        const offReset = layer.reset ? viewer.onReset(() => layer.reset()) : null
+        const offFrame = layer.update ? viewer.onFrame((frame) => layer.update?.(frame)) : null
+        const offReset = layer.reset ? viewer.onReset(() => layer.reset?.()) : null
         ref.current = layer
         viewer.requestRender()
         return () => {
@@ -149,7 +210,14 @@ export function useLayer(create, deps = []) {
  * Sets `object.matrix` to T_fixed_frame and shows it; with no TF path it hides the object. Returns whether it could
  * be placed (and why not, through `onStatus`).
  */
-export function placeInFixedFrame(viewer, tf, object, frame, fixedFrame, onStatus) {
+export function placeInFixedFrame(
+    viewer: Viewer,
+    tf: TfTree,
+    object: THREE.Object3D,
+    frame: string,
+    fixedFrame: string,
+    onStatus?: (status: LayerStatus) => void,
+): boolean {
     const matrix = tf.lookup(frame, fixedFrame)
     if (!matrix) {
         if (object.visible) {
@@ -169,7 +237,11 @@ export function placeInFixedFrame(viewer, tf, object, frame, fixedFrame, onStatu
 }
 
 /** The layer context a layer type's instance gets (registry.js LayerContext). */
-function layerContext(scene, setStatus, extra = {}) {
+function layerContext(
+    scene: Scene,
+    setStatus: (status: LayerStatus) => void,
+    extra: Partial<LayerContext> = {},
+): LayerContext {
     return {
         viewer: scene.viewer,
         tf: scene.tf,
@@ -183,18 +255,41 @@ function layerContext(scene, setStatus, extra = {}) {
     }
 }
 
+/** A click on the scene: the point under it, what it hit, and the click. */
+export interface ScenePick {
+    point: THREE.Vector3
+    on: string
+    object?: THREE.Object3D
+    event: MouseEvent
+}
+
+export interface Scene3DProps extends HTMLAttributes<HTMLDivElement> {
+    fixedFrame?: string
+    followFrame?: string | null
+    follow?: boolean
+    onFollowChange?: (follow: boolean) => void
+    robotFrame?: string | null
+    viewDistance?: number
+    grid?: boolean
+    tf?: TfTree
+    clock?: () => number
+    onPick?: (pick: ScenePick) => void
+    onViewer?: (viewer: Viewer) => void
+    layerOptions?: { baseFrame?: string; cameraInfo?: Record<string, string> }
+    topics?: () => Topic[]
+    cameraPosition?: [number, number, number]
+    cameraTarget?: [number, number, number]
+    near?: number
+    far?: number
+    fov?: number
+    gridSize?: number
+    gridDivisions?: number
+    freeOrbit?: boolean
+}
+
 /**
  * The 3D view. Give it a size (style/className); layers go in `children`, and any DOM children (buttons, stats) are
  * laid over it.
- * @param {{
- *   fixedFrame?: string, followFrame?: string | null, follow?: boolean, onFollowChange?: (follow: boolean) => void,
- *   robotFrame?: string | null, viewDistance?: number, grid?: boolean, tf?: TfTree, clock?: () => number,
- *   onPick?: (pick: { point: THREE.Vector3, on: string, event: MouseEvent }) => void,
- *   onViewer?: (viewer: Viewer) => void, layerOptions?: { baseFrame?: string, cameraInfo?: Record<string, string> },
- *   topics?: () => object[], className?: string, style?: object, children?: any,
- *   cameraPosition?: [number, number, number], cameraTarget?: [number, number, number],
- *   near?: number, far?: number, fov?: number, gridSize?: number, gridDivisions?: number, freeOrbit?: boolean,
- * }} props
  *   `fixedFrame`: the frame everything is drawn in (default: the TF tree's world-ish root). `followFrame`: a TF frame
  *   the camera follows while `follow` (orbit and zoom keep following; a pan pauses it until resumed). `robotFrame`:
  *   the robot's frame (default `followFrame`): the camera frames it once when it first shows up, and without it in
@@ -228,49 +323,26 @@ export function Scene3D({
     gridDivisions,
     freeOrbit,
     ...rest
-}: {
-    fixedFrame?: string
-    followFrame?: string | null
-    follow?: boolean
-    onFollowChange?: (follow: boolean) => void
-    robotFrame?: string | null
-    viewDistance?: number
-    grid?: boolean
-    tf?: TfTree
-    clock?: () => number
-    onPick?: (pick: { point: THREE.Vector3; on: string; event: MouseEvent }) => void
-    onViewer?: (viewer: Viewer) => void
-    layerOptions?: { baseFrame?: string; cameraInfo?: Record<string, string> }
-    topics?: () => object[]
-    className?: string
-    style?: object
-    children?: any
-    cameraPosition?: [number, number, number]
-    cameraTarget?: [number, number, number]
-    near?: number
-    far?: number
-    fov?: number
-    gridSize?: number
-    gridDivisions?: number
-    freeOrbit?: boolean
-}) {
-    const hostRef = useRef(null)
+}: Scene3DProps) {
+    const hostRef = useRef<HTMLDivElement>(null)
     const source = useDataSource()
-    const [viewer, setViewer] = useState(null)
+    const [viewer, setViewer] = useState<Viewer | null>(null)
     const tf = useMemo(() => givenTf ?? new TfTree(), [givenTf])
     const robotPose = useMemo(() => new RobotPose(), [])
     const frameInfo = useMemo(
-        () => new Store({ fixedFrame: "", robotFound: false, followFound: false, following: false }),
+        () => new Store<SceneFrameInfo>({ fixedFrame: "", robotFound: false, followFound: false, following: false }),
         [],
     )
     const [autoFixed, setAutoFixed] = useState("world")
     const fixed = fixedFrame || autoFixed
     const robot = robotFrame === undefined ? followFrame : robotFrame
-    const props = useRef({})
-    props.current = { follow, followFrame, robot, viewDistance, onFollowChange }
+    const current = { follow, followFrame, robot, viewDistance, onFollowChange }
+    const props = useRef(current)
+    props.current = current
 
     useEffect(() => {
-        const created = new Viewer(hostRef.current, {
+        // the effect runs once the host div below is mounted
+        const created = new Viewer(hostRef.current!, {
             clock: clock ?? (() => source.now?.() ?? Date.now()),
             grid,
             near,
@@ -335,10 +407,10 @@ export function Scene3D({
         }
         const check = () => setAutoFixed(tf.defaultFixedFrame())
         check()
-        let timer = null
+        let timer: ReturnType<typeof setTimeout> | undefined = undefined
         const off = tf.onChange(() => {
             timer ??= setTimeout(() => {
-                timer = null
+                timer = undefined
                 check()
             }, 300)
         })
@@ -356,7 +428,11 @@ export function Scene3D({
     }, [viewer, fixed])
 
     // where the robot and the followed frame are, every frame; the camera follows the latter while following
-    const positions = useRef({ robot: null, follow: null, framed: false })
+    const positions = useRef<{ robot: THREE.Vector3 | null; follow: THREE.Vector3 | null; framed: boolean }>({
+        robot: null,
+        follow: null,
+        framed: false,
+    })
     useEffect(() => {
         if (!viewer) {
             return
@@ -372,7 +448,7 @@ export function Scene3D({
                 positions.current.framed = true
                 viewer.frame(robotPosition.clone(), viewDistance)
             }
-            let followed = null
+            let followed: THREE.Vector3 | null = null
             if (followFrame) {
                 followed = followFrame === robot ? robotPosition : null
                 if (!followed) {
@@ -409,7 +485,7 @@ export function Scene3D({
         viewer?.resumeFollow()
     }, [viewer, followFrame])
 
-    const actions = useMemo(
+    const actions = useMemo<SceneActions>(
         () => ({
             /**
              * Not following (paused by a pan, or off): follows again, gliding the followed frame back to the middle with
@@ -461,11 +537,11 @@ export function Scene3D({
             return
         }
         const canvas = viewer.renderer.domElement
-        let down = null
-        const onDown = (event) => {
+        let down: { x: number; y: number } | null = null
+        const onDown = (event: PointerEvent) => {
             down = { x: event.clientX, y: event.clientY }
         }
-        const onUp = (event) => {
+        const onUp = (event: PointerEvent) => {
             if (!down || Math.hypot(event.clientX - down.x, event.clientY - down.y) > 5 || !pickRef.current) {
                 return
             }
@@ -485,7 +561,7 @@ export function Scene3D({
     const topicsRef = useRef(topics)
     topicsRef.current = topics
     const optionsSignature = JSON.stringify(layerOptions ?? {})
-    const value = useMemo(
+    const value = useMemo<SceneContextValue>(
         () => ({
             viewer,
             tf,
@@ -510,21 +586,10 @@ export function Scene3D({
 
 /**
  * Feeds the scene's TF tree: every tf2_msgs.TFMessage topic on the bus (or `topics`), and/or `transforms` given as
- * props. A topic named like tf_static is static (exempt from staleness).
- * @param {{ topics?: string[], transforms?: any, staticTransforms?: any, tf?: TfTree }} props `transforms`: a
- *   decoded TFMessage, an array of TransformStamped, or `[{ parent, child, translation, rotation }]`
+ * props. A topic named like tf_static is static (exempt from staleness). `transforms`: a decoded TFMessage, an array
+ * of TransformStamped, or `[{ parent, child, translation, rotation }]`.
  */
-export function TfFeed({
-    topics,
-    transforms,
-    staticTransforms,
-    tf: given,
-}: {
-    topics?: string[]
-    transforms?: any
-    staticTransforms?: any
-    tf?: TfTree
-}) {
+export function TfFeed({ topics, transforms, staticTransforms, tf: given }: TfFeedProps) {
     const context = useScene()
     const tf = given ?? context.tf
     const viewer = context.viewer
@@ -562,10 +627,19 @@ export function TfFeed({
     return null
 }
 
+export interface TfFeedProps {
+    topics?: string[]
+    /** decoded message data (a TFMessage or TransformStamped[]) or plain transforms: any shape of those */
+    transforms?: any
+    staticTransforms?: any
+    tf?: TfTree
+}
+
 /** Same as TfFeed (the name the component inventory uses). */
 export const TfProvider = TfFeed
 
-function applyTransforms(tf, transforms, isStatic) {
+// `transforms`: decoded message data, any shape TfFeed takes
+function applyTransforms(tf: TfTree | null, transforms: any, isStatic: boolean) {
     if (!tf || !transforms) {
         return
     }
@@ -585,29 +659,23 @@ function applyTransforms(tf, transforms, isStatic) {
     }
 }
 
+export interface LayerProps {
+    type: string | LayerType
+    topic?: string | Topic | null
+    settings?: object
+    /** props data handed to the instance's setData: its shape is up to the layer type */
+    data?: unknown
+    onStatus?: (status: LayerStatus) => void
+    onPose?: (matrix: THREE.Matrix4) => void
+}
+
 /**
  * One layer of a registered type (layers/registry.js) in the scene: from a topic, or from `data` (types that take
  * props data: pointcloud, pose, path, posearray, labeled-points `[{ label, position, frame, color }]`, boxes3d
  * `[{ center, size, yaw, frame, label, color, fill }]`). `settings` override the type's defaults (live: a change restyles,
  * it doesn't re-create).
- * @param {{ type: string | object, topic?: string | { key: string, name: string, type: string } | null,
- *   settings?: object, data?: any, onStatus?: (status: object) => void, onPose?: (matrix: THREE.Matrix4) => void }} props
  */
-export function Layer({
-    type,
-    topic,
-    settings,
-    data,
-    onStatus,
-    onPose,
-}: {
-    type: string | object
-    topic?: string | { key: string; name: string; type: string } | null
-    settings?: object
-    data?: any
-    onStatus?: (status: object) => void
-    onPose?: (matrix: THREE.Matrix4) => void
-}) {
+export function Layer({ type, topic, settings, data, onStatus, onPose }: LayerProps) {
     const scene = useScene()
     const layerType = typeof type === "string" ? layerTypeById(type) : type
     if (!layerType) {
@@ -625,20 +693,23 @@ export function Layer({
             store.update(settings)
         }
     }, [store, settingsSignature])
-    const callbacks = useRef({})
+    const callbacks = useRef({ onStatus, onPose })
     callbacks.current = { onStatus, onPose }
-    const instance = useLayer(() => {
-        const created = layerType.create(
-            layerContext(scene, (status) => callbacks.current.onStatus?.(status), {
-                onPose: (matrix) => callbacks.current.onPose?.(matrix),
-            }),
-            topicObject,
-            store,
-        )
-        // registry layers place their root by its matrix
-        created.root.matrixAutoUpdate = false
-        return created
-    }, [layerType, topicObject?.key, store])
+    const instance = useLayer(
+        (mounted) => {
+            const created = layerType.create(
+                layerContext(mounted, (status) => callbacks.current.onStatus?.(status), {
+                    onPose: (matrix) => callbacks.current.onPose?.(matrix),
+                }),
+                topicObject,
+                store,
+            )
+            // registry layers place their root by its matrix
+            created.root.matrixAutoUpdate = false
+            return created
+        },
+        [layerType, topicObject?.key, store],
+    )
     useEffect(() => {
         if (data !== undefined && instance.current?.setData) {
             instance.current.setData(data)
@@ -650,25 +721,36 @@ export function Layer({
 /**
  * Every topic a LayerManager lists, drawn by its layer type while switched on (unsubscribed while off or paused).
  * The manager (panels.js useLayerManager) is shared with a LayersPanel outside the scene.
- * @param {{ manager: import("./layers/manager").LayerManager }} props
  */
-export function TopicLayers({ manager }: { manager: import("./layers/manager").LayerManager }) {
+export function TopicLayers({ manager }: { manager: LayerManager }) {
     const scene = useScene()
     const { list } = useStore(manager.entries)
     const { paused } = useStore(manager.paused)
-    const instances = useRef(new Map())
+    const instances = useRef(
+        new Map<
+            string,
+            {
+                instance: LayerInstance
+                type: LayerType
+                offFrame: (() => void) | null
+                offReset: (() => void) | null
+            }
+        >(),
+    )
     const sceneRef = useRef(scene)
     sceneRef.current = scene
     useEffect(() => {
-        const viewer = scene.viewer
-        if (!viewer) {
+        // the scene this render saw (sceneRef.current is set to it above)
+        const mounted = sceneRef.current
+        if (!mounted.viewer) {
             return
         }
-        const wanted = new Map(
+        const viewer = mounted.viewer
+        const wanted = new Map<string, LayerEntry>(
             paused ? [] : list.filter((entry) => entry.enabled).map((entry) => [entry.topic.key, entry]),
         )
         for (const [key, running] of instances.current) {
-            if (!wanted.has(key) || wanted.get(key).type !== running.type) {
+            if (!wanted.has(key) || wanted.get(key)?.type !== running.type) {
                 stop(key)
             }
         }
@@ -676,23 +758,26 @@ export function TopicLayers({ manager }: { manager: import("./layers/manager").L
             if (instances.current.has(key)) {
                 continue
             }
-            const context = layerContext(sceneRef.current, (status) => manager.setStatus(key, status), {
+            const context = layerContext(mounted, (status) => manager.setStatus(key, status), {
                 topics: () => manager.topics.get().list,
             })
             try {
                 const instance = entry.type.create(context, entry.topic, entry.settings)
                 instance.root.matrixAutoUpdate = false
                 viewer.scene.add(instance.root)
-                const offFrame = instance.update ? viewer.onFrame((frame) => instance.update(frame)) : null
-                const offReset = instance.reset ? viewer.onReset(() => instance.reset()) : null
+                const offFrame = instance.update ? viewer.onFrame((frame) => instance.update?.(frame)) : null
+                const offReset = instance.reset ? viewer.onReset(() => instance.reset?.()) : null
                 instances.current.set(key, { instance, type: entry.type, offFrame, offReset })
             } catch (error) {
-                manager.setStatus(key, { problem: `failed to start: ${error?.message ?? error}` })
+                manager.setStatus(key, {
+                    problem: `failed to start: ${error instanceof Error ? error.message : error}`,
+                })
             }
         }
         viewer.requestRender()
-        function stop(key) {
-            const running = instances.current.get(key)
+        // only called for keys in instances.current
+        function stop(key: string) {
+            const running = instances.current.get(key)!
             instances.current.delete(key)
             running.offFrame?.()
             running.offReset?.()
@@ -721,7 +806,6 @@ export function TopicLayers({ manager }: { manager: import("./layers/manager").L
 /**
  * The TF tree drawn: an axes gizmo per frame (theme --axis-x/y/z), its name, and a line to its parent. A big tree
  * names only `named` frames (and the fixed frame) past `maxNames`.
- * @param {Record<string, any>} props
  */
 export function TfFrames({
     axesSize = 0.25,
@@ -731,35 +815,66 @@ export function TfFrames({
     named = [],
     maxFrames = 512,
     onStatus,
-}: Record<string, any>) {
+}: TfFramesProps) {
     const settings = { axesSize, names, links, maxNames, named, maxFrames }
     return <Layer type={tfType} settings={settings} onStatus={onStatus} />
 }
-const tfType = {
+export interface TfFramesProps {
+    axesSize?: number
+    names?: boolean
+    links?: boolean
+    maxNames?: number
+    named?: string[]
+    maxFrames?: number
+    onStatus?: (status: LayerStatus) => void
+}
+
+// the props components' layer types (not registered): label and types are unused
+const tfType: LayerType = {
     id: "tf-frames",
+    label: "TF frames",
+    types: [],
     defaults: TF_DEFAULTS,
     create: (context, _topic, settings) => new TfFramesLayer(context, settings),
 }
 
-const cloudType = {
+const cloudType: LayerType = {
     id: "pointcloud-props",
+    label: "Point cloud",
+    types: [],
+    defaults: {},
     create: (context, topic, settings) => new CloudLayer(context, topic, settings),
+}
+
+export interface PointCloudProps {
+    topic?: string
+    points?: Float32Array | number[]
+    intensity?: Uint8Array
+    frame?: string
+    mode?: "latest" | "accumulate"
+    windowSeconds?: number
+    maxPoints?: number
+    maxHz?: number
+    quality?: number
+    style?: "default" | "voxel" | "splat" | "disc" | "square"
+    size?: number
+    colorMode?: "height" | "intensity" | "range" | "solid"
+    gradient?: string
+    axis?: 0 | 1 | 2
+    period?: number
+    rangeMin?: number | null
+    rangeMax?: number | null
+    color?: string
+    opacity?: number
+    cubeShade?: string
+    onStatus?: (status: LayerStatus) => void
 }
 
 /**
  * A point cloud: from a topic (sensor_msgs.PointCloud2 through the gateway's dimos_lcm_pointcloud2 encoding at this
  * viewer's bandwidth preset, or any source publishing `{ positions, intensity?, frame? }` or a decoded PointCloud2) or
- * from `points` props.
- * @param {{
- *   topic?: string, points?: Float32Array | number[], intensity?: Uint8Array, frame?: string,
- *   mode?: "latest" | "accumulate", windowSeconds?: number, maxPoints?: number, maxHz?: number, quality?: number,
- *   style?: "default" | "voxel" | "splat" | "disc" | "square", size?: number,
- *   colorMode?: "height" | "intensity" | "range" | "solid", gradient?: string, axis?: 0 | 1 | 2,
- *   period?: number,
- *   rangeMin?: number | null, rangeMax?: number | null, color?: string, opacity?: number, cubeShade?: string,
- *   onStatus?: (status: object) => void,
- * }} props `color`: the solid color (CSS or a token like "var(--primary)"; colorMode "solid"); `maxHz` / `quality`
- *   pin the subscription instead of the viewer's preset
+ * from `points` props. `color`: the solid color (CSS or a token like "var(--primary)"; colorMode "solid"); `maxHz` /
+ * `quality` pin the subscription instead of the viewer's preset.
  */
 export function PointCloud({
     topic,
@@ -783,30 +898,8 @@ export function PointCloud({
     opacity,
     cubeShade,
     onStatus,
-}: {
-    topic?: string
-    points?: Float32Array | number[]
-    intensity?: Uint8Array
-    frame?: string
-    mode?: "latest" | "accumulate"
-    windowSeconds?: number
-    maxPoints?: number
-    maxHz?: number
-    quality?: number
-    style?: "default" | "voxel" | "splat" | "disc" | "square"
-    size?: number
-    colorMode?: "height" | "intensity" | "range" | "solid"
-    gradient?: string
-    axis?: 0 | 1 | 2
-    period?: number
-    rangeMin?: number | null
-    rangeMax?: number | null
-    color?: string
-    opacity?: number
-    cubeShade?: string
-    onStatus?: (status: object) => void
-}) {
-    const look = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
+}: PointCloudProps) {
+    const look: Record<string, unknown> = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
     for (const [name, value] of Object.entries({
         style,
         size,
@@ -834,13 +927,27 @@ export function PointCloud({
     return <Layer type={cloudType} topic={topic} settings={settings} data={data} onStatus={onStatus} />
 }
 
-const pathType = { id: "path-props", create: (context, topic, settings) => new PathLayer(context, topic, settings) }
+const pathType: LayerType = {
+    id: "path-props",
+    label: "Path",
+    types: [],
+    defaults: {},
+    create: (context, topic, settings) => new PathLayer(context, topic, settings),
+}
 
-/**
- * A path as a thick line: a nav_msgs.Path topic, or `poses` (+ `frame`) as props.
- * @param {{ topic?: string, poses?: any[], frame?: string, color?: string, width?: number, lift?: number,
- *   onTop?: boolean, onStatus?: Function }} props `color`: CSS or token (default var(--primary))
- */
+export interface PathProps {
+    topic?: string
+    /** decoded geometry_msgs poses (PoseStamped or Pose), any of those shapes */
+    poses?: any[]
+    frame?: string
+    color?: string
+    width?: number
+    lift?: number
+    onTop?: boolean
+    onStatus?: (status: LayerStatus) => void
+}
+
+/** A path as a thick line: a nav_msgs.Path topic, or `poses` (+ `frame`) as props. `color`: CSS or token (default var(--primary)). */
 export function Path({
     topic,
     poses,
@@ -850,35 +957,43 @@ export function Path({
     lift = 0.03,
     onTop = false,
     onStatus,
-}: {
-    topic?: string
-    poses?: any[]
-    frame?: string
-    color?: string
-    width?: number
-    lift?: number
-    onTop?: boolean
-    onStatus?: Function
-}) {
+}: PathProps) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
     return (
         <Layer type={pathType} topic={topic} settings={{ color, width, lift, onTop }} data={data} onStatus={onStatus} />
     )
 }
 
-const poseType = {
+const poseType: LayerType = {
     id: "pose-props",
+    label: "Pose",
+    types: [],
     defaults: POSE_DEFAULTS,
     create: (context, topic, settings) => new PoseLayer(context, topic, settings),
+}
+
+export interface PoseProps {
+    topic?: string
+    /** a decoded pose (Pose, PoseStamped, Odometry, ...): any of those shapes */
+    pose?: any
+    frame?: string
+    axesSize?: number
+    trail?: boolean
+    trailLength?: number
+    jumpMeters?: number
+    color?: string
+    width?: number
+    onTop?: boolean
+    route?: boolean
+    onPose?: (matrix: THREE.Matrix4) => void
+    onStatus?: (status: LayerStatus) => void
 }
 
 /**
  * A pose as axes (theme axis colors), with an optional trail of where it has been (kept in the fixed frame; a jump
  * leaves a gap) and, when the source knows it (a recording), the whole route faint ahead. From a topic
  * (nav_msgs.Odometry, geometry_msgs.PoseStamped / PoseWithCovarianceStamped) or `pose` (+ `frame`) as props.
- * @param {{ topic?: string, pose?: any, frame?: string, axesSize?: number, trail?: boolean, trailLength?: number,
- *   jumpMeters?: number, color?: string, width?: number, onTop?: boolean, route?: boolean,
- *   onPose?: (matrix: THREE.Matrix4) => void, onStatus?: Function }} props `onPose`: the pose in the fixed frame
+ * `onPose`: the pose in the fixed frame.
  */
 export function Pose({
     topic,
@@ -894,21 +1009,7 @@ export function Pose({
     route = true,
     onPose,
     onStatus,
-}: {
-    topic?: string
-    pose?: any
-    frame?: string
-    axesSize?: number
-    trail?: boolean
-    trailLength?: number
-    jumpMeters?: number
-    color?: string
-    width?: number
-    onTop?: boolean
-    route?: boolean
-    onPose?: (matrix: THREE.Matrix4) => void
-    onStatus?: Function
-}) {
+}: PoseProps) {
     const data = useMemo(() => (pose ? { pose, frame } : undefined), [pose, frame])
     return (
         <Layer
@@ -922,15 +1023,26 @@ export function Pose({
     )
 }
 
-const poseArrayType = {
+const poseArrayType: LayerType = {
     id: "posearray-props",
+    label: "Pose array",
+    types: [],
+    defaults: {},
     create: (context, topic, settings) => new PoseArrayLayer(context, topic, settings),
 }
 
-/**
- * Many poses as arrows: a geometry_msgs.PoseArray topic, or `poses` (+ `frame`) as props.
- * @param {{ topic?: string, poses?: any[], frame?: string, color?: string, length?: number, width?: number }} props
- */
+export interface PoseArrayProps {
+    topic?: string
+    /** decoded geometry_msgs poses, any of those shapes */
+    poses?: any[]
+    frame?: string
+    color?: string
+    length?: number
+    width?: number
+    onStatus?: (status: LayerStatus) => void
+}
+
+/** Many poses as arrows: a geometry_msgs.PoseArray topic, or `poses` (+ `frame`) as props. */
 export function PoseArray({
     topic,
     poses,
@@ -939,26 +1051,28 @@ export function PoseArray({
     length = 0.4,
     width = 2,
     onStatus,
-}: {
-    topic?: string
-    poses?: any[]
-    frame?: string
-    color?: string
-    length?: number
-    width?: number
-}) {
+}: PoseArrayProps) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
     return (
         <Layer type={poseArrayType} topic={topic} settings={{ color, length, width }} data={data} onStatus={onStatus} />
     )
 }
 
+export interface RobotModelProps {
+    kind?: string
+    frame?: string
+    /** a decoded pose, any of the shapes poseMatrix takes */
+    pose?: any
+    poseFrame?: string
+    scale?: number
+    visible?: boolean
+    colors?: { body?: string; dark?: string; nose?: string }
+}
+
 /**
  * A stand-in robot model (ROBOT_KINDS: dog, humanoid, wheeled, drone, arrow) at a TF frame (`frame`, default the
  * scene's robotFrame, else base_link) or at `pose` (in `poseFrame`). Without its frame in TF it stands at the newest
  * pose a Pose layer reported. Colors follow the theme unless `colors` says otherwise.
- * @param {{ kind?: string, frame?: string, pose?: any, poseFrame?: string, scale?: number, visible?: boolean,
- *   colors?: { body?: string, dark?: string, nose?: string } }} props
  */
 export function RobotModel({
     kind = "wheeled",
@@ -968,30 +1082,25 @@ export function RobotModel({
     scale = 1,
     visible = true,
     colors,
-}: {
-    kind?: string
-    frame?: string
-    pose?: any
-    poseFrame?: string
-    scale?: number
-    visible?: boolean
-    colors?: { body?: string; dark?: string; nose?: string }
-}) {
+}: RobotModelProps) {
     const scene = useScene()
-    const settings = useRef({})
-    settings.current = { frame: frame ?? scene.options?.baseFrame ?? "base_link", pose, poseFrame, scale, visible }
+    const current = { frame: frame ?? scene.options?.baseFrame ?? "base_link", pose, poseFrame, scale, visible }
+    const settings = useRef(current)
+    settings.current = current
     const colorsSignature = JSON.stringify(colors ?? {})
     useLayer(
         ({ viewer, tf, robotPose }) => {
-            let model = robotModel(kind, colors)
-            if (!model) {
+            const first = robotModel(kind, colors)
+            if (!first) {
                 return null
             }
+            let model = first
             const root = new THREE.Group()
             root.add(model)
             const rebuild = () => {
                 disposeTree(model)
-                model = robotModel(kind, colors)
+                // the same kind the first model was built from
+                model = robotModel(kind, colors)!
                 root.add(model)
                 viewer.requestRender()
             }
@@ -1032,12 +1141,16 @@ export function RobotModel({
     return null
 }
 
+export interface FrameHighlightProps {
+    frame: string | null
+    onPlaced?: (placed: boolean) => void
+}
+
 /**
  * One TF frame picked out (e.g. a TF panel's hovered row): big axes drawn over everything with a halo and its name,
  * following the frame as it moves. `onPlaced(placed)` says whether it could be placed in the fixed frame.
- * @param {{ frame: string | null, onPlaced?: (placed: boolean) => void }} props
  */
-export function FrameHighlight({ frame, onPlaced }: { frame: string | null; onPlaced?: (placed: boolean) => void }) {
+export function FrameHighlight({ frame, onPlaced }: FrameHighlightProps) {
     const placedRef = useRef(onPlaced)
     placedRef.current = onPlaced
     const layer = useLayer(
@@ -1050,29 +1163,37 @@ export function FrameHighlight({ frame, onPlaced }: { frame: string | null; onPl
     return null
 }
 
+type TfLayerFrames = NonNullable<CheckTfInput["layers"]>
+
+export interface UseTfIssuesOptions {
+    layers?: TfLayerFrames | (() => TfLayerFrames)
+    tf?: TfTree | null
+    fixedFrame?: string
+    intervalMs?: number
+}
+
 /**
  * What's wrong with the scene's TF tree (tf_check.js), checked every `intervalMs`; a problem shows once two checks in a
  * row see it. `layers`: the drawn layers' frames (a LayerManager's layerFrames()).
- * @returns {import("./tf_check").TfIssue[]}
  */
 export function useTfIssues({
     layers,
     tf: given,
     fixedFrame: givenFixed,
     intervalMs = 2000,
-} = {}): import("./tf_check").TfIssue[] {
+}: UseTfIssuesOptions = {}): TfIssue[] {
     const scene = useScene()
     const tf = given ?? scene.tf
     const fixedRef = useRef(givenFixed ?? scene.fixedFrame)
     fixedRef.current = givenFixed ?? scene.viewer?.fixedFrame ?? scene.fixedFrame
     const layersRef = useRef(layers)
     layersRef.current = layers
-    const [issues, setIssues] = useState([])
+    const [issues, setIssues] = useState<TfIssue[]>([])
     useEffect(() => {
         if (!tf) {
             return
         }
-        let seen = []
+        let seen: TfIssue[] = []
         let shown = "[]"
         const check = () => {
             const fixedFrame = fixedRef.current
@@ -1096,11 +1217,16 @@ export function useTfIssues({
     return issues
 }
 
-/**
- * A Select of the scene's TF frames (inside a Scene3D, or pass `tf`).
- * @param {{ value?: string | null, onChange: (frame: string | null) => void, tf?: TfTree, noneLabel?: string | null,
- *   placeholder?: string, size?: "sm" | "md", className?: string }} props `noneLabel`: an extra "none" option (null)
- */
+export interface FramePickerProps extends Omit<Partial<SelectProps>, "value" | "onChange" | "options"> {
+    value?: string | null
+    onChange: (frame: string | null) => void
+    tf?: TfTree
+    /** an extra "none" option (null) */
+    noneLabel?: string | null
+    placeholder?: string
+}
+
+/** A Select of the scene's TF frames (inside a Scene3D, or pass `tf`). `noneLabel`: an extra "none" option (null). */
 export function FramePicker({
     value,
     onChange,
@@ -1108,24 +1234,17 @@ export function FramePicker({
     noneLabel = null,
     placeholder = "frame…",
     ...rest
-}: {
-    value?: string | null
-    onChange: (frame: string | null) => void
-    tf?: TfTree
-    noneLabel?: string | null
-    placeholder?: string
-    size?: "sm" | "md"
-    className?: string
-}) {
+}: FramePickerProps) {
     const frames = useTfFrames({ tf })
-    const options = [...(noneLabel !== null ? [[null, noneLabel]] : []), ...frames.map((name) => [name, name])]
+    const none: [null, string][] = noneLabel !== null ? [[null, noneLabel]] : []
+    const options: [string | null, string][] = [...none, ...frames.map((name): [string, string] => [name, name])]
     if (value && !frames.includes(value)) {
         options.push([value, `${value} (not seen)`])
     }
     return <Select value={value ?? null} onChange={onChange} options={options} placeholder={placeholder} {...rest} />
 }
 
-const emptyStats = new Store({
+const emptyStats = new Store<RenderStats>({
     fps: 0,
     frameMs: 0,
     latencyP50: null,
@@ -1135,24 +1254,22 @@ const emptyStats = new Store({
     points: 0,
 })
 
-/**
- * The scene's render numbers as a small overlay: fps · points · frame ms · latency, or with `detailed` the full set
- * (CPU per frame, latency p50/p95, arrival→frame, `rttMs` if given, points, draw calls).
- * @param {{ className?: string, detailed?: boolean, rttMs?: number | null }} props
- */
-export function SceneStats({
-    className,
-    detailed = false,
-    rttMs,
-}: {
+export interface SceneStatsProps {
     className?: string
     detailed?: boolean
     rttMs?: number | null
-}) {
+}
+
+/**
+ * The scene's render numbers as a small overlay: fps · points · frame ms · latency, or with `detailed` the full set
+ * (CPU per frame, latency p50/p95, arrival→frame, `rttMs` if given, points, draw calls).
+ */
+export function SceneStats({ className, detailed = false, rttMs }: SceneStatsProps) {
     const viewer = useViewer()
     const stats = useStore(viewer?.stats ?? emptyStats)
     if (detailed) {
-        const ms = (value) => (value === null || value === undefined ? "–" : `${value.toFixed(1)} ms`)
+        const ms = (value: number | null | undefined) =>
+            value === null || value === undefined ? "–" : `${value.toFixed(1)} ms`
         return (
             <div className={cx("dr-scene-stats dr-scene-stats--detailed", className)} data-testid="stats">
                 <div>{`${stats.fps} fps · ${stats.frameMs.toFixed(2)} ms/frame CPU`}</div>
@@ -1176,13 +1293,20 @@ export function SceneStats({
     )
 }
 
+export interface SceneControlsProps {
+    className?: string
+    children?: ReactNode
+    frameAll?: boolean
+    onFrameAll?: () => void
+    onTopDown?: () => void
+    position?: "bottom-right" | "top-right" | "top-left" | "bottom-left"
+}
+
 /**
  * Camera buttons over the scene: follow (reframes the followed frame, or follows again after a pan), top-down (on the
  * area around the robot), frame everything. `children`: extra buttons.
  * `onFrameAll` / `onTopDown` replace what those buttons do (an app's own idea of "everything"); `position`:
  * "bottom-right" (default) | "top-right" | "top-left" | "bottom-left".
- * @param {{ className?: string, children?: any, frameAll?: boolean, onFrameAll?: () => void,
- *   onTopDown?: () => void, position?: string }} props
  */
 export function SceneControls({
     className,
@@ -1191,17 +1315,10 @@ export function SceneControls({
     onFrameAll,
     onTopDown,
     position = "bottom-right",
-}: {
-    className?: string
-    children?: any
-    frameAll?: boolean
-    onFrameAll?: () => void
-    onTopDown?: () => void
-    position?: string
-}) {
+}: SceneControlsProps) {
     const { viewer, frameInfo, actions } = useScene()
     const info = useStore(frameInfo ?? emptyFrameInfo)
-    const button = (icon, label, onClick, pressed) => (
+    const button = (icon: string, label: string, onClick: () => void, pressed?: boolean) => (
         <IconButton
             icon={icon}
             label={label}
@@ -1238,12 +1355,18 @@ const emptyFrameInfo = new Store({ fixedFrame: "", robotFound: false, followFoun
 
 const FLY_KEYS = new Set([..."wasdqeijkl"])
 
+export interface KeyboardFlyProps {
+    speed?: number
+    lookSpeed?: number
+    enabled?: boolean
+}
+
 /**
  * Keyboard flying for the enclosing scene, beside the mouse orbit: W/S forward/back and A/D left/right over the ground,
  * Q/E down/up, I/K look up/down and J/L look left/right (the camera stays put, the orbit target swings around it).
  * `speed` (m/s), `lookSpeed` (rad/s). Keys typed into inputs, and chords with ⌘/Ctrl/Alt, are ignored.
  */
-export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }) {
+export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }: KeyboardFlyProps) {
     const viewer = useViewer()
     const settings = useRef({ speed, lookSpeed })
     settings.current = { speed, lookSpeed }
@@ -1251,9 +1374,10 @@ export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }) {
         if (!viewer || !enabled) {
             return
         }
-        const held = new Set()
-        const typing = (event) => event.target?.closest?.("input, select, textarea, [contenteditable]")
-        const keydown = (event) => {
+        const held = new Set<string>()
+        const typing = (event: KeyboardEvent) =>
+            event.target instanceof Element && event.target.closest("input, select, textarea, [contenteditable]")
+        const keydown = (event: KeyboardEvent) => {
             if (typing(event)) {
                 return
             }
@@ -1267,7 +1391,7 @@ export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }) {
                 held.add(key)
             }
         }
-        const keyup = (event) => held.delete(event.key.toLowerCase())
+        const keyup = (event: KeyboardEvent) => held.delete(event.key.toLowerCase())
         const blur = () => held.clear()
         addEventListener("keydown", keydown)
         addEventListener("keyup", keyup)

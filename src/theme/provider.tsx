@@ -4,6 +4,7 @@
 //     h(DimThemeProvider, { skin: "research" }, h(App))        // pinned (demos, screenshots)
 //     const { skin, dark, corners, colors } = useTheme()
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react"
+import type { ReactNode } from "react"
 import {
     applyTheme,
     desktopCorners,
@@ -13,11 +14,39 @@ import {
     signalReady,
     themeColors,
     watchDesktopTheme,
-} from "./theme"
+} from "./theme.ts"
+import type { Corners, ThemeColors } from "./theme.ts"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
-const ThemeContext = createContext({
+/** What useTheme() gives: the skin and corners in effect, what they look like, and per-page setters. */
+export interface ThemeContextValue {
+    skin: string
+    corners: Corners
+    dark: boolean
+    square: boolean
+    colors: Partial<ThemeColors>
+    /** the theme's stylesheet has been applied (absent outside a DimThemeProvider) */
+    ready?: boolean
+    /** this page only; undefined goes back to Desktop's */
+    setSkin: (next: string | undefined) => void
+    setCorners: (next: Corners | undefined) => void
+}
+
+export interface DimThemeProviderProps {
+    /** pin the skin (default: Desktop's saved choice, followed live) */
+    skin?: string
+    /** pin the corners (default: Desktop's saved choice, followed live) */
+    corners?: Corners
+    /** Desktop's tokens stylesheet (default /theme.css on Desktop, the bundled copy elsewhere) */
+    themeUrl?: string
+    bundled?: boolean
+    /** style <body> too (default true) */
+    global?: boolean
+    children?: ReactNode
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
     skin: "portal",
     corners: "theme",
     dark: true,
@@ -28,36 +57,21 @@ const ThemeContext = createContext({
 })
 
 /**
- * @param {{
- *   skin?: string, corners?: "sharp" | "rounded" | "theme",
- *   themeUrl?: string, bundled?: boolean,
- *   global?: boolean,
- *   children?: any,
- * }} props
- *   `skin` / `corners`: pin them (default: Desktop's saved choice, followed live). `themeUrl`: Desktop's tokens
- *   stylesheet (default /theme.css on Desktop, the bundled copy elsewhere). `global`: style <body> too (default true).
+ * `skin` / `corners`: pin them (default: Desktop's saved choice, followed live). `themeUrl`: Desktop's tokens
+ * stylesheet (default /theme.css on Desktop, the bundled copy elsewhere). `global`: style <body> too (default true).
  */
-export function DimThemeProvider({
-    skin,
-    corners,
-    themeUrl,
-    bundled,
-    global = true,
-    children,
-}: {
-    skin?: string
-    corners?: "sharp" | "rounded" | "theme"
-    themeUrl?: string
-    bundled?: boolean
-    global?: boolean
-    children?: any
-}) {
-    const [desktop, setDesktop] = useState(() => ({
+export function DimThemeProvider({ skin, corners, themeUrl, bundled, global = true, children }: DimThemeProviderProps) {
+    const [desktop, setDesktop] = useState<{ skin: string; corners: Corners }>(() => ({
         skin: typeof window === "undefined" ? "portal" : desktopSkin(),
         corners: typeof window === "undefined" ? "theme" : desktopCorners(),
     }))
-    const [override, setOverride] = useState({})
-    const [state, setState] = useState({ dark: true, square: true, colors: {}, ready: false })
+    const [override, setOverride] = useState<{ skin?: string; corners?: Corners }>({})
+    const [state, setState] = useState<{
+        dark: boolean
+        square: boolean
+        colors: Partial<ThemeColors>
+        ready: boolean
+    }>({ dark: true, square: true, colors: {}, ready: false })
     const wantedSkin = skin ?? override.skin ?? desktop.skin
     const wantedCorners = corners ?? override.corners ?? desktop.corners
 
@@ -90,7 +104,7 @@ export function DimThemeProvider({
         }
     }, [wantedSkin, wantedCorners, themeUrl, bundled, global])
 
-    const value = useMemo(
+    const value = useMemo<ThemeContextValue>(
         () => ({
             skin: wantedSkin,
             corners: wantedCorners,
@@ -107,11 +121,11 @@ export function DimThemeProvider({
 }
 
 /** `{ skin, corners, dark, square, colors, ready, setSkin, setCorners }` (setSkin/setCorners: this page only). */
-export function useTheme() {
+export function useTheme(): ThemeContextValue {
     return useContext(ThemeContext)
 }
 
 /** The theme's colors (themeColors()), re-read on every skin change: for canvases, charts and 3D scenes. */
-export function useThemeColors() {
+export function useThemeColors(): Partial<ThemeColors> {
     return useContext(ThemeContext).colors
 }

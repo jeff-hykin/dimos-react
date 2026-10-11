@@ -1,7 +1,8 @@
 // Demo: the 3D view. A test data source plays a robot driving a loop (TF over LCM, a planned path, a lidar ring),
 // while a room-shaped point cloud and a pose array come in as props.
 import { useEffect, useMemo, useRef, useState } from "react"
-import { encode } from "../../src/lcm"
+import type { ComponentProps } from "react"
+import { encode } from "../../src/lcm.ts"
 import {
     Badge,
     Button,
@@ -15,7 +16,8 @@ import {
     Slider,
     Tabs,
     Toggle,
-} from "../../src/index"
+} from "../../src/index.ts"
+import type { MemorySource } from "../../src/index.ts"
 import {
     FrameHighlight,
     FramePicker,
@@ -41,7 +43,8 @@ import {
     useScene,
     useTfFrames,
     useTfIssues,
-} from "../../src/three"
+} from "../../src/three.ts"
+import type { LayerManager } from "../../src/three.ts"
 
 const TF_KEY = "dimos/tf/tf2_msgs.TFMessage"
 const TF_STATIC_KEY = "dimos/tf_static/tf2_msgs.TFMessage"
@@ -49,7 +52,7 @@ const PATH_KEY = "dimos/path/nav_msgs.Path"
 const LIDAR_KEY = "dimos/lidar/sensor_msgs.PointCloud2"
 const ODOM_KEY = "dimos/odom/nav_msgs.Odometry"
 
-const stamped = (parent, child, [x, y, z], yaw = 0) => ({
+const stamped = (parent: string, child: string, [x, y, z]: [number, number, number], yaw = 0) => ({
     header: { frame_id: parent },
     child_frame_id: child,
     transform: {
@@ -60,8 +63,8 @@ const stamped = (parent, child, [x, y, z], yaw = 0) => ({
 
 /** A 12 × 8 m room: floor speckle, four walls and a few boxes, in "world". */
 function roomCloud() {
-    const points = []
-    const add = (x, y, z) => points.push(x, y, z)
+    const points: number[] = []
+    const add = (x: number, y: number, z: number) => points.push(x, y, z)
     for (let index = 0; index < 9000; index++) {
         add(Math.random() * 12 - 6, Math.random() * 8 - 4, Math.random() * 0.02)
     }
@@ -69,10 +72,18 @@ function roomCloud() {
         const along = Math.random()
         const z = Math.random() * 2.4
         const wall = index % 4
-        if (wall === 0) add(-6 + along * 12, -4, z)
-        if (wall === 1) add(-6 + along * 12, 4, z)
-        if (wall === 2) add(-6, -4 + along * 8, z)
-        if (wall === 3) add(6, -4 + along * 8, z)
+        if (wall === 0) {
+            add(-6 + along * 12, -4, z)
+        }
+        if (wall === 1) {
+            add(-6 + along * 12, 4, z)
+        }
+        if (wall === 2) {
+            add(-6, -4 + along * 8, z)
+        }
+        if (wall === 3) {
+            add(6, -4 + along * 8, z)
+        }
     }
     for (const [cx, cy, size] of [
         [3.5, 2, 0.8],
@@ -87,7 +98,7 @@ function roomCloud() {
 }
 
 /** The loop the robot drives: a rounded rectangle, as [x, y, yaw] at t (0..1). */
-function loopAt(t) {
+function loopAt(t: number): [x: number, y: number, yaw: number] {
     const angle = t * Math.PI * 2
     const x = 3.2 * Math.cos(angle)
     const y = 2 * Math.sin(angle)
@@ -95,7 +106,7 @@ function loopAt(t) {
 }
 
 /** Plays the robot into `source`: static and dynamic TF, odometry, a path ahead of it, a lidar ring around it. */
-function useDemoRobot(source) {
+function useDemoRobot(source: MemorySource) {
     useEffect(() => {
         // tf_static is latched on a real bus; this test source isn't, so it repeats (late subscribers get it too)
         const publishStatic = () =>
@@ -159,6 +170,8 @@ function useDemoRobot(source) {
     }, [source])
 }
 
+type PointStyle = NonNullable<ComponentProps<typeof PointCloud>["style"]>
+
 function FrameCount() {
     const frames = useTfFrames()
     return <Badge tone={frames.length ? "ok" : "default"}>{`${frames.length} TF frames`}</Badge>
@@ -190,8 +203,8 @@ function LiveDemo() {
         [],
     )
     const [follow, setFollow] = useState(false)
-    const [followFrame, setFollowFrame] = useState("base_link")
-    const [style, setStyle] = useState("voxel")
+    const [followFrame, setFollowFrame] = useState<string | null>("base_link")
+    const [style, setStyle] = useState<PointStyle>("voxel")
     const [names, setNames] = useState(true)
     const [gradient, setGradient] = useState("memworld")
     return (
@@ -262,12 +275,18 @@ function LiveDemo() {
 // type through TopicLayers, switched and tuned in LayersPanel, the TF tree in TfPanel ──
 
 const REPLAY_SECONDS = 60
-const loopPose = (seconds) => loopAt((seconds / REPLAY_SECONDS) % 1)
+
+/** the replay's playhead (s) and whether it advances */
+interface ReplayState {
+    seconds: number
+    playing: boolean
+}
+const loopPose = (seconds: number) => loopAt((seconds / REPLAY_SECONDS) % 1)
 
 /** Everything a recording of the demo robot holds at `seconds` (keys → values), for a replay to publish. */
-function replayFrame(seconds) {
+function replayFrame(seconds: number) {
     const [x, y, yaw] = loopPose(seconds)
-    const out = {}
+    const out: Record<string, unknown> = {}
     out[TF_KEY] = { transforms: [stamped("odom", "base_link", [x, y, 0.35], yaw)] }
     out[TF_STATIC_KEY] = {
         transforms: [
@@ -295,6 +314,13 @@ function replayFrame(seconds) {
     out["dimos/lidar/sensor_msgs.PointCloud2"] = { positions: ring, frame: "lidar_link" }
     return out
 }
+
+/** The detected boxes: x, y, size (m), class, score. */
+const DETECTIONS: [x: number, y: number, size: number, classId: string, score: number][] = [
+    [3.5, 2, 0.8, "box", 0.93],
+    [-3, -2.5, 1.1, "crate", 0.81],
+    [-4, 2.5, 0.6, "box", 0.66],
+]
 
 /** A costmap of the room: free floor, lethal walls and boxes, inflated costs around them. */
 function costmap() {
@@ -326,8 +352,8 @@ function costmap() {
     }
 }
 
-const color = (r, g, b, a = 1) => ({ r, g, b, a })
-const STATIC_TOPICS = {
+const color = (r: number, g: number, b: number, a = 1) => ({ r, g, b, a })
+const STATIC_TOPICS: Record<string, () => unknown> = {
     "dimos/costmap/nav_msgs.OccupancyGrid": costmap,
     "dimos/markers/visualization_msgs.MarkerArray": () => ({
         markers: [
@@ -372,11 +398,7 @@ const STATIC_TOPICS = {
     }),
     "dimos/detections/vision_msgs.Detection3DArray": () => ({
         header: { frame_id: "map" },
-        detections: [
-            [3.5, 2, 0.8, "box", 0.93],
-            [-3, -2.5, 1.1, "crate", 0.81],
-            [-4, 2.5, 0.6, "box", 0.66],
-        ].map(([x, y, size, class_id, score]) => ({
+        detections: DETECTIONS.map(([x, y, size, class_id, score]) => ({
             bbox: {
                 center: { position: { x, y, z: size / 2 }, orientation: { w: 1 } },
                 size: { x: size, y: size, z: size },
@@ -385,7 +407,7 @@ const STATIC_TOPICS = {
         })),
     }),
     "dimos/roadmap/nav_msgs.LineSegments3D": () => {
-        const nodes = [
+        const nodes: [number, number][] = [
             [-5, -3],
             [0, -3.2],
             [5, -3],
@@ -396,7 +418,7 @@ const STATIC_TOPICS = {
             [-5, 0],
             [0, 0],
         ]
-        const edges = [
+        const edges: [number, number][] = [
             [0, 1],
             [1, 2],
             [2, 3],
@@ -410,7 +432,9 @@ const STATIC_TOPICS = {
             [7, 8],
             [8, 3],
         ]
-        const pose = ([x, y], w = 1) => ({ pose: { position: { x, y, z: 0.05 }, orientation: { w } } })
+        const pose = ([x, y]: [number, number], w = 1) => ({
+            pose: { position: { x, y, z: 0.05 }, orientation: { w } },
+        })
         return {
             header: { frame_id: "map" },
             poses: edges.flatMap(([a, b], index) => [pose(nodes[a], 1 + index * 3), pose(nodes[b])]),
@@ -457,9 +481,9 @@ function useReplay() {
             }),
         [],
     )
-    const [state, setState] = useState({ seconds: 0, playing: true })
+    const [state, setState] = useState<ReplayState>({ seconds: 0, playing: true })
     useEffect(() => {
-        const statics = Object.entries(STATIC_TOPICS).map(([key, make]) => [key, make()])
+        const statics = Object.entries(STATIC_TOPICS).map(([key, make]): [string, unknown] => [key, make()])
         let last = performance.now()
         const publish = () => {
             for (const [key, value] of Object.entries(replayFrame(playhead.current / 1000))) {
@@ -482,23 +506,23 @@ function useReplay() {
         }, 100)
         return () => clearInterval(timer)
     }, [source])
-    const seek = (seconds) => {
+    const seek = (seconds: number) => {
         playhead.current = seconds * 1000
         source.seek()
         setState((current) => ({ ...current, seconds }))
     }
-    return { source, state, setPlaying: (playing) => setState((current) => ({ ...current, playing })), seek }
+    return { source, state, setPlaying: (playing: boolean) => setState((current) => ({ ...current, playing })), seek }
 }
 
 /** The TF footnote over the replay's view, from the scene's own tree and the drawn layers' frames. */
-function ReplayFootnote({ manager, onOpen }) {
+function ReplayFootnote({ manager, onOpen }: { manager: LayerManager; onOpen: () => void }) {
     const issues = useTfIssues({ layers: () => manager.layerFrames() })
     return <TfFootnote issues={issues} onOpen={onOpen} />
 }
 
-function SceneInfo({ onInfo }) {
+function SceneInfo({ onInfo }: { onInfo: (info: { fixedFrame: string; robotFound: boolean }) => void }) {
     const { frameInfo } = useScene()
-    useEffect(() => frameInfo.subscribe(() => onInfo(frameInfo.get())), [frameInfo])
+    useEffect(() => frameInfo?.subscribe(() => onInfo(frameInfo.get())), [frameInfo])
     return null
 }
 
@@ -511,11 +535,17 @@ function ReplayDemo() {
     )
 }
 
-function ReplayView({ state, setPlaying, seek }) {
+interface ReplayViewProps {
+    state: ReplayState
+    setPlaying: (playing: boolean) => void
+    seek: (seconds: number) => void
+}
+
+function ReplayView({ state, setPlaying, seek }: ReplayViewProps) {
     const manager = useLayerManager({ storagePrefix: "dimos-react-demo.layers", intervalMs: 1000 })
     const tf = useMemo(() => new TfTree(), [])
     const [tab, setTab] = useState("layers")
-    const [hovered, setHovered] = useState(null)
+    const [hovered, setHovered] = useState<string | null>(null)
     const [placed, setPlaced] = useState(true)
     const [fixedFrame, setFixedFrame] = useState("")
     const [follow, setFollow] = useState(true)

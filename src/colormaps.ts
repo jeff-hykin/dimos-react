@@ -1,8 +1,20 @@
 // Data colormaps (scalar → color for depth images, point clouds, heat maps; not UI colors), with no three.js, so 2D
 // components can use them. src/three/gradients.js re-exports these and adds the 256×1 textures the shaders sample.
 
+/** A ramp stop: [position 0..1, "#rrggbb"]. */
+export type RampStop = [position: number, hex: string]
+
+/** An rgb color, each channel 0..255. */
+export type Rgb = [r: number, g: number, b: number]
+
+/** A repeating palette: its menu label and its colors. */
+export interface Palette {
+    label: string
+    colors: string[]
+}
+
 /** Stops as [position 0..1, "#rrggbb"]; piecewise-linear in sRGB. */
-export const RAMPS = {
+export const RAMPS: Record<string, RampStop[]> = {
     // MemWorld's height ramp: purple, blue, cyan, mint
     memworld: [
         [0, "#6f15b3"],
@@ -66,7 +78,7 @@ export const RAMPS = {
 export const GRADIENTS = Object.keys(RAMPS)
 export const DEFAULT_GRADIENT = "memworld"
 
-function hexToRgb(hex) {
+function hexToRgb(hex: string): Rgb {
     const value = parseInt(hex.slice(1), 16)
     return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
@@ -76,7 +88,7 @@ function hexToRgb(hex) {
 // hue jump. Point clouds take one as `gradient` (+ `period`); its texture wraps.
 
 /** Soft neon palettes (bright enough to glow on a dark scene); linear in sRGB between evenly spaced stops. */
-export const PALETTES = {
+export const PALETTES: Record<string, Palette> = {
     aurora: { label: "Aurora (purple → blue → cyan → green)", colors: ["#a05cf0", "#5a86f2", "#3ed4e0", "#6ee68c"] },
     ember: { label: "Ember (gold → orange → red)", colors: ["#f2c64e", "#f08c4c", "#e8565e"] },
     rose: { label: "Rose (pink → blush → white)", colors: ["#f264b0", "#f2a6cc", "#f6e8ee"] },
@@ -87,18 +99,18 @@ export const DEFAULT_PALETTE = "aurora"
 export const DEFAULT_PERIOD = 9
 
 /** True for a repeating palette's name (PALETTES), false for a ramp (RAMPS). */
-export function isPalette(name) {
+export function isPalette(name: string): boolean {
     return Object.hasOwn(PALETTES, name)
 }
 
 /** Where in its cycle a height is, 0 (inclusive) to 1 (exclusive); negative heights wrap the same way. */
-export function cyclePhase(height, period = DEFAULT_PERIOD) {
+export function cyclePhase(height: number, period: number = DEFAULT_PERIOD): number {
     const turns = height / Math.max(1e-6, period)
     return turns - Math.floor(turns)
 }
 
 /** A palette's color at a phase (0..1, wrapping) as 0..255 rgb: first color at 0, last at 0.5, first again at 1. */
-export function paletteAt(name, phase) {
+export function paletteAt(name: string, phase: number): Rgb {
     const colors = (PALETTES[name] ?? PALETTES[DEFAULT_PALETTE]).colors.map(hexToRgb)
     const wrapped = phase - Math.floor(phase)
     const along = (1 - Math.abs(2 * wrapped - 1)) * (colors.length - 1)
@@ -109,17 +121,17 @@ export function paletteAt(name, phase) {
 }
 
 /** A palette's color for a height. */
-export function heightColor(name, height, period = DEFAULT_PERIOD) {
+export function heightColor(name: string, height: number, period: number = DEFAULT_PERIOD): Rgb {
     return paletteAt(name, cyclePhase(height, period))
 }
 
 /** The palette for another cloud beside one drawn in `taken`: the next one, so the two never match. */
-export function otherPalette(taken) {
+export function otherPalette(taken: string): string {
     return PALETTE_NAMES[(PALETTE_NAMES.indexOf(taken) + 1) % PALETTE_NAMES.length]
 }
 
 /** The ramp's color at t (0..1) as 0..255 rgb (a palette's: at phase t). */
-export function sampleGradient(name, t) {
+export function sampleGradient(name: string, t: number): Rgb {
     if (isPalette(name)) {
         return paletteAt(name, t)
     }

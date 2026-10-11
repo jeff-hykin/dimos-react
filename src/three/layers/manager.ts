@@ -2,49 +2,60 @@
 // live instance inside <TopicLayers> (subscribed), a disabled one has none (unsubscribed, so it costs no bandwidth).
 // Which topics are on and each topic's settings persist through `persist(key, defaults)` (localStorage by default;
 // an app that keeps settings in its backend passes its own).
-import { parseKey } from "../../data"
-import { localStore, Store } from "../store"
-import { defaultSettings, layerTypeFor } from "./registry"
+import { parseKey } from "../../data.ts"
+import type { DataSource, ListedTopic, Topic } from "../../data.ts"
+import { localStore, Store } from "../store.ts"
+import { defaultSettings, layerTypeFor } from "./registry.ts"
+import type { LayerStatus, LayerType } from "./registry.ts"
 
-/**
- * @typedef {{ topic: import("./registry").Topic, type: import("./registry").LayerType, enabled: boolean,
- *   status: import("./registry").LayerStatus, settings: Store<any> }} LayerEntry
- */
+/** A topic's settings bag: whatever its layer type keeps (see LayerType's `S`). */
+export interface LayerEntry {
+    topic: Topic
+    type: LayerType
+    enabled: boolean
+    status: LayerStatus
+    settings: Store<any>
+}
+
+/** Saves a Store under `key` (fields missing from what's saved come from `defaults`); localStore by default. */
+export type Persist = <T extends object>(key: string, defaults: T) => Store<T>
+
+export interface LayerManagerOptions {
+    source: DataSource
+    persist?: Persist
+    storagePrefix?: string
+    forgetMs?: number
+}
+
+/** A listed topic that already says its name and type. */
+const isTopic = (item: ListedTopic): item is ListedTopic & Topic =>
+    !!item.name && !!item.type && typeof item.name === "string" && typeof item.type === "string"
 
 export class LayerManager {
-    /** @type {Store<{ list: LayerEntry[] }>} */
-    entries: Store<{ list: LayerEntry[] }> = new Store({ list: [] })
+    entries: Store<{ list: LayerEntry[] }> = new Store<{ list: LayerEntry[] }>({ list: [] })
     /** every topic seen (drawn or not), sorted by name */
-    topics = new Store({ list: [] })
+    topics: Store<{ list: Topic[] }> = new Store<{ list: Topic[] }>({ list: [] })
     /** the 3D view is off: no layer runs (nothing subscribed); the switches keep what to start again */
-    paused = new Store({ paused: false })
-    #enabled
-    #persist
-    #prefix
-    #lastSeen = new Map()
+    paused: Store<{ paused: boolean }> = new Store({ paused: false })
+    /** topic key → switched on, as saved */
+    #enabled: Store<Record<string, boolean>>
+    #persist: Persist
+    #prefix: string
+    #lastSeen: Map<string, { topic: Topic; at: number }> = new Map()
     forgetMs: number
-    source: any
+    source: DataSource
 
-    /**
-     * @param {{ source: any, persist?: (key: string, defaults: object) => Store<any>, storagePrefix?: string,
-     *   forgetMs?: number }} options
-     */
     constructor({
         source,
         persist = localStore,
         storagePrefix = "dimos-react.layers",
         forgetMs = 20000,
-    }: {
-        source: any
-        persist?: (key: string, defaults: object) => Store<any>
-        storagePrefix?: string
-        forgetMs?: number
-    }) {
+    }: LayerManagerOptions) {
         this.source = source
         this.#persist = persist
         this.#prefix = storagePrefix
         this.forgetMs = forgetMs
-        this.#enabled = persist(`${storagePrefix}.enabled`, {})
+        this.#enabled = persist<Record<string, boolean>>(`${storagePrefix}.enabled`, {})
         // turned on or off elsewhere (another tab, an agent writing the setting)
         this.#enabled.subscribe(() => {
             for (const entry of this.entries.get().list) {
@@ -57,9 +68,9 @@ export class LayerManager {
     }
 
     /** Lists the source's topics now and every `intervalMs` (and on the source's topic events). Returns stop. */
-    watch({ filter = "dimos/**", intervalMs = 2000 } = {}) {
+    watch({ filter = "dimos/**", intervalMs = 2000 }: { filter?: string; intervalMs?: number } = {}): () => void {
         let live = true
-        let timer = null
+        let timer: ReturnType<typeof setTimeout> | undefined
         const round = async () => {
             try {
                 this.setTopics(await this.source.listTopics(filter))
@@ -83,10 +94,10 @@ export class LayerManager {
     }
 
     /** Topics found (`[{ key }]` or `[{ key, name, type }]`): new drawable ones become entries; gone ones are kept for `forgetMs`. */
-    setTopics(found) {
+    setTopics(found: ListedTopic[]) {
         const now = Date.now()
         for (const item of found) {
-            const topic = item.name && item.type ? item : parseKey(item.key)
+            const topic = isTopic(item) ? item : parseKey(item.key)
             if (topic) {
                 this.#lastSeen.set(topic.key, { topic, at: now })
             }
@@ -106,10 +117,10 @@ export class LayerManager {
         this.#sync(all)
     }
 
-    #sync(topics) {
+    #sync(topics: Topic[]) {
         const list = this.entries.get().list
         const known = new Set(list.map((entry) => entry.topic.key))
-        const added = []
+        const added: LayerEntry[] = []
         for (const topic of topics) {
             const type = layerTypeFor(topic.type)
             if (!type || known.has(topic.key)) {
@@ -126,20 +137,20 @@ export class LayerManager {
     }
 
     /** Switches a topic's layer on (subscribes) or off (unsubscribes); remembered. */
-    setEnabled(key, enabled) {
+    setEnabled(key: string, enabled: boolean) {
         this.#enabled.update({ [key]: enabled })
         this.#patch(key, { enabled })
     }
 
     /** Off: every layer stops; on: the enabled ones start again. */
-    setPaused(paused) {
+    setPaused(paused: boolean) {
         if (paused !== this.paused.get().paused) {
             this.paused.set({ paused })
         }
     }
 
     /** Topics of these types being drawn (e.g. to pick a robot pose source). */
-    enabledOfType(...types) {
+    enabledOfType(...types: string[]): Topic[] {
         return this.entries
             .get()
             .list.filter((entry) => entry.enabled && types.includes(entry.topic.type))
@@ -147,27 +158,31 @@ export class LayerManager {
     }
 
     /** The drawn layers' data frames (for the TF check). */
-    layerFrames() {
+    layerFrames(): { name: string; frame: string }[] {
         return this.entries
             .get()
-            .list.filter((entry) => entry.enabled && entry.status.frame)
-            .map((entry) => ({ name: entry.topic.name, frame: entry.status.frame }))
+            .list.flatMap((entry) =>
+                entry.enabled && entry.status.frame ? [{ name: entry.topic.name, frame: entry.status.frame }] : [],
+            )
     }
 
     /** A layer reports info / a problem / its frame (only real changes re-render). */
-    setStatus(key, status) {
+    setStatus(key: string, status: LayerStatus) {
         const current = this.entries.get().list.find((entry) => entry.topic.key === key)?.status
-        if (!current || Object.keys(status).some((field) => current[field] !== status[field])) {
+        if (
+            !current ||
+            (Object.keys(status) as (keyof LayerStatus)[]).some((field) => current[field] !== status[field])
+        ) {
             this.#patch(key, { status: { ...current, ...status } })
         }
     }
 
     /** A layer stopped: its info and problem go with it. */
-    clearStatus(key) {
+    clearStatus(key: string) {
         this.#patch(key, { status: {} })
     }
 
-    #patch(key, patch) {
+    #patch(key: string, patch: Partial<LayerEntry>) {
         const list = this.entries.get().list
         if (list.some((entry) => entry.topic.key === key)) {
             this.entries.set({ list: list.map((entry) => (entry.topic.key === key ? { ...entry, ...patch } : entry)) })

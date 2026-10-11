@@ -1,29 +1,72 @@
 // Media: a camera / image view (any image topic, or frames you pass) and a playback bar for recordings (play, speed,
 // loop, a zoomable scrubber, and a lane per stream with a tick per message).
 import { useEffect, useRef, useState } from "react"
-import { cx } from "../cx"
-import { Icon } from "./icon"
-import { IconButton, Select } from "./controls"
-import { Menu } from "./nav"
-import { decodeMessage, parseKey, useDataSource } from "../data"
-import { sampleGradient } from "../colormaps"
-import { themeColors } from "../theme/theme"
+import type {
+    ComponentProps,
+    CSSProperties,
+    HTMLAttributes,
+    PointerEvent as ReactPointerEvent,
+    ReactNode,
+    WheelEvent as ReactWheelEvent,
+} from "react"
+import { cx } from "../cx.ts"
+import { Icon } from "./icon.tsx"
+import { IconButton, Select } from "./controls.tsx"
+import { Menu } from "./nav.tsx"
+import { decodeMessage, parseKey, useDataSource } from "../data.ts"
+import type { Message } from "../data.ts"
+import { sampleGradient } from "../colormaps.ts"
+import { themeColors } from "../theme/theme.ts"
 
 // ── ImageView ──
 
 export const DEPTH_COLORMAPS = ["turbo", "magma", "plasma", "memworld", "viridis", "grayscale"]
 
 /** Raw depth units → meters: 32FC1 is meters, 16UC1 (and mono16) millimetres. */
-export const depthScale = (encoding) => (encoding === "32FC1" ? 1 : 0.001)
+export const depthScale = (encoding: string): number => (encoding === "32FC1" ? 1 : 0.001)
 
-const RAW_BYTES = { mono8: 1, "8uc1": 1, rgb8: 3, bgr8: 3, rgba8: 4, bgra8: 4 }
+/** raw pixels: an image or a depth image */
+export interface RawFrame {
+    kind: "image" | "depth"
+    width: number
+    height: number
+    encoding: string
+    /** bytes per row (0 / missing: packed) */
+    step?: number
+    data: Uint8Array
+    frame?: string
+}
+
+/** a jpeg / png / webp image */
+export interface EncodedFrame {
+    kind: "encoded"
+    format: string
+    data: Uint8Array<ArrayBuffer>
+    frame?: string
+}
+
+export type NormalizedFrame = RawFrame | EncodedFrame
+
+/** what an ImageView reports about what it shows */
+export interface ImageInfo {
+    width: number
+    height: number
+    fps: number
+    /** "full", or the gateway's quality score for a degraded frame */
+    quality: string | number
+    depth: boolean
+    range: [number, number] | null
+}
+
+const RAW_BYTES: Record<string, number> = { mono8: 1, "8uc1": 1, rgb8: 3, bgr8: 3, rgba8: 4, bgra8: 4 }
 
 /**
  * A frame (whatever form it arrives in) → `{ kind: "image" | "depth", width, height, encoding, data }`, or an
  * `{ kind: "encoded", format, data }` for jpeg/png/webp. Takes a pre-decoded frame (a replay's), a decoded
  * sensor_msgs.Image or sensor_msgs.CompressedImage.
  */
-export function normalizeFrame(value) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a decoded message or a source's frame: any shape
+export function normalizeFrame(value: any): NormalizedFrame | null {
     if (!value) {
         return null
     }
@@ -53,7 +96,7 @@ export function normalizeFrame(value) {
 }
 
 /** Raw pixels → RGBA ImageData (null for an encoding it can't read). */
-export function rawToImageData(frame) {
+export function rawToImageData(frame: RawFrame): ImageData | null {
     const { width, height, data } = frame
     const bpp = RAW_BYTES[frame.encoding] ?? 0
     if (!width || !height || !bpp) {
@@ -81,7 +124,7 @@ export function rawToImageData(frame) {
 }
 
 /** The depth values of a depth frame as numbers (meters after `depthScale`). */
-function depthValues(frame) {
+function depthValues(frame: RawFrame): Float32Array | Uint16Array {
     const bytes = frame.data
     const copy = bytes.byteOffset % 4 === 0 ? bytes : bytes.slice()
     return frame.encoding === "32FC1"
@@ -93,13 +136,26 @@ function depthValues(frame) {
  * A depth frame → colormapped ImageData (near = the ramp's end, far = its start; no return = transparent), and the
  * range it used: `near`/`far` in meters, or null for automatic (2nd–98th percentile, eased by `previous`).
  */
-export function colorizeDepth(frame, { colormap = "turbo", near = null, far = null, previous = null } = {}) {
+export function colorizeDepth(
+    frame: RawFrame,
+    {
+        colormap = "turbo",
+        near = null,
+        far = null,
+        previous = null,
+    }: {
+        colormap?: string
+        near?: number | null
+        far?: number | null
+        previous?: [number, number] | null
+    } = {},
+): { image: ImageData; range: [number, number] } {
     const values = depthValues(frame)
     const scale = depthScale(frame.encoding)
-    let range = [near ?? 0, far ?? 1]
+    let range: [number, number] = [near ?? 0, far ?? 1]
     if (near === null || far === null) {
         const step = Math.max(1, Math.floor(values.length / 4096))
-        const samples = []
+        const samples: number[] = []
         for (let index = 0; index < values.length; index += step) {
             const value = values[index]
             if (value > 0 && Number.isFinite(value)) {
@@ -144,7 +200,7 @@ export function colorizeDepth(frame, { colormap = "turbo", near = null, far = nu
 }
 
 /** A stable, distinct color per name (HSL), for boxes of one class. */
-function nameColor(name) {
+function nameColor(name: unknown) {
     let hash = 0
     for (const char of String(name)) {
         hash = (hash * 31 + char.charCodeAt(0)) | 0
@@ -153,8 +209,9 @@ function nameColor(name) {
 }
 
 /** vision_msgs.Detection2DArray / Detection2D / BoundingBox2DArray drawn over an image (pixel coordinates). */
-export function drawDetections2D(context, message) {
-    const boxes = message?.detections ?? message?.boxes?.map((bbox) => ({ bbox })) ?? [message]
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a decoded vision_msgs message
+export function drawDetections2D(context: CanvasRenderingContext2D, message: any): void {
+    const boxes = message?.detections ?? message?.boxes?.map((bbox: unknown) => ({ bbox })) ?? [message]
     const theme = themeColors()
     context.lineWidth = Math.max(2, context.canvas.width / 400)
     context.font = `${Math.max(12, context.canvas.width / 60)}px ${theme.sans || "sans-serif"}`
@@ -165,7 +222,8 @@ export function drawDetections2D(context, message) {
         const left = center.x - (box.size_x ?? 0) / 2
         const top = center.y - (box.size_y ?? 0) / 2
         const best = [...(detection?.results ?? [])].sort(
-            (a, b) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- decoded ObjectHypothesisWithPose
+            (a: any, b: any) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
         )[0]
         const name = best?.hypothesis?.class_id || detection?.id || ""
         const color = nameColor(name || "box")
@@ -191,17 +249,30 @@ export const IMAGE_OVERLAY_TYPES = [
     "vision_msgs.BoundingBox2DArray",
 ]
 
+export interface ImageViewProps extends HTMLAttributes<HTMLDivElement> {
+    topic?: string | null
+    /** a frame to show instead of a topic's (any form normalizeFrame takes) */
+    frame?: unknown
+    /** the subscription encoding a source may deliver frames in (e.g. a replay's "dimos_lcm_image") */
+    encoding?: string
+    maxHz?: number
+    /** force depth (default: by encoding) */
+    depth?: boolean
+    colormap?: string
+    near?: number | null
+    far?: number | null
+    fit?: "contain" | "cover"
+    overlayTopic?: string | null
+    onInfo?: (info: ImageInfo) => void
+    className?: string
+    style?: CSSProperties
+    /** laid over the image */
+    children?: ReactNode
+}
+
 /**
  * A camera / image view: the latest frame of an image topic (sensor_msgs.Image, CompressedImage, or a source's
  * pre-decoded frames), or `frame` as a prop. Depth images (16UC1 / 32FC1) are drawn through a colormap.
- * @param {{
- *   topic?: string | null, frame?: any, encoding?: string, maxHz?: number, depth?: boolean,
- *   colormap?: string, near?: number | null, far?: number | null, fit?: "contain" | "cover",
- *   overlayTopic?: string | null, onInfo?: (info: { width: number, height: number, fps: number,
- *   quality: string, depth: boolean, range: [number, number] | null }) => void,
- *   className?: string, style?: object, children?: any,
- * }} props `encoding`: the subscription encoding a source may deliver frames in (e.g. a replay's
- *   "dimos_lcm_image"); `depth`: force depth (default: by encoding); children are laid over the image
  */
 export function ImageView({
     topic,
@@ -219,39 +290,25 @@ export function ImageView({
     style,
     children,
     ...rest
-}: {
-    topic?: string | null
-    frame?: any
-    encoding?: string
-    maxHz?: number
-    depth?: boolean
-    colormap?: string
-    near?: number | null
-    far?: number | null
-    fit?: "contain" | "cover"
-    overlayTopic?: string | null
-    onInfo?: (info: {
-        width: number
-        height: number
-        fps: number
-        quality: string
-        depth: boolean
-        range: [number, number] | null
-    }) => void
-    className?: string
-    style?: object
-    children?: any
-}) {
+}: ImageViewProps) {
     const source = useDataSource()
-    const canvas = useRef(null)
-    const overlay = useRef(null)
-    const state = useRef({ ticket: 0, newest: 0, frames: 0, since: 0, fps: 0, range: null, info: "" })
-    const settings = useRef({})
+    const canvas = useRef<HTMLCanvasElement>(null)
+    const overlay = useRef<HTMLCanvasElement>(null)
+    const state = useRef<{
+        ticket: number
+        newest: number
+        frames: number
+        since: number
+        fps: number
+        range: [number, number] | null
+        info: string
+    }>({ ticket: 0, newest: 0, frames: 0, since: 0, fps: 0, range: null, info: "" })
+    const settings = useRef<Pick<ImageViewProps, "depth" | "colormap" | "near" | "far" | "onInfo">>({})
     settings.current = { depth, colormap, near, far, onInfo }
-    const lastDepth = useRef(null)
+    const lastDepth = useRef<{ frame: RawFrame; quality: string | number } | null>(null)
     const [empty, setEmpty] = useState(true)
 
-    const report = (width, height, quality, isDepth) => {
+    const report = (width: number, height: number, quality: string | number, isDepth: boolean) => {
         const s = state.current
         s.frames++
         const now = performance.now()
@@ -262,7 +319,7 @@ export function ImageView({
             s.frames = 0
             s.since = now
         }
-        const info = { width, height, fps: s.fps, quality, depth: isDepth, range: isDepth ? s.range : null }
+        const info: ImageInfo = { width, height, fps: s.fps, quality, depth: isDepth, range: isDepth ? s.range : null }
         const signature = JSON.stringify(info)
         if (signature !== s.info) {
             s.info = signature
@@ -270,7 +327,7 @@ export function ImageView({
         }
     }
 
-    const show = async (value, quality = "full") => {
+    const show = async (value: unknown, quality: string | number = "full") => {
         const element = canvas.current
         const normalized = normalizeFrame(value)
         if (!element || !normalized) {
@@ -279,7 +336,7 @@ export function ImageView({
         const s = state.current
         const mine = ++s.ticket
         const { depth: forceDepth, colormap, near, far } = settings.current
-        let drawable = null
+        let drawable: ImageBitmap | ImageData | null
         let isDepth = false
         if (normalized.kind === "encoded") {
             try {
@@ -297,7 +354,9 @@ export function ImageView({
             drawable = rawToImageData(normalized)
         }
         if (!drawable || mine < s.newest) {
-            drawable?.close?.()
+            if (drawable && "close" in drawable) {
+                drawable.close?.()
+            }
             return
         }
         s.newest = mine
@@ -305,14 +364,14 @@ export function ImageView({
             element.width = drawable.width
             element.height = drawable.height
         }
-        const context = element.getContext("2d")
+        const context = element.getContext("2d")!
         if (drawable instanceof ImageData) {
             context.putImageData(drawable, 0, 0)
         } else {
             context.drawImage(drawable, 0, 0)
             drawable.close?.()
         }
-        element.dataset.quality = quality
+        element.dataset.quality = String(quality)
         setEmpty(false)
         report(element.width, element.height, quality, isDepth)
     }
@@ -347,7 +406,7 @@ export function ImageView({
                 } catch {
                     return
                 }
-                show(value, message.quality ?? "full")
+                show(value, (message as Message & { quality?: number }).quality ?? "full")
             },
         )
         return () => off()
@@ -376,7 +435,7 @@ export function ImageView({
                 element.height = height
             }
             clear()
-            drawDetections2D(element.getContext("2d"), value)
+            drawDetections2D(element.getContext("2d")!, value)
         })
         return () => {
             off()
@@ -405,7 +464,7 @@ export function ImageView({
 // ── PlaybackBar ──
 
 /** 83.4 → "1:23.4"; over an hour "1:02:03". */
-export function playbackClock(seconds) {
+export function playbackClock(seconds: number): string {
     const sign = seconds < 0 ? "-" : ""
     const value = Math.abs(seconds)
     const hours = Math.floor(value / 3600)
@@ -418,8 +477,34 @@ export function playbackClock(seconds) {
 }
 
 /** One lane's ticks: exact `times`, or `counts` per slice of the shown window (denser = stronger). */
-function LaneTicks({ ticks, view }) {
-    const canvas = useRef(null)
+/** a lane's ticks: exact message `times`, or `counts` per slice of the shown window */
+export interface LaneTickData {
+    times?: number[]
+    counts?: number[]
+}
+
+/** the shown window of a recording's time axis (s) */
+export interface PlaybackView {
+    from: number
+    to: number
+}
+
+/** a PlaybackBar row: one stream */
+export interface PlaybackLane {
+    id: string
+    label: ReactNode
+    title?: string
+    meta?: ReactNode
+    count?: ReactNode
+    leading?: ReactNode
+    menu?: ComponentProps<typeof Menu>["items"]
+    active?: boolean
+    busy?: boolean
+    ticks?: LaneTickData | null
+}
+
+function LaneTicks({ ticks, view }: { ticks?: LaneTickData | null; view: PlaybackView }) {
+    const canvas = useRef<HTMLCanvasElement>(null)
     useEffect(() => {
         const element = canvas.current
         if (!element) {
@@ -431,7 +516,7 @@ function LaneTicks({ ticks, view }) {
             const height = Math.max(1, Math.round(element.clientHeight * ratio))
             element.width = width
             element.height = height
-            const context = element.getContext("2d")
+            const context = element.getContext("2d")!
             context.clearRect(0, 0, width, height)
             if (!ticks) {
                 return
@@ -475,22 +560,41 @@ function LaneTicks({ ticks, view }) {
     return <canvas ref={canvas} className="dr-playback__ticks" />
 }
 
+/** PlaybackBar's props; times in seconds */
+export interface PlaybackBarProps extends HTMLAttributes<HTMLElement> {
+    start: number
+    end: number
+    value: number
+    playing?: boolean
+    onPlayPause?: (playing: boolean) => void
+    onSeek?: (t: number) => void
+    onScrubStart?: () => void
+    onScrubEnd?: () => void
+    scrubbing?: boolean
+    speed?: number
+    speeds?: number[]
+    onSpeedChange?: (speed: number) => void
+    loop?: boolean
+    onLoopChange?: (loop: boolean) => void
+    format?: (t: number) => string
+    lanes?: PlaybackLane[]
+    lanesLabel?: string
+    expanded?: boolean
+    onExpandedChange?: (expanded: boolean) => void
+    view?: PlaybackView
+    onViewChange?: (view: PlaybackView) => void
+    /** space plays / pauses, ← / → step 1 s (shift 10 s), Home / End, page-wide (not while typing) */
+    keyboard?: boolean
+    /** extra elements after the built-in ones */
+    controls?: ReactNode
+    className?: string
+    style?: CSSProperties
+}
+
 /**
  * A recording player's bar: play / pause, the time, speed, loop, a scrubber that zooms (ctrl/⌘ + wheel; any wheel
  * over the lanes) and pans (horizontal scroll), and, expanded, a lane per stream with a tick per message on the same
  * axis. Dragging anywhere on the axis scrubs: `onScrubStart`, `onSeek(t)` per move, `onScrubEnd`.
- * @param {{
- *   start: number, end: number, value: number, playing?: boolean, onPlayPause?: (playing: boolean) => void,
- *   onSeek?: (t: number) => void, onScrubStart?: () => void, onScrubEnd?: () => void, scrubbing?: boolean,
- *   speed?: number, speeds?: number[], onSpeedChange?: (speed: number) => void,
- *   loop?: boolean, onLoopChange?: (loop: boolean) => void, format?: (t: number) => string,
- *   lanes?: { id: string, label: any, title?: string, meta?: any, count?: any, leading?: any, menu?: any[],
- *     active?: boolean, busy?: boolean, ticks?: { times?: number[], counts?: number[] } | null }[],
- *   lanesLabel?: string, expanded?: boolean, onExpandedChange?: (expanded: boolean) => void,
- *   view?: { from: number, to: number }, onViewChange?: (view: { from: number, to: number }) => void,
- *   keyboard?: boolean, controls?: any, className?: string, style?: object,
- * }} props times in seconds; `keyboard`: space plays / pauses, ← / → step 1 s (shift 10 s), Home / End, page-wide
- *   (not while typing); `controls`: extra elements after the built-in ones
  */
 export function PlaybackBar({
     start,
@@ -519,47 +623,10 @@ export function PlaybackBar({
     className,
     style,
     ...rest
-}: {
-    start: number
-    end: number
-    value: number
-    playing?: boolean
-    onPlayPause?: (playing: boolean) => void
-    onSeek?: (t: number) => void
-    onScrubStart?: () => void
-    onScrubEnd?: () => void
-    scrubbing?: boolean
-    speed?: number
-    speeds?: number[]
-    onSpeedChange?: (speed: number) => void
-    loop?: boolean
-    onLoopChange?: (loop: boolean) => void
-    format?: (t: number) => string
-    lanes?: {
-        id: string
-        label: any
-        title?: string
-        meta?: any
-        count?: any
-        leading?: any
-        menu?: any[]
-        active?: boolean
-        busy?: boolean
-        ticks?: { times?: number[]; counts?: number[] } | null
-    }[]
-    lanesLabel?: string
-    expanded?: boolean
-    onExpandedChange?: (expanded: boolean) => void
-    view?: { from: number; to: number }
-    onViewChange?: (view: { from: number; to: number }) => void
-    keyboard?: boolean
-    controls?: any
-    className?: string
-    style?: object
-}) {
-    const [innerView, setInnerView] = useState({ from: start, to: end })
+}: PlaybackBarProps) {
+    const [innerView, setInnerView] = useState<PlaybackView>({ from: start, to: end })
     const view = givenView ?? innerView
-    const setView = (next) => {
+    const setView = (next: PlaybackView) => {
         if (!givenView) {
             setInnerView(next)
         }
@@ -570,12 +637,17 @@ export function PlaybackBar({
             setInnerView({ from: start, to: end })
         }
     }, [start, end])
-    const show = format ?? ((t) => playbackClock(t - start))
+    const show = format ?? ((t: number) => playbackClock(t - start))
     const span = Math.max(1e-6, end - start)
     const zoomed = view.from > start + 1e-6 || view.to < end - 1e-6
-    const [hover, setHover] = useState(null)
-    const endScrub = useRef(null)
-    const latest = useRef({})
+    const [hover, setHover] = useState<{ x: number; t: number } | null>(null)
+    const endScrub = useRef<(() => void) | null>(null)
+    const latest = useRef<
+        Pick<
+            PlaybackBarProps,
+            "value" | "playing" | "onSeek" | "onPlayPause" | "onScrubStart" | "onScrubEnd" | "start" | "end"
+        >
+    >({ value, playing, onSeek, onPlayPause, onScrubStart, onScrubEnd, start, end })
     latest.current = { value, playing, onSeek, onPlayPause, onScrubStart, onScrubEnd, start, end }
     useEffect(() => () => endScrub.current?.(), [])
 
@@ -583,8 +655,9 @@ export function PlaybackBar({
         if (!keyboard) {
             return
         }
-        const typing = (target) => target?.closest?.("input, select, textarea, [contenteditable]")
-        const onKey = (event) => {
+        const typing = (target: EventTarget | null) =>
+            (target as Element | null)?.closest?.("input, select, textarea, [contenteditable]")
+        const onKey = (event: KeyboardEvent) => {
             if (typing(event.target) || event.metaKey || event.ctrlKey) {
                 return
             }
@@ -603,7 +676,7 @@ export function PlaybackBar({
             }
         }
         // a focused button would also take the space as a click (on keyup): space is play / pause only
-        const onKeyUp = (event) => {
+        const onKeyUp = (event: KeyboardEvent) => {
             if (event.code === "Space" && !typing(event.target)) {
                 event.preventDefault()
             }
@@ -616,13 +689,13 @@ export function PlaybackBar({
         }
     }, [keyboard])
 
-    const timeAt = (lane, clientX) => {
+    const timeAt = (lane: HTMLElement, clientX: number) => {
         const box = lane.getBoundingClientRect()
         const fraction = Math.min(1, Math.max(0, (clientX - box.left) / Math.max(1, box.width)))
         return view.from + fraction * (view.to - view.from)
     }
-    const axis = (zoomAlways) => ({
-        onPointerDown: (event) => {
+    const axis = (zoomAlways: boolean) => ({
+        onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
             if (event.button !== 0 || !onSeek) {
                 return
             }
@@ -635,7 +708,7 @@ export function PlaybackBar({
             }
             latest.current.onScrubStart?.()
             latest.current.onSeek?.(timeAt(lane, event.clientX))
-            const move = (moved) => latest.current.onSeek?.(timeAt(lane, moved.clientX))
+            const move = (moved: PointerEvent) => latest.current.onSeek?.(timeAt(lane, moved.clientX))
             const stop = () => {
                 endScrub.current = null
                 removeEventListener("pointermove", move)
@@ -648,12 +721,12 @@ export function PlaybackBar({
             addEventListener("pointercancel", stop)
             endScrub.current = stop
         },
-        onPointerMove: (event) => {
+        onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
             const lane = event.currentTarget
             setHover({ x: event.clientX - lane.getBoundingClientRect().left, t: timeAt(lane, event.clientX) })
         },
         onPointerLeave: () => setHover(null),
-        onWheel: (event) => {
+        onWheel: (event: ReactWheelEvent<HTMLDivElement>) => {
             if (!zoomAlways && !event.ctrlKey && !event.metaKey) {
                 return
             }
@@ -671,7 +744,7 @@ export function PlaybackBar({
             setView({ from, to: from + next })
         },
     })
-    const percent = (t) => `${((t - view.from) / Math.max(1e-9, view.to - view.from)) * 100}%`
+    const percent = (t: number) => `${((t - view.from) / Math.max(1e-9, view.to - view.from)) * 100}%`
     const inView = value >= view.from && value <= view.to
     const hasLanes = !!lanes?.length || !!onExpandedChange
 
@@ -707,7 +780,7 @@ export function PlaybackBar({
                             aria-label="Speed"
                             title="Playback speed"
                             value={speed}
-                            options={speeds.map((option) => [option, `${option}×`])}
+                            options={speeds.map((option): [number, string] => [option, `${option}×`])}
                             onChange={onSpeedChange}
                         />
                     ) : null}

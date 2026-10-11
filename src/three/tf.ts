@@ -13,33 +13,50 @@ const scratchQuaternion = new Quaternion()
 const unitScale = new Vector3(1, 1, 1)
 const clock = () => globalThis.performance?.now() ?? Date.now()
 
-/**
- * @typedef {{ doubleParent: [string, string[]][], roots: string[], cycle: string[], stale: string[] }} TfProblems
- * @typedef {{ frames: string[], edges: { parent: string, child: string, isStatic: boolean, ageMs: number }[], problems: TfProblems }} TfSnapshot
- */
+export interface TfProblems {
+    doubleParent: [string, string[]][]
+    roots: string[]
+    cycle: string[]
+    stale: string[]
+}
+
+export interface TfSnapshotEdge {
+    parent: string
+    child: string
+    isStatic: boolean
+    ageMs: number
+}
+
+export interface TfSnapshot {
+    frames: string[]
+    edges: TfSnapshotEdge[]
+    problems: TfProblems
+}
+
+interface TfEdge {
+    parent: string
+    matrix: Matrix4
+    isStatic: boolean
+    receivedAt: number
+}
 
 export class TfTree {
-    /** @type {Map<string, { parent: string, matrix: Matrix4, isStatic: boolean, receivedAt: number }>} */
-    #edges: Map<string, { parent: string; matrix: Matrix4; isStatic: boolean; receivedAt: number }> = new Map()
-    #parentsSeen = new Map()
-    #cache = new Map()
+    #edges: Map<string, TfEdge> = new Map()
+    #parentsSeen: Map<string, Set<string>> = new Map()
+    #cache: Map<string, Matrix4 | null> = new Map()
     #cacheFixed = ""
-    #listeners = new Set()
+    #listeners: Set<(version: number) => void> = new Set()
     /** bumped on every change, so layers know when to re-place what they drew */
     version = 0
-    now: () => any
-    /** @param {{ now?: () => number }} [options] `now`: the clock (ms) for staleness; tests pass a fake one */
+    now: () => number
+    /** @param options `now`: the clock (ms) for staleness; tests pass a fake one */
     constructor({ now = clock }: { now?: () => number } = {}) {
         this.now = now
     }
 
     /**
      * Sets T_parent_child.
-     * @param {string} parent
-     * @param {string} child
-     * @param {[number, number, number]} translation
-     * @param {[number, number, number, number]} rotation quaternion x, y, z, w
-     * @param {boolean} [isStatic]
+     * @param rotation quaternion x, y, z, w
      */
     set(
         parent: string,
@@ -75,8 +92,6 @@ export class TfTree {
 
     /**
      * Feeds a decoded tf2_msgs.TFMessage (or an array of geometry_msgs.TransformStamped).
-     * @param {any} message
-     * @param {boolean} [isStatic]
      */
     setMessage(message: any, isStatic: boolean = false) {
         const transforms = Array.isArray(message) ? message : (message?.transforms ?? [])
@@ -111,23 +126,23 @@ export class TfTree {
     }
 
     /** `listener(version)` after every change. Returns unsubscribe. */
-    onChange(listener) {
+    onChange(listener: (version: number) => void): () => void {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }
 
     /** Whether the tree knows `frame` (as a child or a parent). */
-    has(frame) {
+    has(frame: string): boolean {
         return this.#edges.has(frame) || [...this.#edges.values()].some((edge) => edge.parent === frame)
     }
 
     /** The parent of `frame`, or null for a root / unknown frame. */
-    parentOf(frame) {
+    parentOf(frame: string): string | null {
         return this.#edges.get(frame)?.parent ?? null
     }
 
     /** The root above `frame` and T_root_frame, or null on a cycle. */
-    #toRoot(frame) {
+    #toRoot(frame: string): { root: string; matrix: Matrix4 } | null {
         const matrix = new Matrix4()
         let current = frame
         for (let guard = 0; guard < 128; guard++) {
@@ -144,9 +159,6 @@ export class TfTree {
     /**
      * T_fixed_frame: places data in `frame` into the fixed frame. An empty frame or the fixed frame itself is identity;
      * null when there is no path (different trees, unknown frame, a cycle). The result is cached: don't mutate it.
-     * @param {string} frame
-     * @param {string} fixed
-     * @returns {Matrix4 | null}
      */
     lookup(frame: string, fixed: string): Matrix4 | null {
         if (fixed !== this.#cacheFixed) {
@@ -157,7 +169,7 @@ export class TfTree {
         if (cached !== undefined) {
             return cached
         }
-        let result = null
+        let result: Matrix4 | null = null
         if (frame === fixed || frame === "") {
             result = new Matrix4()
         } else {
@@ -181,7 +193,7 @@ export class TfTree {
     }
 
     /** The fixed frame to default to: a world-ish root if there is one, else the root of the biggest tree. */
-    defaultFixedFrame() {
+    defaultFixedFrame(): string {
         const roots = this.#roots()
         for (const name of WORLD_NAMES) {
             if (roots.includes(name)) {
@@ -205,8 +217,8 @@ export class TfTree {
         return best
     }
 
-    #roots() {
-        const roots = new Set()
+    #roots(): string[] {
+        const roots: Set<string> = new Set()
         for (const edge of this.#edges.values()) {
             if (!this.#edges.has(edge.parent)) {
                 roots.add(edge.parent)
@@ -215,9 +227,8 @@ export class TfTree {
         return [...roots].sort()
     }
 
-    /** Every frame name, sorted. @returns {string[]} */
+    /** Every frame name, sorted. */
     frames(): string[] {
-        /** @type {Set<string>} */
         const frames: Set<string> = new Set()
         for (const [child, edge] of this.#edges) {
             frames.add(child)
@@ -226,10 +237,9 @@ export class TfTree {
         return [...frames].sort()
     }
 
-    /** @returns {TfSnapshot} */
     snapshot(): TfSnapshot {
         const now = this.now()
-        const edges = []
+        const edges: TfSnapshotEdge[] = []
         for (const [child, edge] of this.#edges) {
             edges.push({ parent: edge.parent, child, isStatic: edge.isStatic, ageMs: now - edge.receivedAt })
         }
@@ -239,7 +249,7 @@ export class TfTree {
             problems: {
                 doubleParent: [...this.#parentsSeen]
                     .filter(([, parents]) => parents.size > 1)
-                    .map(([child, parents]) => [child, [...parents]]),
+                    .map(([child, parents]): [string, string[]] => [child, [...parents]]),
                 roots: this.#roots(),
                 cycle: [...this.#edges.keys()].filter((child) => this.#toRoot(child) === null),
                 stale: edges.filter((edge) => !edge.isStatic && edge.ageMs > STALE_MS).map((edge) => edge.child),

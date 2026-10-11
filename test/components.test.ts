@@ -1,17 +1,18 @@
 // The generic pieces Desktop's Launcher added: SafeHtml's sanitizer, Stepper's per-step state, TagList, Tile.
 import { test } from "vitest"
-import { assert, assertEquals } from "./assert"
+import { testGlobals } from "./fake_globals.ts"
+import { assert, assertEquals } from "./assert.ts"
 import { Window } from "happy-dom"
 
 const window = new Window({
     url: "http://localhost/",
     settings: { disableJavaScriptEvaluation: true, disableJavaScriptFileLoading: true, disableIframePageLoading: true },
 })
-globalThis.DOMParser ??= window.DOMParser
-globalThis.NodeFilter ??= window.NodeFilter
+testGlobals.DOMParser ??= window.DOMParser
+testGlobals.NodeFilter ??= window.NodeFilter
 const { createElement: h } = await import("react")
 const { renderToStaticMarkup } = await import("react-dom/server")
-const { sanitizeHtml, Stepper, TagList, Tile } = await import("../src/index")
+const { sanitizeHtml, Stepper, TagList, Tile } = await import("../src/index.ts")
 
 test("sanitizeHtml drops what runs or restyles, keeps the prose", () => {
     const clean = sanitizeHtml(
@@ -47,7 +48,7 @@ test("TagList renders every tag (oneLine trims only once laid out) and its extra
 })
 
 test("Menu items pass their data-* / aria-* keys (and id) to their buttons", async () => {
-    const { MenuList } = await import("../src/index")
+    const { MenuList } = await import("../src/index.ts")
     const html = renderToStaticMarkup(
         h(MenuList, {
             autoFocus: false,

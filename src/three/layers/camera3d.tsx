@@ -3,31 +3,66 @@
 // the shared camera stream (CameraStreams): a live H.264 track as a video texture, a replay's frames (an ImageBitmap /
 // ImageData) drawn into a canvas texture, depth as a GPU heat map.
 import * as THREE from "three"
-import { useStore } from "../store"
-import { headerFrameId } from "../../lcm"
-import { themeColors } from "../../theme/theme"
-import { cameraInfoFor, isDepthTopic } from "../../components/camera"
-import { DEPTH_COLORMAPS } from "../../components/media"
-import { FatLines } from "../lines"
-import { cssColor } from "../robot_model"
-import { DepthMaterial } from "../../camera/depth"
-import { placeLayer, registerLayer, subscribeDecoded } from "./registry"
-import { RangeInput } from "../look_editor"
-import { Field, Select, Slider, Toggle } from "../../components/controls"
+import { useStore, type Store } from "../store.ts"
+import { headerFrameId } from "../../lcm.ts"
+import { themeColors } from "../../theme/theme.ts"
+import { cameraInfoFor, isDepthTopic, type CameraStreams } from "../../components/camera.tsx"
+import { DEPTH_COLORMAPS } from "../../components/media.tsx"
+import { FatLines } from "../lines.ts"
+import { cssColor } from "../robot_model.ts"
+import { DepthMaterial, type DepthLook } from "../../camera/depth.ts"
+import {
+    placeLayer,
+    registerLayer,
+    subscribeDecoded,
+    type LayerContext,
+    type LayerSettingsProps,
+    type Topic,
+} from "./registry.ts"
+import type { FrameInfo } from "../viewer.ts"
+import { RangeInput } from "../look_editor.tsx"
+import { Field, Select, Slider, Toggle } from "../../components/controls.tsx"
 
 /**
- * @typedef {{ distance: number, opacity: number, image: boolean, frustum: boolean,
- *   convention: "auto" | "optical" | "body", depth: { colormap: string, near: number | null, far: number | null } }} Camera3dSettings
- *   `distance`: meters from the camera to the picture; `convention` "optical": z forward, x right, y down (ROS
- *   *_optical_frame), "body": x forward, y left, z up
+ * `distance`: meters from the camera to the picture; `convention` "optical": z forward, x right, y down (ROS
+ * *_optical_frame), "body": x forward, y left, z up
  */
+export interface Camera3dSettings {
+    distance: number
+    opacity: number
+    image: boolean
+    frustum: boolean
+    convention: "auto" | "optical" | "body"
+    depth: DepthLook
+}
 
-export const DEFAULT_DEPTH_LOOK = { colormap: "turbo", near: null, far: null }
+export const DEFAULT_DEPTH_LOOK: DepthLook = { colormap: "turbo", near: null, far: null }
+
+/** Pinhole intrinsics in pixels. */
+interface Intrinsics {
+    width: number
+    height: number
+    fx: number
+    fy: number
+    cx: number
+    cy: number
+}
+
+/** A decoded sensor_msgs.CameraInfo (the fields the layer reads; older messages spell `K`). */
+interface CameraInfoMessage {
+    header?: { frame_id?: string }
+    width: number
+    height: number
+    K?: number[]
+    k?: number[]
+}
+
+type CameraHandle = ReturnType<CameraStreams["acquire"]>
 
 // optical (x right, y down, z forward) → body (x forward, y left, z up)
 const OPTICAL_TO_BODY = new THREE.Matrix4().set(0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1)
 
-function guess(width, height) {
+function guess(width: number, height: number): Intrinsics {
     const fx = width / 2 / Math.tan(THREE.MathUtils.degToRad(70) / 2)
     return { width, height, fx, fy: fx, cx: width / 2, cy: height / 2 }
 }
@@ -35,30 +70,31 @@ function guess(width, height) {
 export class Camera3dLayer {
     root = new THREE.Group()
     #content = new THREE.Group()
-    #plane
-    #picture = null
-    #depth = null
-    #depthSize = [0, 0]
-    #frustum
-    #texture = null
-    #textureOf = null
-    #canvas = null
-    #frame = null
-    #intrinsics = null
+    #plane: THREE.Mesh<THREE.BufferGeometry, THREE.Material>
+    #picture: THREE.MeshBasicMaterial | null = null
+    #depth: DepthMaterial | null = null
+    #depthSize: [number, number] = [0, 0]
+    #frustum: FatLines
+    #texture: THREE.Texture | null = null
+    /** what the texture shows: the live stream, or a replay canvas's "WxH" */
+    #textureOf: unknown = null
+    #canvas: HTMLCanvasElement | null = null
+    #frame: string | null = null
+    #intrinsics: Intrinsics | null = null
     #infoKey = ""
-    #stopInfo = null
-    #stopFrame = null
-    #stops = []
-    #camera
-    #element = null
+    #stopInfo: (() => void) | null = null
+    #stopFrame: (() => void) | null = null
+    #stops: (() => void)[] = []
+    #camera: CameraHandle
+    #element: HTMLVideoElement | null = null
     #videoCallback = 0
     #lastShape = ""
     #checkedInfoAt = 0
-    settings: any
-    topic: any
-    context: any
+    settings: Store<Camera3dSettings>
+    topic: Topic
+    context: LayerContext
 
-    constructor(context, topic, settings) {
+    constructor(context: LayerContext, topic: Topic, settings: Store<Camera3dSettings>) {
         this.context = context
         this.topic = topic
         this.settings = settings
@@ -102,17 +138,22 @@ export class Camera3dLayer {
 
     /** a live stream → a video texture (each decoded frame asks for a redraw); a replay canvas → a canvas texture */
     #onVideo() {
+        // only a color topic's layer listens to video, and it has a picture material
+        const picture = this.#picture
+        if (!picture) {
+            return
+        }
         const state = this.#camera.video.get()
         if (state.stream) {
             if (this.#textureOf !== state.stream) {
                 this.#textureOf = state.stream
                 this.#texture?.dispose()
-                const element = this.context.video.element(this.#camera)
+                const element: HTMLVideoElement = this.context.video.element(this.#camera)
                 this.#element = element
                 this.#texture = new THREE.VideoTexture(element)
                 this.#texture.colorSpace = THREE.SRGBColorSpace
-                this.#picture.map = this.#texture
-                this.#picture.needsUpdate = true
+                picture.map = this.#texture
+                picture.needsUpdate = true
                 const onVideoFrame = () => {
                     this.context.viewer.requestRender()
                     this.#videoCallback = element.requestVideoFrameCallback(onVideoFrame)
@@ -129,7 +170,7 @@ export class Camera3dLayer {
                 canvas.width = image.width
                 canvas.height = image.height
             }
-            const context2d = canvas.getContext("2d")
+            const context2d = canvas.getContext("2d")!
             if (image instanceof ImageData) {
                 context2d.putImageData(image, 0, 0)
             } else {
@@ -141,10 +182,11 @@ export class Camera3dLayer {
                 this.#texture?.dispose()
                 this.#texture = new THREE.CanvasTexture(canvas)
                 this.#texture.colorSpace = THREE.SRGBColorSpace
-                this.#picture.map = this.#texture
-                this.#picture.needsUpdate = true
+                picture.map = this.#texture
+                picture.needsUpdate = true
             }
-            this.#texture.needsUpdate = true
+            // set just above when the shape changed, else kept from the last frame of this shape
+            this.#texture!.needsUpdate = true
         } else {
             return
         }
@@ -165,8 +207,10 @@ export class Camera3dLayer {
                 this.topic.key,
                 { delivery: "latest", maxHz: 1 },
                 (message) => {
-                    let frame = null
-                    const value = message.value ?? message.decoded
+                    let frame: string | null
+                    // a source that already decoded it: any shape, maybe a frame_id
+                    const value = (message.value ?? message.decoded) as
+                        { frame?: string; header?: { frame_id?: string } } | undefined
                     if (value) {
                         frame = value.frame ?? value.header?.frame_id ?? null
                     } else {
@@ -195,7 +239,7 @@ export class Camera3dLayer {
         this.#infoKey = key
         const named = cameraInfoFor(this.topic, infos, this.context.options?.cameraInfo ?? {})
         const stops = infos.map((info) =>
-            subscribeDecoded(this.context, info, { maxHz: 30, reliable: true }, (message) => {
+            subscribeDecoded(this.context, info, { maxHz: 30, reliable: true }, (message: CameraInfoMessage) => {
                 const K = message.K ?? message.k ?? []
                 const infoFrame = message.header?.frame_id ?? ""
                 // an image without a frame_id (the go2 sim's) is matched by name and placed at its info's frame
@@ -223,7 +267,7 @@ export class Camera3dLayer {
         this.#stopInfo = () => stops.forEach((stop) => stop())
     }
 
-    #reshape(force) {
+    #reshape(force: boolean) {
         const settings = this.settings.get()
         const video = this.#camera.video.get()
         const [width, height] = this.#depth ? this.#depthSize : [video.width, video.height]
@@ -237,7 +281,7 @@ export class Camera3dLayer {
         }
         this.#lastShape = shape
         const d = settings.distance
-        const corner = (u, v) =>
+        const corner = (u: number, v: number) =>
             new THREE.Vector3(((u - intrinsics.cx) / intrinsics.fx) * d, ((v - intrinsics.cy) / intrinsics.fy) * d, d)
         const corners = [
             corner(0, 0),
@@ -290,7 +334,7 @@ export class Camera3dLayer {
         this.context.viewer.requestRender()
     }
 
-    update(frame) {
+    update(frame: FrameInfo) {
         if (!this.#intrinsics && frame.now - this.#checkedInfoAt > 2000) {
             this.#findInfo()
         }
@@ -322,10 +366,19 @@ export class Camera3dLayer {
     }
 }
 
-export function Camera3dSettingsEditor({ settings, topic }) {
+export type Camera3dSettingsEditorProps = LayerSettingsProps<Camera3dSettings>
+
+export function Camera3dSettingsEditor({ settings, topic }: Camera3dSettingsEditorProps) {
     const value = useStore(settings)
     const depth = value.depth ?? DEFAULT_DEPTH_LOOK
-    const slider = (label, key, min, max, step, format) => (
+    const slider = (
+        label: string,
+        key: "distance" | "opacity",
+        min: number,
+        max: number,
+        step: number,
+        format: (value: number) => string,
+    ) => (
         <Field label={label}>
             <Slider
                 min={min}
@@ -333,38 +386,38 @@ export function Camera3dSettingsEditor({ settings, topic }) {
                 step={step}
                 value={value[key]}
                 format={format}
-                onChange={(next) => settings.update({ [key]: next })}
+                onChange={(next: number) => settings.update({ [key]: next })}
             />
         </Field>
     )
     return (
         <div className="dr-layer-settings-grid">
             <Field label="Picture">
-                <Toggle value={value.image} onChange={(image) => settings.update({ image })} />
+                <Toggle value={value.image} onChange={(image: boolean) => settings.update({ image })} />
             </Field>
             <Field label="Frustum">
-                <Toggle value={value.frustum} onChange={(frustum) => settings.update({ frustum })} />
+                <Toggle value={value.frustum} onChange={(frustum: boolean) => settings.update({ frustum })} />
             </Field>
-            {slider("Distance", "distance", 0.2, 10, 0.1, (distance) => `${distance.toFixed(1)} m`)}
-            {slider("Opacity", "opacity", 0.1, 1, 0.05, (opacity) => `${Math.round(opacity * 100)}%`)}
+            {slider("Distance", "distance", 0.2, 10, 0.1, (distance: number) => `${distance.toFixed(1)} m`)}
+            {slider("Opacity", "opacity", 0.1, 1, 0.05, (opacity: number) => `${Math.round(opacity * 100)}%`)}
             {topic && isDepthTopic(topic)
                 ? [
                       <Field label="Colormap" key="colormap">
                           <Select
                               value={depth.colormap}
                               options={DEPTH_COLORMAPS}
-                              onChange={(colormap) => settings.update({ depth: { ...depth, colormap } })}
+                              onChange={(colormap: string) => settings.update({ depth: { ...depth, colormap } })}
                           />
                       </Field>,
                       <Field label="Range" hint="meters; empty = automatic (2nd–98th percentile)" key="range">
                           <span className="dr-range-inputs">
                               <RangeInput
                                   value={depth.near}
-                                  onChange={(near) => settings.update({ depth: { ...depth, near } })}
+                                  onChange={(near: number | null) => settings.update({ depth: { ...depth, near } })}
                               />
                               <RangeInput
                                   value={depth.far}
-                                  onChange={(far) => settings.update({ depth: { ...depth, far } })}
+                                  onChange={(far: number | null) => settings.update({ depth: { ...depth, far } })}
                               />
                           </span>
                       </Field>,
@@ -378,14 +431,14 @@ export function Camera3dSettingsEditor({ settings, topic }) {
                         ["optical", "optical (z forward)"],
                         ["body", "body (x forward)"],
                     ]}
-                    onChange={(convention) => settings.update({ convention })}
+                    onChange={(convention: Camera3dSettings["convention"]) => settings.update({ convention })}
                 />
             </Field>
         </div>
     )
 }
 
-registerLayer({
+registerLayer<Camera3dSettings>({
     id: "camera3d",
     label: "Camera in 3D",
     types: ["sensor_msgs.Image", "sensor_msgs.CompressedImage"],
@@ -399,6 +452,11 @@ registerLayer({
     },
     // camera panels show images; projecting one into the scene is opt-in
     enabledByDefault: () => false,
-    create: (context, topic, settings) => new Camera3dLayer(context, topic, settings),
+    create: (context, topic, settings) => {
+        if (!topic) {
+            throw new Error("the camera3d layer draws a topic (it has no setData)")
+        }
+        return new Camera3dLayer(context, topic, settings)
+    },
     Settings: Camera3dSettingsEditor,
 })

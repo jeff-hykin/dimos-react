@@ -10,28 +10,36 @@ import {
     useState,
     useSyncExternalStore,
 } from "react"
+import type { CSSProperties, ErrorInfo, HTMLAttributes, ReactNode } from "react"
 import { createPortal } from "react-dom"
-import { cx } from "../cx"
-import { useEscape } from "../hooks"
-import { Icon } from "./icon"
-import { Button, IconButton, TextInput } from "./controls"
+import { cx } from "../cx.ts"
+import { useEscape } from "../hooks.ts"
+import { Icon } from "./icon.tsx"
+import { Button, IconButton, TextInput } from "./controls.tsx"
 
-const TONE_ICONS = { info: "info", ok: "check-circle", warn: "warn", danger: "x-circle" }
+export type AlertTone = "info" | "ok" | "warn" | "danger"
+
+const TONE_ICONS: Record<string, string | undefined> = {
+    info: "info",
+    ok: "check-circle",
+    warn: "warn",
+    danger: "x-circle",
+}
+
+export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+    tone?: AlertTone
+    title?: ReactNode
+    /** an Icon name (default: the tone's) */
+    icon?: string
+    /** buttons */
+    actions?: ReactNode
+    onClose?: () => void
+}
 
 /**
  * An inline notice. `tone`: "info" | "ok" | "warn" | "danger"; `title`; `actions` (buttons); `onClose` adds an ✕.
- * @param {Record<string, any>} props
  */
-export function Alert({
-    tone = "info",
-    title,
-    icon,
-    actions,
-    onClose,
-    className,
-    children,
-    ...rest
-}: Record<string, any>) {
+export function Alert({ tone = "info", title, icon, actions, onClose, className, children, ...rest }: AlertProps) {
     return (
         <div
             className={cx("dr-alert", `dr-alert--${tone}`, className)}
@@ -53,30 +61,45 @@ export function Alert({
 
 // ── toasts: a module-level queue, so toast() works from anywhere (event handlers, non-React code) ──
 
-let toasts = []
+export type ToastId = string | number
+
+export interface ToastOptions {
+    /** a toast with the same id replaces it */
+    id?: ToastId
+    title?: ReactNode
+    message?: ReactNode
+    tone?: AlertTone
+    /** 0 keeps it until dismissed (default 4 s; 8 s for "danger") */
+    durationMs?: number
+    action?: { label: ReactNode; onClick?: () => void }
+}
+
+type ToastEntry = ToastOptions & { id: ToastId }
+
+let toasts: ToastEntry[] = []
 let toastId = 0
-const toastListeners = new Set()
+const toastListeners = new Set<() => void>()
 const emitToasts = () => toastListeners.forEach((listener) => listener())
 
 /**
  * Shows a toast; returns its id. `toast("Saved")`, `toast({ title, message, tone, durationMs, action: { label, onClick } })`.
  * `durationMs: 0` keeps it until dismissed. Shown by the nearest <ToastViewport> (AppProvider/ToastProvider add one).
  */
-export function toast(input) {
+export function toast(input: string | ToastOptions): ToastId {
     const options = typeof input === "string" ? { message: input } : input
     const id = options.id ?? ++toastId
-    const entry = { tone: "info", durationMs: options.tone === "danger" ? 8000 : 4000, ...options, id }
+    const entry: ToastEntry = { tone: "info", durationMs: options.tone === "danger" ? 8000 : 4000, ...options, id }
     toasts = [...toasts.filter((other) => other.id !== id), entry].slice(-6)
     emitToasts()
     return id
 }
-toast.ok = (message, options) => toast({ ...options, message, tone: "ok" })
-toast.warn = (message, options) => toast({ ...options, message, tone: "warn" })
-toast.error = (message, options) => toast({ ...options, message, tone: "danger" })
-toast.info = (message, options) => toast({ ...options, message, tone: "info" })
+toast.ok = (message: ReactNode, options?: ToastOptions) => toast({ ...options, message, tone: "ok" })
+toast.warn = (message: ReactNode, options?: ToastOptions) => toast({ ...options, message, tone: "warn" })
+toast.error = (message: ReactNode, options?: ToastOptions) => toast({ ...options, message, tone: "danger" })
+toast.info = (message: ReactNode, options?: ToastOptions) => toast({ ...options, message, tone: "info" })
 
 /** Removes a toast (all of them without an id). */
-export function dismissToast(id) {
+export function dismissToast(id?: ToastId) {
     toasts = id === undefined ? [] : toasts.filter((entry) => entry.id !== id)
     emitToasts()
 }
@@ -92,7 +115,7 @@ function useToasts() {
     )
 }
 
-function ToastItem({ entry }) {
+function ToastItem({ entry }: { entry: ToastEntry }) {
     useEffect(() => {
         if (!entry.durationMs) {
             return
@@ -103,7 +126,7 @@ function ToastItem({ entry }) {
     return (
         <div className={cx("dr-toast", `dr-toast--${entry.tone}`)} role={entry.tone === "danger" ? "alert" : "status"}>
             <span className="dr-toast-icon">
-                <Icon name={TONE_ICONS[entry.tone] ?? "info"} size={16} />
+                <Icon name={TONE_ICONS[entry.tone ?? ""] ?? "info"} size={16} />
             </span>
             <div className="dr-toast-body">
                 {entry.title ? <div className="dr-toast-title">{entry.title}</div> : null}
@@ -114,7 +137,7 @@ function ToastItem({ entry }) {
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                        entry.action.onClick?.()
+                        entry.action?.onClick?.()
                         dismissToast(entry.id)
                     }}
                 >
@@ -126,11 +149,16 @@ function ToastItem({ entry }) {
     )
 }
 
+export type ToastPosition = "bottom-right" | "bottom" | "top-right" | "top"
+
+export interface ToastViewportProps {
+    position?: ToastPosition
+}
+
 /**
  * Where toasts appear (bottom-right, above Desktop's dock). `position`: "bottom-right" | "bottom" | "top-right" | "top".
- * @param {Record<string, any>} props
  */
-export function ToastViewport({ position = "bottom-right" }: Record<string, any>) {
+export function ToastViewport({ position = "bottom-right" }: ToastViewportProps) {
     const list = useToasts()
     const [mounted, setMounted] = useState(false)
     useEffect(() => setMounted(true), [])
@@ -148,11 +176,13 @@ export function ToastViewport({ position = "bottom-right" }: Record<string, any>
 }
 
 const ToastContext = createContext(toast)
-/**
- * Adds a ToastViewport; `useToast()` below it returns toast().
- * @param {Record<string, any>} props
- */
-export function ToastProvider({ position, children }: Record<string, any>) {
+export interface ToastProviderProps {
+    position?: ToastPosition
+    children?: ReactNode
+}
+
+/** Adds a ToastViewport; `useToast()` below it returns toast(). */
+export function ToastProvider({ position, children }: ToastProviderProps) {
     return (
         <ToastContext.Provider value={toast}>
             {children}
@@ -167,10 +197,19 @@ export function useToast() {
 
 // ── modals ──
 
+export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+    open?: boolean
+    onClose?: () => void
+    title?: ReactNode
+    /** buttons */
+    footer?: ReactNode
+    size?: "sm" | "md" | "lg"
+    dismissable?: boolean
+}
+
 /**
  * A modal dialog over a scrim. `open` + `onClose`; `title`, `footer` (buttons); `size` "sm" | "md" | "lg";
  * `dismissable` (default true): Escape and a scrim click close it.
- * @param {Record<string, any>} props
  */
 export function Modal({
     open,
@@ -182,16 +221,18 @@ export function Modal({
     className,
     children,
     ...rest
-}: Record<string, any>) {
+}: ModalProps) {
     const titleId = useId()
-    const panel = useRef(null)
+    const panel = useRef<HTMLDivElement>(null)
     useEscape(() => dismissable && onClose?.(), !!open)
     useEffect(() => {
         if (!open) {
             return
         }
-        const previous = document.activeElement
-        const first = panel.current?.querySelector("[autofocus], input, select, textarea, button:not(.dr-modal-close)")
+        const previous: (Element & { focus?: () => void }) | null = document.activeElement
+        const first = panel.current?.querySelector<HTMLElement>(
+            "[autofocus], input, select, textarea, button:not(.dr-modal-close)",
+        )
         ;(first ?? panel.current)?.focus?.()
         return () => previous?.focus?.()
     }, [open])
@@ -242,16 +283,38 @@ export function Modal({
 
 // ── confirm / prompt: promise-returning dialogs ──
 
-const DialogContext = createContext(null)
+export interface ConfirmOptions {
+    title?: ReactNode
+    message?: ReactNode
+    /** a red confirm button */
+    danger?: boolean
+    confirmLabel?: ReactNode
+    cancelLabel?: ReactNode
+}
 
-/**
- * Hosts useConfirm / usePrompt dialogs (AppProvider includes it).
- * @param {Record<string, any>} props
- */
-export function DialogProvider({ children }: Record<string, any>) {
-    const [dialog, setDialog] = useState(null)
+export interface PromptOptions extends ConfirmOptions {
+    defaultValue?: string
+    placeholder?: string
+    /** false allows an empty answer */
+    required?: boolean
+}
+
+type DialogKind = "confirm" | "prompt"
+/** What a dialog resolves to: confirm → true/false; prompt → the text, or null when cancelled. */
+type DialogResult = boolean | string | null
+type OpenDialog = (kind: DialogKind, options: PromptOptions) => Promise<DialogResult>
+
+const DialogContext = createContext<OpenDialog | null>(null)
+
+/** Hosts useConfirm / usePrompt dialogs (AppProvider includes it). */
+export function DialogProvider({ children }: { children?: ReactNode }) {
+    const [dialog, setDialog] = useState<{
+        kind: DialogKind
+        options: PromptOptions
+        resolve: (result: DialogResult) => void
+    } | null>(null)
     const [text, setText] = useState("")
-    const open = useCallback(
+    const open = useCallback<OpenDialog>(
         (kind, options) =>
             new Promise((resolve) => {
                 setText(options.defaultValue ?? "")
@@ -259,11 +322,11 @@ export function DialogProvider({ children }: Record<string, any>) {
             }),
         [],
     )
-    const close = (result) => {
+    const close = (result: DialogResult) => {
         dialog?.resolve(result)
         setDialog(null)
     }
-    const options = dialog?.options ?? {}
+    const options: PromptOptions = dialog?.options ?? {}
     const isPrompt = dialog?.kind === "prompt"
     const submit = () => close(isPrompt ? text : true)
     return (
@@ -312,30 +375,38 @@ function useDialog() {
 }
 
 /** `const confirm = useConfirm(); if (await confirm({ title, message, danger, confirmLabel })) …` → true/false. */
-export function useConfirm() {
+export function useConfirm(): (options?: ConfirmOptions | string) => Promise<boolean> {
     const open = useDialog()
     return useCallback(
-        (options = {}) => open("confirm", typeof options === "string" ? { message: options } : options),
+        (options: ConfirmOptions | string = {}) =>
+            // a confirm dialog resolves with a boolean (DialogProvider's close)
+            open("confirm", typeof options === "string" ? { message: options } : options) as Promise<boolean>,
         [open],
     )
 }
 
 /** `const prompt = usePrompt(); const name = await prompt({ title, defaultValue, placeholder })` → string or null. */
-export function usePrompt() {
+export function usePrompt(): (options?: PromptOptions | string) => Promise<string | null> {
     const open = useDialog()
     return useCallback(
-        (options = {}) => open("prompt", typeof options === "string" ? { title: options } : options),
+        (options: PromptOptions | string = {}) =>
+            // a prompt resolves with the text, or null when cancelled (DialogProvider's close)
+            open("prompt", typeof options === "string" ? { title: options } : options) as Promise<string | null>,
         [open],
     )
 }
 
 // ── progress ──
 
-/**
- * A spinning ring; `label` for screen readers.
- * @param {Record<string, any>} props
- */
-export function Spinner({ size = 18, label = "Loading", className, ...rest }: Record<string, any>) {
+export interface SpinnerProps extends HTMLAttributes<HTMLSpanElement> {
+    /** px, or a CSS length */
+    size?: CSSProperties["width"]
+    /** for screen readers */
+    label?: string
+}
+
+/** A spinning ring; `label` for screen readers. */
+export function Spinner({ size = 18, label = "Loading", className, ...rest }: SpinnerProps) {
     return (
         <span
             className={cx("dr-spinner", className)}
@@ -347,11 +418,18 @@ export function Spinner({ size = 18, label = "Loading", className, ...rest }: Re
     )
 }
 
-/**
- * A bar: `value` 0..1, or none for an indeterminate one. `tone` colors it.
- * @param {Record<string, any>} props
- */
-export function Progress({ value, tone = "primary", label, className, ...rest }: Record<string, any>) {
+export type ProgressTone = "primary" | "ok" | "warn" | "danger"
+
+export interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
+    /** 0..1; none (or not finite) for an indeterminate bar */
+    value?: number | null
+    tone?: ProgressTone
+    /** for screen readers */
+    label?: string
+}
+
+/** A bar: `value` 0..1, or none for an indeterminate one. `tone` colors it. */
+export function Progress({ value, tone = "primary", label, className, ...rest }: ProgressProps) {
     const known = typeof value === "number" && Number.isFinite(value)
     return (
         <div
@@ -376,10 +454,17 @@ export function Progress({ value, tone = "primary", label, className, ...rest }:
     )
 }
 
-/**
- * A ring: `value` 0..1 (uploads, downloads); shows the percent inside unless `children` replace it.
- * @param {Record<string, any>} props
- */
+export interface ProgressRingProps extends HTMLAttributes<HTMLDivElement> {
+    /** 0..1 */
+    value?: number
+    /** px */
+    size?: number
+    /** the ring's width, px */
+    stroke?: number
+    tone?: ProgressTone
+}
+
+/** A ring: `value` 0..1 (uploads, downloads); shows the percent inside unless `children` replace it. */
 export function ProgressRing({
     value = 0,
     size = 44,
@@ -388,7 +473,7 @@ export function ProgressRing({
     className,
     children,
     ...rest
-}: Record<string, any>) {
+}: ProgressRingProps) {
     const radius = (size - stroke) / 2
     const length = 2 * Math.PI * radius
     const clamped = Math.min(1, Math.max(0, value))
@@ -426,18 +511,28 @@ export function ProgressRing({
     )
 }
 
-/**
- * A loading placeholder block.
- * @param {Record<string, any>} props
- */
-export function Skeleton({ width = "100%", height = 14, className, style, ...rest }: Record<string, any>) {
+export interface SkeletonProps extends HTMLAttributes<HTMLSpanElement> {
+    width?: CSSProperties["width"]
+    height?: CSSProperties["height"]
+}
+
+/** A loading placeholder block. */
+export function Skeleton({ width = "100%", height = 14, className, style, ...rest }: SkeletonProps) {
     return <span className={cx("dr-skeleton", className)} style={{ width, height, ...style }} {...rest} />
 }
 
-/**
- * A first-run / empty / error message with next steps. `layer` centers it over a whole view (a canvas, a 3D scene).
- * @param {Record<string, any>} props
- */
+export interface EmptyStateProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
+    /** an Icon name (default "info"); null for none */
+    icon?: string | null
+    title?: ReactNode
+    message?: ReactNode
+    actions?: ReactNode
+    tone?: "warn" | "danger"
+    /** centers it over a whole view */
+    layer?: boolean
+}
+
+/** A first-run / empty / error message with next steps. `layer` centers it over a whole view (a canvas, a 3D scene). */
 export function EmptyState({
     icon = "info",
     title,
@@ -448,7 +543,7 @@ export function EmptyState({
     className,
     children,
     ...rest
-}: Record<string, any>) {
+}: EmptyStateProps) {
     return (
         <div className={cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className)} {...rest}>
             <div className="dr-empty-inner">
@@ -466,21 +561,32 @@ export function EmptyState({
     )
 }
 
+export interface ErrorBoundaryProps {
+    children?: ReactNode
+    /** an element, or `({ error, reset }) => element` */
+    fallback?: ReactNode | ((caught: { error: unknown; reset: () => void }) => ReactNode)
+    onError?: (error: unknown, info: ErrorInfo) => void
+}
+
+/** `error.message` when the thrown value has one, else the value itself. */
+const errorText = (error: unknown) =>
+    String((typeof error === "object" && error !== null && "message" in error ? error.message : undefined) ?? error)
+
 /**
  * Catches render errors below it and shows `fallback` (an element, or `({ error, reset }) => element`); reports via
  * `onError(error, info)`.
  */
-export class ErrorBoundary extends Component {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, { error: unknown }> {
     reset: () => void
-    constructor(props) {
+    constructor(props: ErrorBoundaryProps) {
         super(props)
         this.state = { error: null }
         this.reset = () => this.setState({ error: null })
     }
-    static getDerivedStateFromError(error) {
+    static getDerivedStateFromError(error: unknown) {
         return { error }
     }
-    componentDidCatch(error, info) {
+    componentDidCatch(error: unknown, info: ErrorInfo) {
         this.props.onError?.(error, info)
     }
     render() {
@@ -498,7 +604,7 @@ export class ErrorBoundary extends Component {
                     icon="warn"
                     tone="danger"
                     title="Something went wrong"
-                    message={String(error?.message ?? error)}
+                    message={errorText(error)}
                     actions={
                         <Button size="sm" onClick={this.reset}>
                             Try again

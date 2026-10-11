@@ -9,14 +9,135 @@
 //
 // A source is `{ subscribe, subscribeFrontend, listTopics, state, onState, now }`; see zenohSource / memorySource.
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import type { ReactNode } from "react"
 import { getZenoh } from "./vendor/dim-app/zenoh.js"
-import { decode as decodeLcm } from "./lcm"
+import type { AppZenoh, ConnectionState, GetZenohOptions } from "./vendor/dim-app/zenoh.js"
+import { decode as decodeLcm } from "./lcm.ts"
+
+export type { AppZenoh }
+
+/** A source's connection state: "connecting" | "connected" | "degraded" | "lost". */
+export type SourceState = ConnectionState
+
+/** A dimos topic: its zenoh key, its name ("/odom") and LCM type ("nav_msgs.Odometry"). */
+export interface Topic {
+    key: string
+    name: string
+    type: string
+}
+
+/** A topic a source lists (`{ key }`, plus whatever else the source knows about it). */
+export interface ListedTopic {
+    key: string
+    [field: string]: unknown
+}
+
+/**
+ * One message off a source: zenoh-gateway's `{ key, bytes, timestamp, … }`. `decoded` is the gateway's own decoding
+ * (encodings like dimos_lcm_pointcloud2); `value` is what an in-page source was given (not bytes).
+ */
+export interface Message {
+    key: string
+    bytes: Uint8Array
+    timestamp?: number
+    kind?: string
+    seq?: number
+    decoded?: unknown
+    value?: unknown
+}
+
+/** What a frontend-topic callback gets alongside the payload. */
+export interface FrontendMessage {
+    key: string
+    timestamp?: number
+}
+
+/** How a message becomes a value (see decodeMessage). */
+export type Decoder = "auto" | "decoded" | "lcm" | "json" | "text" | "bytes" | ((message: Message) => any)
+
+/** Options a source's subscribe takes (zenoh-gateway's: delivery, maxHz, encoding, encodeOptions, minQuality, …). */
+export interface SubscribeOptions {
+    delivery?: "latest" | "reliable"
+    maxHz?: number
+    encoding?: string
+    encodeOptions?: Record<string, unknown>
+    minQuality?: number
+    [option: string]: unknown
+}
+
+/** A source's subscribe returns this: call it (or `.unsubscribe()`) to stop; `.update(changes)` changes options. */
+export type Subscription = (() => void) & {
+    unsubscribe(): void
+    update(changes: Record<string, unknown>): Promise<void>
+}
+
+/** A pose topic's whole recorded route: `points` are `[tSeconds, x, y, z]`. */
+export interface Route {
+    frame: string
+    points: [number, number, number, number][]
+}
+
+/** Where live data comes from (zenohSource, memorySource, or anything with this shape). */
+export interface DataSource {
+    kind: string
+    readonly state: ConnectionState
+    /** a replay: `now()` is the playhead, so staleness, fading and lifetimes follow it (not the wall clock) */
+    replay?: boolean
+    subscribe(key: string, options: SubscribeOptions | undefined, onMessage: (message: Message) => void): Subscription
+    subscribeFrontend(
+        topic: string,
+        callback: (payload: any, message: FrontendMessage) => void,
+        options?: Record<string, unknown>,
+    ): () => void
+    listTopics(filter?: string, options?: { probeMs?: number }): Promise<ListedTopic[]>
+    onState(listener: (state: ConnectionState) => void): () => void
+    onReconnect?(listener: () => void): () => void
+    /** the topic list changed (a source that knows, rather than has to probe) */
+    onTopics?(listener: () => void): () => void
+    now(): number
+    seek?(): void
+    onSeek?(listener: () => void): () => void
+    route?: ((key: string) => Route | null | Promise<Route | null>) | null
+}
+
+/** The live source (zenohSource): `zenoh` is the page's dim-app connection. */
+export interface ZenohSource extends DataSource {
+    kind: "zenoh"
+    readonly zenoh: AppZenoh
+    onReconnect(listener: () => void): () => void
+}
+
+/** The in-page source (memorySource). */
+export interface MemorySource extends DataSource {
+    kind: "memory"
+    state: ConnectionState
+    replay: boolean
+    onReconnect(listener: () => void): () => void
+    onTopics(listener: () => void): () => void
+    seek(): void
+    onSeek(listener: () => void): () => void
+    route: ((key: string) => Route | null | Promise<Route | null>) | null
+    /** Delivers a message to every subscriber whose key expression matches `key`. */
+    publish(key: string, payload: unknown, options?: { timestamp?: number }): void
+    /** What the app backend's publishFrontend(topic, payload) does: JSON to `subscribeFrontend(topic)` listeners. */
+    publishFrontend(topic: string, payload: unknown): void
+    setTopics(keys: string[]): void
+    setState(next: ConnectionState): void
+}
+
+export interface MemorySourceOptions {
+    topics?: string[]
+    state?: ConnectionState
+    /** the playhead (ms): makes the source a replay */
+    clock?: () => number
+    route?: (key: string) => Route | null | Promise<Route | null>
+}
 
 const decoder = new TextDecoder()
 const encoder = new TextEncoder()
 
 /** `dimos/<name>/<type>` → `{ key, name: "/<name>", type }`; anything else → null. */
-export function parseKey(key) {
+export function parseKey(key: string): Topic | null {
     const parts = String(key).split("/")
     if (parts.length < 3 || parts[0] !== "dimos" || key.includes("*")) {
         return null
@@ -29,13 +150,13 @@ export function parseKey(key) {
 }
 
 /** The zenoh key dimos uses for a topic of a type: dimosKey("/odom", "nav_msgs.Odometry"). */
-export const dimosKey = (topic, type) => `dimos/${String(topic).replace(/^\/+/, "")}/${type}`
+export const dimosKey = (topic: string, type: string): string => `dimos/${String(topic).replace(/^\/+/, "")}/${type}`
 
 /** zenoh key-expression matching (`*` = one chunk, `**` = any number of chunks). */
-export function keyMatches(pattern, key) {
+export function keyMatches(pattern: string, key: string): boolean {
     const want = pattern.split("/")
     const have = key.split("/")
-    const match = (i, j) => {
+    const match = (i: number, j: number): boolean => {
         if (i === want.length) {
             return j === have.length
         }
@@ -57,7 +178,7 @@ export function keyMatches(pattern, key) {
  * function `(message) => value`. A message the gateway already decoded (an encoding like dimos_lcm_pointcloud2)
  * keeps `message.decoded`.
  */
-export function decodeMessage(message, how = "auto", type) {
+export function decodeMessage(message: Message, how: Decoder = "auto", type?: string): any {
     if (typeof how === "function") {
         return how(message)
     }
@@ -77,15 +198,15 @@ export function decodeMessage(message, how = "auto", type) {
     if (kind === "json") {
         return JSON.parse(decoder.decode(message.bytes))
     }
-    return decodeLcm(type ?? parseKey(message.key).type, message.bytes)
+    return decodeLcm(type ?? parseKey(message.key)!.type, message.bytes)
 }
 
 /**
  * The live source: the page's one zenoh-gateway connection (dim-app's getZenoh(), shared with everything else on the
  * page). `options` go to getZenoh on first use (app, connectOptions, …).
  */
-export function zenohSource(options = {}) {
-    let zenoh = null
+export function zenohSource(options: GetZenohOptions = {}): ZenohSource {
+    let zenoh: AppZenoh | null = null
     const get = () => (zenoh ??= getZenoh(options))
     return {
         kind: "zenoh",
@@ -96,7 +217,7 @@ export function zenohSource(options = {}) {
         subscribeFrontend: (topic, callback, frontendOptions) =>
             get().subscribeFrontend(topic, callback, frontendOptions),
         listTopics: async (filter = "dimos/**", { probeMs = 800 } = {}) => {
-            const client = (await get().ready).client
+            const client = (await get().ready).client!
             return await client.listTopics(filter, { probeMs })
         },
         get state() {
@@ -117,14 +238,19 @@ export function zenohSource(options = {}) {
  * A replay passes `clock` (the playhead, ms: `now()` returns it), calls `seek()` when the playhead jumps and may pass
  * `route(key)` (a pose topic's whole recorded route) so the 3D view can draw it.
  */
-export function memorySource({ topics = [], state = "connected", clock, route } = {}) {
-    const subscribers = new Set()
-    const frontend = new Set()
-    const stateListeners = new Set()
-    const topicListeners = new Set()
-    const seekListeners = new Set()
-    let known = new Map(topics.map((key) => [key, { key }]))
-    const source = {
+export function memorySource({
+    topics = [],
+    state = "connected",
+    clock,
+    route,
+}: MemorySourceOptions = {}): MemorySource {
+    const subscribers = new Set<{ key: string; onMessage: (message: Message) => void }>()
+    const frontend = new Set<{ topic: string; callback: (payload: any, message: FrontendMessage) => void }>()
+    const stateListeners = new Set<(state: ConnectionState) => void>()
+    const topicListeners = new Set<() => void>()
+    const seekListeners = new Set<() => void>()
+    let known = new Map<string, ListedTopic>(topics.map((key) => [key, { key }]))
+    const source: MemorySource = {
         kind: "memory",
         state,
         /** a replay: `now()` is the playhead, so staleness, fading and lifetimes follow it (not the wall clock) */
@@ -133,9 +259,7 @@ export function memorySource({ topics = [], state = "connected", clock, route } 
             const entry = { key, onMessage }
             subscribers.add(entry)
             const off = () => subscribers.delete(entry)
-            off.unsubscribe = off
-            off.update = async () => {}
-            return off
+            return Object.assign(off, { unsubscribe: off, update: async () => {} })
         },
         subscribeFrontend(topic, callback) {
             const entry = { topic, callback }
@@ -173,7 +297,7 @@ export function memorySource({ topics = [], state = "connected", clock, route } 
                 known.set(key, { key })
                 topicListeners.forEach((listener) => listener())
             }
-            const message =
+            const message: Message =
                 payload instanceof Uint8Array
                     ? { key, bytes: payload, timestamp }
                     : { key, value: payload, bytes: encoder.encode(JSON.stringify(payload ?? null)), timestamp }
@@ -203,58 +327,57 @@ export function memorySource({ topics = [], state = "connected", clock, route } 
     return source
 }
 
-const DataSourceContext = createContext(null)
-let defaultSource = null
+const DataSourceContext = createContext<DataSource | null>(null)
+let defaultSource: ZenohSource | null = null
 
-/**
- * Makes `source` the data source of everything below.
- * @param {Record<string, any>} props
- */
-export function DataSourceProvider({ source, children }: Record<string, any>) {
+export interface DataSourceProviderProps {
+    source: DataSource
+    children?: ReactNode
+}
+
+/** Makes `source` the data source of everything below. */
+export function DataSourceProvider({ source, children }: DataSourceProviderProps) {
     return createElement(DataSourceContext.Provider, { value: source }, children)
 }
 
-/**
- * DataSourceProvider with the live zenoh-gateway source (props go to getZenoh on first use).
- * @param {Record<string, any>} props
- */
-export function ZenohProvider({ children, ...options }: Record<string, any>) {
+export interface ZenohProviderProps extends GetZenohOptions {
+    children?: ReactNode
+}
+
+/** DataSourceProvider with the live zenoh-gateway source (props go to getZenoh on first use). */
+export function ZenohProvider({ children, ...options }: ZenohProviderProps) {
     const source = useMemo(() => zenohSource(options), [])
     return createElement(DataSourceContext.Provider, { value: source }, children)
 }
 
 /** The data source in effect: the nearest provider's, else the page's zenoh-gateway connection. */
-export function useDataSource() {
+export function useDataSource(): DataSource {
     const source = useContext(DataSourceContext)
     return source ?? (defaultSource ??= zenohSource())
 }
 
 /** The zenoh connection behind the source (dim-app's AppZenoh), or null for a non-zenoh source. */
-export function useZenoh() {
+export function useZenoh(): AppZenoh | null {
     const source = useDataSource()
-    return source.kind === "zenoh" ? source.zenoh : null
+    return source.kind === "zenoh" ? (source as ZenohSource).zenoh : null
+}
+
+export interface UseSubscriptionOptions extends SubscribeOptions {
+    /** how a message becomes a value (decodeMessage's `how`) */
+    decode?: Decoder
+    /** the LCM type, when the key doesn't say */
+    type?: string
 }
 
 /**
  * Calls `onMessage(value, message)` for every message on `key` (null key: nothing). The callback may change freely.
- * @param {string | null} key a zenoh key expression
- * @param {(value: any, message: any) => void} onMessage
- * @param {{ decode?: string | Function, type?: string, delivery?: "latest" | "reliable", maxHz?: number,
- *   encoding?: string, encodeOptions?: object, minQuality?: number }} [options]
+ * @param key a zenoh key expression
  */
-export function useSubscription(
-    key: string | null,
-    onMessage: (value: any, message: any) => void,
-    options: {
-        decode?: string | Function
-        type?: string
-        delivery?: "latest" | "reliable"
-        maxHz?: number
-        encoding?: string
-        encodeOptions?: object
-        minQuality?: number
-    } = {},
-) {
+export function useSubscription<T = any>(
+    key: string | null | undefined,
+    onMessage: (value: T, message: Message) => void,
+    options: UseSubscriptionOptions = {},
+): void {
     const source = useDataSource()
     const callback = useRef(onMessage)
     callback.current = onMessage
@@ -269,7 +392,7 @@ export function useSubscription(
             try {
                 value = decodeMessage(message, decode, type)
             } catch (error) {
-                console.debug(`[dimos-react] ${message.key}: cannot decode (${error?.message ?? error})`)
+                console.debug(`[dimos-react] ${message.key}: cannot decode (${(error as Error)?.message ?? error})`)
                 return
             }
             callback.current(value, message)
@@ -278,12 +401,27 @@ export function useSubscription(
     }, [source, key, optionsKey, typeof decode === "string" ? decode : "fn", type])
 }
 
-/**
- * The latest message on a topic, re-rendered per message (throttle with `maxHz`).
- * @returns {{ value: any, message: any, timestamp: number | null, count: number }}
- */
-export function useTopic(key, options = {}): { value: any; message: any; timestamp: number | null; count: number } {
-    const [latest, setLatest] = useState({ value: options.initial, message: null, timestamp: null, count: 0 })
+export interface UseTopicOptions<T = any> extends UseSubscriptionOptions {
+    /** the value before the first message */
+    initial?: T
+}
+
+/** The latest message on a topic and its decoded value (`initial` until the first message). */
+export interface TopicState<T = any> {
+    value: T | undefined
+    message: Message | null
+    timestamp: number | null
+    count: number
+}
+
+/** The latest message on a topic, re-rendered per message (throttle with `maxHz`). */
+export function useTopic<T = any>(key: string | null | undefined, options: UseTopicOptions<T> = {}): TopicState<T> {
+    const [latest, setLatest] = useState<TopicState<T>>({
+        value: options.initial,
+        message: null,
+        timestamp: null,
+        count: 0,
+    })
     useEffect(() => setLatest({ value: options.initial, message: null, timestamp: null, count: 0 }), [key])
     useSubscription(
         key,
@@ -299,14 +437,19 @@ export function useTopic(key, options = {}): { value: any; message: any; timesta
  * The dimos topics on the bus (`[{ key, name, type }]`, sorted), re-listed every `intervalMs`. A topic stays listed
  * `forgetMs` after it was last seen (slow publishers miss a probe now and then).
  */
-export function useTopicList({ filter = "dimos/**", intervalMs = 2000, forgetMs = 20000, types } = {}) {
+export function useTopicList({
+    filter = "dimos/**",
+    intervalMs = 2000,
+    forgetMs = 20000,
+    types,
+}: { filter?: string; intervalMs?: number; forgetMs?: number; types?: string[] } = {}): Topic[] {
     const source = useDataSource()
-    const [topics, setTopics] = useState([])
+    const [topics, setTopics] = useState<Topic[]>([])
     const typesKey = types ? types.join(",") : ""
     useEffect(() => {
         let live = true
-        let timer = null
-        const lastSeen = new Map()
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const lastSeen = new Map<string, { topic: Topic; at: number }>()
         const round = async () => {
             try {
                 const found = await source.listTopics(filter)
@@ -354,9 +497,9 @@ export function useTopicList({ filter = "dimos/**", intervalMs = 2000, forgetMs 
 }
 
 /** The source's connection state: "connecting" | "connected" | "degraded" | "lost". */
-export function useConnectionState() {
+export function useConnectionState(): ConnectionState {
     const source = useDataSource()
-    const [state, setState] = useState(() => source.state ?? "connecting")
+    const [state, setState] = useState<ConnectionState>(() => source.state ?? "connecting")
     useEffect(() => {
         setState(source.state ?? "connecting")
         return source.onState((next) => setState(next))
@@ -368,7 +511,10 @@ export function useConnectionState() {
  * The app backend's events (dim-app's publishEvent / publishFrontend("events", …)): `onEvent(event)` per event.
  * `onReconnect` runs when the link comes back (events sent while it was down are gone: re-GET what you show).
  */
-export function useBackendEvents(onEvent, { topic = "events", onReconnect } = {}) {
+export function useBackendEvents(
+    onEvent: (event: any) => void,
+    { topic = "events", onReconnect }: { topic?: string; onReconnect?: () => void } = {},
+): void {
     const source = useDataSource()
     const handler = useRef(onEvent)
     handler.current = onEvent
@@ -384,17 +530,38 @@ export function useBackendEvents(onEvent, { topic = "events", onReconnect } = {}
     }, [source, topic])
 }
 
+export interface UseBackendStateOptions<T = any> {
+    /** where to GET the snapshot (default `api/state/<key>`) */
+    url?: string
+    /** the frontend topic announcing changes (default `state/<key>`) */
+    topic?: string
+    /** the value before the first GET answers */
+    initial?: T
+    debounceMs?: number
+    fetch?: typeof fetch
+}
+
+/** useBackendState's second element. */
+export interface BackendStateStatus {
+    loading: boolean
+    error: Error | null
+    refresh: () => Promise<void>
+}
+
 /**
  * Snapshot + live backend state (dim-app's convention): GET `api/state/<key>` (or `url`), then re-GET whenever the
  * backend's stateChanged(key) announces a change on the frontend topic `state/<key>`, and after a reconnect.
- * @returns {[any, { loading: boolean, error: Error | null, refresh: () => Promise<void> }]}
  */
-export function useBackendState(
-    key,
-    { url, topic, initial, debounceMs = 100, fetch: fetchImpl } = {},
-): [any, { loading: boolean; error: Error | null; refresh: () => Promise<void> }] {
+export function useBackendState<T = any>(
+    key: string | null | undefined,
+    { url, topic, initial, debounceMs = 100, fetch: fetchImpl }: UseBackendStateOptions<T> = {},
+): [T | undefined, BackendStateStatus] {
     const source = useDataSource()
-    const [snapshot, setSnapshot] = useState({ data: initial, loading: true, error: null })
+    const [snapshot, setSnapshot] = useState<{ data: T | undefined; loading: boolean; error: Error | null }>({
+        data: initial,
+        loading: true,
+        error: null,
+    })
     const href = url ?? `api/state/${key}` // dimos-yaml-check: ignore (an app that calls useBackendState lists it)
     const generation = useRef(0)
     const refresh = useCallback(async () => {
@@ -410,7 +577,7 @@ export function useBackendState(
             }
         } catch (error) {
             if (mine === generation.current) {
-                setSnapshot((old) => ({ ...old, loading: false, error }))
+                setSnapshot((old) => ({ ...old, loading: false, error: error as Error }))
             }
         }
     }, [href, fetchImpl])
@@ -419,7 +586,7 @@ export function useBackendState(
             return
         }
         refresh()
-        let timer = null
+        let timer: ReturnType<typeof setTimeout> | undefined
         const later = () => {
             clearTimeout(timer)
             timer = setTimeout(refresh, debounceMs)

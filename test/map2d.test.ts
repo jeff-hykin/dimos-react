@@ -1,7 +1,7 @@
 // The 2D map's view transform (north-up: +x right, +y up), zoom about a point, pan, and fitting.
 import { test } from "vitest"
-import { assertAlmostEquals, assertEquals } from "./assert"
-import { fitView, pan, screenToWorld, worldToScreen, zoomAt } from "../src/map2d/math"
+import { assert, assertAlmostEquals, assertEquals } from "./assert.ts"
+import { fitView, pan, screenToWorld, worldToScreen, zoomAt } from "../src/map2d/math.ts"
 
 const view = { centerX: 2, centerY: -1, metersPerPixel: 0.05 }
 
@@ -27,6 +27,7 @@ test("zoom keeps the world point under the cursor; pan follows the drag", () => 
 
 test("fitView shows the whole box", () => {
     const fitted = fitView([0, 0, 10, 4], 400, 300)
+    assert(fitted)
     const [left, top] = worldToScreen(fitted, 400, 300, 0, 4)
     const [right, bottom] = worldToScreen(fitted, 400, 300, 10, 0)
     assertEquals(left >= 0 && top >= 0 && right <= 400 && bottom <= 300, true)

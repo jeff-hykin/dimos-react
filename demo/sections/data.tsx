@@ -21,9 +21,17 @@ import {
     Table,
     Timeline,
     Tree,
-} from "../../src/index"
+} from "../../src/index.ts"
 
-const TOPICS = [
+interface DemoTopic {
+    key: string
+    name: string
+    type: string
+    hz: number
+    kb: number
+}
+
+const TOPICS: DemoTopic[] = [
     { key: "dimos/lidar/sensor_msgs.PointCloud2", name: "/lidar", type: "sensor_msgs.PointCloud2", hz: 10.1, kb: 1840 },
     { key: "dimos/odom/nav_msgs.Odometry", name: "/odom", type: "nav_msgs.Odometry", hz: 50.0, kb: 0.7 },
     { key: "dimos/tf/tf2_msgs.TFMessage", name: "/tf", type: "tf2_msgs.TFMessage", hz: 100.2, kb: 1.3 },
@@ -83,7 +91,13 @@ const FRAMES = [
     },
 ]
 
-const LOG = [
+interface DemoLogLine {
+    ts: number
+    text: string
+    level: "error" | "warn" | "info" | "debug"
+}
+
+const LOG: DemoLogLine[] = [
     { ts: Date.now() - 9000, text: "[dimos] starting blueprint unitree_go2", level: "info" },
     { ts: Date.now() - 8000, text: "[go2] connecting to 192.168.12.1 over WebRTC", level: "info" },
     { ts: Date.now() - 7000, text: "[go2] connected; video + lidar streams up", level: "info" },
@@ -106,12 +120,12 @@ class Follow(Module):
 
 /** A canvas animation as a MediaStream stands in for a camera track. */
 function MediaDemo() {
-    const [stream, setStream] = useState(null)
-    const [still, setStill] = useState(null)
-    const video = useRef(null)
+    const [stream, setStream] = useState<MediaStream | null>(null)
+    const [still, setStill] = useState<string | null>(null)
+    const video = useRef<HTMLVideoElement>(null)
     useEffect(() => {
         const canvas = Object.assign(document.createElement("canvas"), { width: 320, height: 180 })
-        const context = canvas.getContext("2d")
+        const context = canvas.getContext("2d")!
         const color = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()
         let frame = 0
         const timer = setInterval(() => {
@@ -266,7 +280,7 @@ export function DataSection() {
                 />
             </Card>
             <Card title="LiveValue (flashes on change)">
-                <LiveValue value={Math.round(rates.at(-1) * 10) / 10} format={(value) => `${value.toFixed(1)} Hz`} />
+                <LiveValue value={Math.round(rates.at(-1)! * 10) / 10} format={(value) => `${value.toFixed(1)} Hz`} />
             </Card>
             <Card title="CodeBlock (json)">
                 <CodeBlock code={CODE} language="json" lineNumbers={true} />
@@ -327,8 +341,13 @@ export function DataSection() {
 
 /** A table whose rows a backend sorts: the header picks the sort key, the rows keep the order they arrive in. */
 function BackendSortedTable() {
-    const [sort, setSort] = useState({ key: "hz", dir: "desc" })
-    const read = { name: (row) => row.name, hz: (row) => -row.hz, kb: (row) => -row.kb }[sort.key]
+    const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" }>({ key: "hz", dir: "desc" })
+    const readers: Record<string, (row: DemoTopic) => string | number> = {
+        name: (row) => row.name,
+        hz: (row) => -row.hz,
+        kb: (row) => -row.kb,
+    }
+    const read = readers[sort.key]
     // stands in for the backend: sorted by the chosen key, live first
     const rows = [...TOPICS].sort((a, b) => (read(a) < read(b) ? -1 : read(a) > read(b) ? 1 : 0))
     return (

@@ -93,6 +93,8 @@ function ControlsSection() {
                 h(Button, { variant: "primary", icon: "play" }, "Start replay"),
                 h(Button, { variant: "ghost", icon: "refresh" }, "Reload"),
                 h(Button, { variant: "danger", icon: "trash" }, "Delete"),
+                h(Button, { variant: "ok", icon: "check" }, "Stand up"),
+                h(Button, { variant: "warn", icon: "warn" }, "Take over"),
                 h(Button, { pressed: true, icon: "target" }, "Following"),
                 h(Button, { loading: true }, "Saving"),
                 h(Button, { disabled: true }, "Disabled"),

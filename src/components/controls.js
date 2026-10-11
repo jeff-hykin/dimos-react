@@ -5,7 +5,7 @@ import { cx, h } from "../h.js"
 import { Icon } from "./icon.js"
 
 /**
- * @param {{ variant?: "default" | "primary" | "ghost" | "danger", size?: "sm" | "md" | "lg", icon?: string,
+ * @param {{ variant?: "default" | "primary" | "ghost" | "danger" | "ok" | "warn", size?: "sm" | "md" | "lg", icon?: string,
  *   iconRight?: string, pressed?: boolean, loading?: boolean, block?: boolean, type?: string } & Record<string, any>} props
  */
 export function Button({

@@ -39,6 +39,11 @@ export const CONTROLS_CSS = /* css */ `
 :root[data-dr-dark] .dr-btn--ghost:hover { border-color: var(--border); }
 .dr-btn--danger { color: var(--danger); border-color: var(--danger-line); }
 .dr-btn--danger:hover { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); }
+.dr-btn--ok { color: var(--ok); border-color: var(--ok-line); }
+.dr-btn--ok:hover { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.dr-btn--warn { color: var(--warn); border-color: var(--warn-line); }
+.dr-btn--warn:hover { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); }
+.dr-btn--danger[aria-pressed="true"] { color: var(--danger); border-color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .dr-btn[aria-pressed="true"] { color: var(--primary); background: var(--sel); border-color: var(--primary); }
 .dr-btn--sm { min-height: var(--dr-control-h-sm); font-size: 12px; padding: 3px 10px; gap: 5px; }
 :root[data-dr-dark] .dr-btn--sm { font-size: 11px; }

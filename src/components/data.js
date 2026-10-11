@@ -1,7 +1,9 @@
-// Data display: tables, trees, key/value readouts, stats, lists, logs, code, sparklines and a timeline scrubber.
+// Data display: tables, trees, key/value readouts, stats, lists, logs, code, sparklines, an attitude indicator and a
+// timeline scrubber.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { cx, h } from "../h.js"
 import { Icon } from "./icon.js"
+import { copyText } from "../hooks.js"
 
 const useIsoLayoutEffect = typeof document === "undefined" ? useEffect : useLayoutEffect
 
@@ -518,12 +520,9 @@ export function CodeBlock(
     const [copied, setCopied] = useState(false)
     const lines = String(code).replace(/\n$/, "").split("\n")
     const onCopy = async () => {
-        try {
-            await globalThis.navigator?.clipboard?.writeText(code)
+        if (await copyText(code)) {
             setCopied(true)
             setTimeout(() => setCopied(false), 1200)
-        } catch {
-            // clipboard blocked
         }
     }
     return h(
@@ -573,6 +572,38 @@ export function CodeBlock(
 }
 
 // ── Sparkline ──
+
+/**
+ * An attitude indicator (artificial horizon): the horizon rolls and shifts with the body's roll and pitch, yaw is
+ * printed below. Angles in radians; null shows a level, dimmed horizon.
+ * @param {{ roll?: number | null, pitch?: number | null, yaw?: number | null, height?: number,
+ *   pitchScale?: number, className?: string }} props `pitchScale`: px of shift per degree of pitch (default 1.4)
+ */
+export function AttitudeIndicator(
+    { roll = null, pitch = null, yaw = null, height = 84, pitchScale = 1.4, className, ...rest },
+) {
+    const deg = (radians) => radians * 180 / Math.PI
+    const known = roll !== null && pitch !== null
+    const shift = known ? Math.max(-height / 2, Math.min(height / 2, deg(pitch) * pitchScale)) : 0
+    return h(
+        "div",
+        {
+            className: cx("dr-attitude", !known && "dr-attitude--unknown", className),
+            style: { height },
+            role: "img",
+            "aria-label": known ? `roll ${deg(roll).toFixed(1)}°, pitch ${deg(pitch).toFixed(1)}°` : "attitude unknown",
+            ...rest,
+        },
+        h("div", {
+            className: "dr-attitude__sky",
+            style: known
+                ? { transform: `rotate(${(-deg(roll)).toFixed(1)}deg) translateY(${shift.toFixed(0)}px)` }
+                : undefined,
+        }),
+        h("div", { className: "dr-attitude__cross" }),
+        h("div", { className: "dr-attitude__yaw" }, `yaw ${yaw === null ? "—" : deg(yaw).toFixed(0)}°`),
+    )
+}
 
 /**
  * A tiny line chart (rates, latency, battery).

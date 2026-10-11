@@ -275,3 +275,35 @@ export function useLatest(value) {
     ref.current = value
     return ref
 }
+
+/**
+ * Copies text to the clipboard → true when it worked. Pages served over plain http (a robot reached by IP) have no
+ * navigator.clipboard (secure contexts only), so it falls back to a hidden textarea + execCommand("copy").
+ */
+export async function copyText(text) {
+    try {
+        if (globalThis.navigator?.clipboard && globalThis.isSecureContext) {
+            await navigator.clipboard.writeText(text)
+            return true
+        }
+    } catch {
+        // fall through to the textarea
+    }
+    if (typeof document === "undefined") {
+        return false
+    }
+    const area = document.createElement("textarea")
+    area.value = text
+    area.setAttribute("readonly", "")
+    area.style.cssText = "position:fixed;top:0;left:0;opacity:0"
+    document.body.appendChild(area)
+    area.select()
+    let ok = false
+    try {
+        ok = document.execCommand("copy")
+    } catch {
+        ok = false
+    }
+    area.remove()
+    return ok
+}

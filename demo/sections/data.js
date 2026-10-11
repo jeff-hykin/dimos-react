@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import { h } from "../../src/h.js"
 import {
+    AttitudeIndicator,
     Badge,
     Button,
     captureFrame,
@@ -204,6 +205,16 @@ export function DataSection() {
             }),
         ),
         h(MediaDemo),
+        h(
+            Card,
+            { title: "AttitudeIndicator" },
+            h(
+                "div",
+                { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+                h(AttitudeIndicator, { roll: 0.21, pitch: -0.08, yaw: 1.2 }),
+                h(AttitudeIndicator, {}),
+            ),
+        ),
         h(
             Card,
             { title: "List + ListRow" },

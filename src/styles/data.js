@@ -340,6 +340,54 @@ export const DATA_CSS = /* css */ `
 .dr-tok-com { color: var(--code-com); font-style: italic; }
 .dr-tok-func { color: var(--code-func); }
 
+/* attitude indicator: sky in the accent, ground in the muted ink */
+.dr-attitude {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--primary) 12%, var(--bg));
+}
+.dr-attitude__sky {
+    position: absolute;
+    inset: -40%;
+    background: linear-gradient(
+        color-mix(in srgb, var(--primary) 30%, var(--bg)) 49.6%,
+        color-mix(in srgb, var(--muted-fg) 30%, var(--bg)) 50.4%
+    );
+    transform-origin: center;
+    transition: transform 120ms linear;
+}
+.dr-attitude--unknown .dr-attitude__sky { opacity: 0.4; }
+.dr-attitude__cross {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 46px;
+    height: 1px;
+    background: var(--primary);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 6px var(--primary);
+}
+.dr-attitude__cross::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1px;
+    height: 14px;
+    background: var(--primary);
+    transform: translate(-50%, -50%);
+}
+.dr-attitude__yaw {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 3px;
+    text-align: center;
+    font: 10px var(--mono);
+    color: var(--fg);
+}
 /* sparkline */
 .dr-sparkline { display: inline-block; vertical-align: middle; overflow: visible; }
 .dr-sparkline__fill { fill: currentColor; opacity: 0.14; }

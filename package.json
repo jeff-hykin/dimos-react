@@ -5,22 +5,22 @@
     "type": "module",
     "license": "MIT",
     "repository": "github:jeff-hykin/dimos-react",
-    "main": "./dist/index.js",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./src/index.ts",
+    "module": "./src/index.ts",
+    "types": "./src/index.ts",
     "exports": {
         ".": {
-            "types": "./dist/index.d.ts",
-            "default": "./dist/index.js"
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
         },
         "./three": {
-            "types": "./dist/three.d.ts",
-            "default": "./dist/three.js"
+            "types": "./src/three.ts",
+            "default": "./src/three.ts"
         },
         "./package.json": "./package.json"
     },
     "files": [
-        "dist"
+        "src"
     ],
     "scripts": {
         "build": "vite build",
@@ -31,8 +31,7 @@
         "lint": "eslint . && prettier --check .",
         "format": "prettier --write . && eslint --fix .",
         "sync-tokens": "node tools/sync_tokens.mjs",
-        "vendor": "node tools/vendor.mjs",
-        "prepare": "vite build"
+        "vendor": "node tools/vendor.mjs"
     },
     "peerDependencies": {
         "react": ">=18",

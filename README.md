@@ -373,9 +373,12 @@ Image / CompressedImage values or their LCM bytes, and CameraStreams decodes the
   (`test/imports.test.ts` checks both).
 - **Deno / vendored source**: Deno runs and type-checks the `.ts`/`.tsx` source as-is (copy `src/` in, map `react`,
   `react-dom` and `three` in your import map; `deno check` wants `@types/react` and `@types/three` for the types).
-- **Vite / npm**: a tarball or git dependency on a tag; its `prepare` script runs `npm run build`, so the package exposes
-  `dist/` (`import { AppProvider } from "dimos-react"`, `import { Scene3D } from "dimos-react/three"`), typed by
-  `dist/*.d.ts` (the old `declare module "dimos-react"` shim can go). react, react-dom and three are peer dependencies.
+- **Vite / npm**: a git dependency on a tag. The package exports the TypeScript source (`src/index.ts`,
+  `src/three.ts`, types included) and your bundler compiles it with your app: nothing is built at install, so no dev
+  dependencies come along (`import { AppProvider } from "dimos-react"`, `import { Scene3D } from "dimos-react/three"`).
+  Your tsconfig needs `"allowImportingTsExtensions": true` (Vite's react-ts template already sets it, with `noEmit`):
+  the source's relative imports name their `.ts` / `.tsx` files, and `skipLibCheck` doesn't skip `.ts` sources. Also
+  have `@types/react` (and `@types/three` for the 3D entry). react, react-dom and three are peer dependencies.
 
     ```json
     "dependencies": { "dimos-react": "github:jeff-hykin/dimos-react#vX.Y.Z" }
@@ -389,12 +392,13 @@ npm run dev         # the demo / storybook, live
 npm test            # vitest: theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock, the export list
 npm run typecheck   # tsc, strict
 npm run lint        # eslint + prettier --check (npm run format fixes)
-npm run build       # dist/ (not committed): index.js, three.js, shared chunks, .d.ts
+npm run build       # dist/ (not committed, not exported): index.js, three.js, chunks, .d.ts, for a future npm publish
 npm run build:demo  # dist-demo/index.html, the demo as one self-contained file
 ```
 
 **Releasing**: bump `version` in package.json, commit, `git tag vX.Y.Z`, push the tag. Nothing is built into git:
-esm.sh compiles the tagged source, and npm/git installs build `dist/` themselves (`prepare`).
+esm.sh compiles the tagged source, and npm/git installs hand the source to the app's bundler. (Publishing to the npm
+registry would point `exports` back at `dist/` and add it to `files`.)
 
 ## Layout
 

@@ -52,6 +52,7 @@ export declare function ListRow(props: Record<string, any>): ReactNode
 export declare function LiveValue(props: Record<string, any>): ReactNode
 export declare function LogView(props: Record<string, any>): ReactNode
 export declare function Markdown(props: Record<string, any>): ReactNode
+export declare function MediaFrame(props: Record<string, any>): ReactNode
 export declare function Menu(props: Record<string, any>): ReactNode
 export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
@@ -100,6 +101,7 @@ export declare function ZenohProvider(props: Record<string, any>): ReactNode
 export declare const applyTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const applyUrlEvent: ((...args: any[]) => any) & Record<string, any>
 export declare const bindUrlEvents: ((...args: any[]) => any) & Record<string, any>
+export declare const captureFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const createMemoryWindow: ((...args: any[]) => any) & Record<string, any>
 export declare const createUrlStore: ((...args: any[]) => any) & Record<string, any>
 export declare const cx: ((...args: any[]) => any) & Record<string, any>

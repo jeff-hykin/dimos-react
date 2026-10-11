@@ -1,0 +1,277 @@
+// Small hooks every app hand-rolled: persisted state, keys, Escape, mobile, pointer drags, a ticking clock, gamepads.
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
+
+/**
+ * useState that survives reloads (localStorage, JSON). A blocked or full storage just keeps it in memory.
+ * @template T
+ * @param {string} key
+ * @param {T | (() => T)} initial
+ * @returns {[T, (next: T | ((old: T) => T)) => void]}
+ */
+export function usePersistentState(key, initial) {
+    const [value, setValue] = useState(() => {
+        try {
+            const saved = globalThis.localStorage?.getItem(key)
+            if (saved !== null && saved !== undefined) {
+                return JSON.parse(saved)
+            }
+        } catch {
+            // unreadable: the initial value
+        }
+        return typeof initial === "function" ? initial() : initial
+    })
+    const set = useCallback((next) => {
+        setValue((old) => {
+            const resolved = typeof next === "function" ? next(old) : next
+            try {
+                globalThis.localStorage?.setItem(key, JSON.stringify(resolved))
+            } catch {
+                // storage blocked or full
+            }
+            return resolved
+        })
+    }, [key])
+    return [value, set]
+}
+
+const isTyping = (event) => {
+    const target = event.target
+    return !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName ?? ""))
+}
+
+/** "mod+k" → does `event` match it (mod = ⌘ on Mac, Ctrl elsewhere)? */
+export function matchesHotkey(event, combo) {
+    const parts = combo.toLowerCase().split("+").map((part) => part.trim())
+    const key = parts.pop()
+    const mac = /mac|iphone|ipad/i.test(globalThis.navigator?.platform ?? "")
+    const want = {
+        ctrl: parts.includes("ctrl") || (!mac && parts.includes("mod")),
+        meta: parts.includes("meta") || parts.includes("cmd") || (mac && parts.includes("mod")),
+        alt: parts.includes("alt") || parts.includes("option"),
+        shift: parts.includes("shift"),
+    }
+    const pressed = (event.key ?? "").toLowerCase()
+    const named = {
+        esc: "escape",
+        space: " ",
+        up: "arrowup",
+        down: "arrowdown",
+        left: "arrowleft",
+        right: "arrowright",
+    }
+    return (pressed === (named[key] ?? key) || (event.code ?? "").toLowerCase() === `key${key}`) &&
+        event.ctrlKey === want.ctrl && event.metaKey === want.meta && event.altKey === want.alt &&
+        (event.shiftKey === want.shift || key.length === 1 && !/[a-z0-9]/.test(key))
+}
+
+/**
+ * Keyboard shortcuts: `{ "mod+k": openPalette, "?": showHelp }`. Ignored while typing in a field unless the combo has
+ * a modifier. `enabled: false` turns them all off.
+ * @param {Record<string, (event: KeyboardEvent) => void>} bindings
+ * @param {{ enabled?: boolean, target?: EventTarget }} [options]
+ */
+export function useHotkeys(bindings, { enabled = true, target } = {}) {
+    const ref = useRef(bindings)
+    ref.current = bindings
+    useEffect(() => {
+        if (!enabled) {
+            return
+        }
+        const on = target ?? globalThis
+        const listener = (event) => {
+            for (const [combo, handler] of Object.entries(ref.current)) {
+                if (!matchesHotkey(event, combo)) {
+                    continue
+                }
+                if (isTyping(event) && !/(mod|ctrl|meta|cmd|alt)\+/.test(combo.toLowerCase())) {
+                    continue
+                }
+                event.preventDefault()
+                handler(event)
+                return
+            }
+        }
+        on.addEventListener("keydown", listener)
+        return () => on.removeEventListener("keydown", listener)
+    }, [enabled, target])
+}
+
+/**
+ * The set of keys held right now (KeyboardEvent.code, e.g. "KeyW", "ArrowUp"), for driving and jogging. Cleared when
+ * the window loses focus so a key never sticks. Only `codes` are tracked (default: all).
+ * @param {{ codes?: string[], enabled?: boolean }} [options]
+ * @returns {Set<string>}
+ */
+export function useHeldKeys({ codes, enabled = true } = {}) {
+    const [held, setHeld] = useState(() => new Set())
+    const wanted = codes ? codes.join(",") : ""
+    useEffect(() => {
+        if (!enabled) {
+            setHeld(new Set())
+            return
+        }
+        const allow = wanted ? new Set(wanted.split(",")) : null
+        const current = new Set()
+        const push = () => setHeld(new Set(current))
+        const down = (event) => {
+            if (isTyping(event) || (allow && !allow.has(event.code)) || current.has(event.code)) {
+                return
+            }
+            current.add(event.code)
+            push()
+        }
+        const up = (event) => {
+            if (current.delete(event.code)) {
+                push()
+            }
+        }
+        const clear = () => {
+            if (current.size) {
+                current.clear()
+                push()
+            }
+        }
+        addEventListener("keydown", down)
+        addEventListener("keyup", up)
+        addEventListener("blur", clear)
+        document.addEventListener("visibilitychange", clear)
+        return () => {
+            removeEventListener("keydown", down)
+            removeEventListener("keyup", up)
+            removeEventListener("blur", clear)
+            document.removeEventListener("visibilitychange", clear)
+        }
+    }, [wanted, enabled])
+    return held
+}
+
+/** Calls `handler` on Escape (while `enabled`). The most recently mounted handler wins, so nested popups close in order. */
+const escapeStack = []
+export function useEscape(handler, enabled = true) {
+    const ref = useRef(handler)
+    ref.current = handler
+    useEffect(() => {
+        if (!enabled) {
+            return
+        }
+        const entry = { call: (event) => ref.current(event) }
+        escapeStack.push(entry)
+        const listener = (event) => {
+            if (event.key === "Escape" && escapeStack[escapeStack.length - 1] === entry) {
+                event.stopPropagation()
+                entry.call(event)
+            }
+        }
+        addEventListener("keydown", listener)
+        return () => {
+            removeEventListener("keydown", listener)
+            escapeStack.splice(escapeStack.indexOf(entry), 1)
+        }
+    }, [enabled])
+}
+
+/** Whether a CSS media query matches, live. */
+export function useMediaQuery(query) {
+    const subscribe = useCallback((notify) => {
+        const list = globalThis.matchMedia?.(query)
+        list?.addEventListener("change", notify)
+        return () => list?.removeEventListener("change", notify)
+    }, [query])
+    return useSyncExternalStore(subscribe, () => !!globalThis.matchMedia?.(query).matches, () => false)
+}
+
+/** A phone-sized or touch-first viewport (narrow, or a coarse pointer with no hover). */
+export function useMobile(maxWidth = 700) {
+    const narrow = useMediaQuery(`(max-width: ${maxWidth}px)`)
+    const touch = useMediaQuery("(hover: none) and (pointer: coarse)")
+    return narrow || touch
+}
+
+/**
+ * Pointer drags (mouse, pen, touch) on an element: `onStart(point)`, `onMove({ dx, dy, x, y, event })` with dx/dy
+ * since the start, `onEnd(...)`. Returns props to spread on the handle element.
+ * @param {{ onStart?: (p: any) => void, onMove?: (p: any) => void, onEnd?: (p: any) => void, disabled?: boolean }} handlers
+ */
+export function useDrag(handlers) {
+    const ref = useRef(handlers)
+    ref.current = handlers
+    const onPointerDown = useCallback((event) => {
+        if (ref.current.disabled || (event.pointerType === "mouse" && event.button !== 0)) {
+            return
+        }
+        const element = event.currentTarget
+        const start = { x: event.clientX, y: event.clientY }
+        element.setPointerCapture?.(event.pointerId)
+        const info = (moveEvent) => ({
+            x: moveEvent.clientX,
+            y: moveEvent.clientY,
+            dx: moveEvent.clientX - start.x,
+            dy: moveEvent.clientY - start.y,
+            event: moveEvent,
+            element,
+        })
+        ref.current.onStart?.(info(event))
+        const move = (moveEvent) => ref.current.onMove?.(info(moveEvent))
+        const end = (endEvent) => {
+            element.removeEventListener("pointermove", move)
+            element.removeEventListener("pointerup", end)
+            element.removeEventListener("pointercancel", end)
+            ref.current.onEnd?.(info(endEvent))
+        }
+        element.addEventListener("pointermove", move)
+        element.addEventListener("pointerup", end)
+        element.addEventListener("pointercancel", end)
+    }, [])
+    return { onPointerDown, style: { touchAction: "none" } }
+}
+
+/** `Date.now()`, re-rendered every `intervalMs` (for "3 s ago" labels and staleness). */
+export function useNow(intervalMs = 1000) {
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), intervalMs)
+        return () => clearInterval(timer)
+    }, [intervalMs])
+    return now
+}
+
+/**
+ * The first connected gamepad, polled each animation frame: `{ id, axes, buttons: boolean[] } | null`.
+ * `deadzone` zeroes small stick values.
+ */
+export function useGamepad({ deadzone = 0.08, enabled = true } = {}) {
+    const [pad, setPad] = useState(null)
+    useEffect(() => {
+        if (!enabled || !globalThis.navigator?.getGamepads) {
+            return
+        }
+        let frame = 0
+        let last = ""
+        const poll = () => {
+            frame = requestAnimationFrame(poll)
+            const found = [...navigator.getGamepads()].find(Boolean)
+            const next = found
+                ? {
+                    id: found.id,
+                    axes: found.axes.map((value) => (Math.abs(value) < deadzone ? 0 : value)),
+                    buttons: found.buttons.map((button) => button.pressed),
+                }
+                : null
+            const signature = JSON.stringify(next)
+            if (signature !== last) {
+                last = signature
+                setPad(next)
+            }
+        }
+        poll()
+        return () => cancelAnimationFrame(frame)
+    }, [deadzone, enabled])
+    return pad
+}
+
+/** The latest value of `value` in a ref (for callbacks that must not re-subscribe). */
+export function useLatest(value) {
+    const ref = useRef(value)
+    ref.current = value
+    return ref
+}

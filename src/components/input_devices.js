@@ -1,0 +1,312 @@
+// Touch and pointer input: a virtual joystick, a D-pad, a file drop zone, a color swatch and HUD key hints.
+import { useEffect, useRef, useState } from "react"
+import { cx, h } from "../h.js"
+import { Icon } from "./icon.js"
+
+/** Pointer offset from a circle's center → stick value in -1..1 (y up), clamped to the unit circle. */
+export function stickValue(dx, dy, radius) {
+    let x = dx / radius
+    let y = -dy / radius
+    const length = Math.hypot(x, y)
+    if (length > 1) {
+        x /= length
+        y /= length
+    }
+    return { x, y }
+}
+
+/**
+ * A virtual joystick: `onChange({ x, y })` (-1..1, y up) on every move while held, `{0, 0}` on release.
+ * @param {{ onChange?: (value: { x: number, y: number }) => void, onStart?: () => void, onEnd?: () => void,
+ *   size?: number, disabled?: boolean, label?: any, className?: string, style?: object }} props
+ */
+export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label, className, style, ...rest }) {
+    const base = useRef(null)
+    const [knob, setKnob] = useState({ x: 0, y: 0, active: false })
+    const radius = size / 2 - size * 0.18
+    const update = (event) => {
+        const rect = base.current.getBoundingClientRect()
+        const value = stickValue(
+            event.clientX - (rect.left + rect.width / 2),
+            event.clientY - (rect.top + rect.height / 2),
+            radius,
+        )
+        setKnob({ ...value, active: true })
+        onChange?.(value)
+    }
+    const release = () => {
+        setKnob({ x: 0, y: 0, active: false })
+        onChange?.({ x: 0, y: 0 })
+        onEnd?.()
+    }
+    return h(
+        "div",
+        {
+            ref: base,
+            className: cx(
+                "dr-joystick",
+                knob.active && "dr-joystick--active",
+                disabled && "dr-joystick--disabled",
+                className,
+            ),
+            style: { width: size, height: size, touchAction: "none", ...style },
+            role: "application",
+            "aria-label": typeof label === "string" ? label : "Joystick",
+            onPointerDown: (event) => {
+                if (disabled) {
+                    return
+                }
+                event.currentTarget.setPointerCapture?.(event.pointerId)
+                onStart?.()
+                update(event)
+            },
+            onPointerMove: (event) => {
+                if (knob.active && !disabled) {
+                    update(event)
+                }
+            },
+            onPointerUp: () => knob.active && release(),
+            onPointerCancel: () => knob.active && release(),
+            onLostPointerCapture: () => knob.active && release(),
+            ...rest,
+        },
+        h("span", { className: "dr-joystick__ring" }),
+        h("span", { className: "dr-joystick__cross" }),
+        h("span", {
+            className: "dr-joystick__knob",
+            style: {
+                width: size * 0.36,
+                height: size * 0.36,
+                transform: `translate(calc(-50% + ${knob.x * radius}px), calc(-50% + ${-knob.y * radius}px))`,
+            },
+        }),
+        label ? h("span", { className: "dr-joystick__label" }, label) : null,
+    )
+}
+
+const DIRECTIONS = [
+    ["up", "arrow-up"],
+    ["left", "arrow-left"],
+    ["center", null],
+    ["right", "arrow-right"],
+    ["down", "arrow-down"],
+]
+
+/**
+ * A D-pad: `onPress(dir)` when a direction goes down, `onRelease(dir)` when it comes up ("up" | "down" | "left" |
+ * "right" | "center"). Holds while the pointer is down.
+ * @param {{ onPress?: (dir: string) => void, onRelease?: (dir: string) => void, size?: number, center?: any,
+ *   disabled?: boolean, held?: string[], className?: string, style?: object }} props
+ *   `center`: content of the middle button (omit for none); `held`: directions to show as pressed (e.g. from keys)
+ */
+export function DPad({ onPress, onRelease, size = 132, center, disabled, held = [], className, style, ...rest }) {
+    const [down, setDown] = useState(null)
+    const press = (dir, event) => {
+        if (disabled) {
+            return
+        }
+        event.currentTarget.setPointerCapture?.(event.pointerId)
+        setDown(dir)
+        onPress?.(dir)
+    }
+    const release = (dir) => {
+        if (down === dir) {
+            setDown(null)
+            onRelease?.(dir)
+        }
+    }
+    return h(
+        "div",
+        {
+            className: cx("dr-dpad", disabled && "dr-dpad--disabled", className),
+            style: { width: size, height: size, ...style },
+            ...rest,
+        },
+        DIRECTIONS.map(([dir, icon]) => {
+            if (dir === "center" && center === undefined) {
+                return h("span", { key: dir, className: "dr-dpad__hub" })
+            }
+            return h(
+                "button",
+                {
+                    key: dir,
+                    type: "button",
+                    "aria-label": dir,
+                    "aria-pressed": down === dir || held.includes(dir),
+                    disabled,
+                    className: cx("dr-dpad__btn", `dr-dpad__btn--${dir}`),
+                    style: { touchAction: "none" },
+                    onPointerDown: (event) => press(dir, event),
+                    onPointerUp: () => release(dir),
+                    onPointerCancel: () => release(dir),
+                    onLostPointerCapture: () => release(dir),
+                    onContextMenu: (event) => event.preventDefault(),
+                },
+                icon ? h(Icon, { name: icon, size: Math.round(size * 0.15) }) : center,
+            )
+        }),
+    )
+}
+
+/**
+ * A drop zone that also opens the file picker on click.
+ * @param {{ onFiles: (files: File[]) => void, accept?: string, multiple?: boolean, disabled?: boolean, title?: any,
+ *   hint?: any, icon?: string, children?: any, className?: string, style?: object }} props
+ */
+export function FileDrop(
+    {
+        onFiles,
+        accept,
+        multiple = false,
+        disabled,
+        title = "Drop a file here",
+        hint = "or click to choose",
+        icon = "upload",
+        children,
+        className,
+        style,
+        ...rest
+    },
+) {
+    const input = useRef(null)
+    const [over, setOver] = useState(false)
+    const accepts = (file) => {
+        if (!accept) {
+            return true
+        }
+        return accept.split(",").map((part) => part.trim().toLowerCase()).some((rule) =>
+            rule.startsWith(".")
+                ? file.name.toLowerCase().endsWith(rule)
+                : rule.endsWith("/*")
+                ? file.type.startsWith(rule.slice(0, -1))
+                : file.type === rule
+        )
+    }
+    const take = (list) => {
+        const files = [...(list ?? [])].filter(accepts)
+        if (files.length) {
+            onFiles?.(multiple ? files : files.slice(0, 1))
+        }
+    }
+    return h(
+        "div",
+        {
+            className: cx("dr-filedrop", over && "dr-filedrop--over", disabled && "dr-filedrop--disabled", className),
+            style,
+            role: "button",
+            tabIndex: disabled ? -1 : 0,
+            onClick: () => !disabled && input.current?.click(),
+            onKeyDown: (event) => {
+                if (!disabled && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault()
+                    input.current?.click()
+                }
+            },
+            onDragOver: (event) => {
+                if (disabled) {
+                    return
+                }
+                event.preventDefault()
+                setOver(true)
+            },
+            onDragLeave: () => setOver(false),
+            onDrop: (event) => {
+                event.preventDefault()
+                setOver(false)
+                if (!disabled) {
+                    take(event.dataTransfer?.files)
+                }
+            },
+            ...rest,
+        },
+        h("input", {
+            ref: input,
+            type: "file",
+            accept,
+            multiple,
+            hidden: true,
+            onChange: (event) => {
+                take(event.target.files)
+                event.target.value = ""
+            },
+        }),
+        children ?? [
+            h(Icon, { key: "i", name: icon, size: 24, className: "dr-filedrop__icon" }),
+            h("div", { key: "t", className: "dr-filedrop__title" }, title),
+            hint ? h("div", { key: "h", className: "dr-filedrop__hint" }, hint) : null,
+        ],
+    )
+}
+
+/**
+ * A color picker swatch (the color is user data: a layer's color, a path's color), with optional presets.
+ * @param {{ value: string, onChange?: (color: string) => void, presets?: string[], disabled?: boolean,
+ *   label?: string, className?: string }} props
+ */
+export function ColorSwatch({ value, onChange, presets, disabled, label = "Color", className, ...rest }) {
+    return h(
+        "span",
+        { className: cx("dr-swatch", className), ...rest },
+        h(
+            "label",
+            { className: cx("dr-swatch__pick", disabled && "dr-swatch__pick--disabled"), title: value },
+            h("span", { className: "dr-swatch__color", style: { background: value } }),
+            h("input", {
+                type: "color",
+                className: "dr-sr-only",
+                "aria-label": label,
+                value,
+                disabled,
+                onChange: (event) => onChange?.(event.target.value),
+            }),
+        ),
+        presets?.map((preset) =>
+            h("button", {
+                key: preset,
+                type: "button",
+                disabled,
+                title: preset,
+                "aria-label": `${label} ${preset}`,
+                "aria-pressed": preset.toLowerCase() === String(value).toLowerCase(),
+                className: "dr-swatch__preset",
+                style: { background: preset },
+                onClick: () => onChange?.(preset),
+            })
+        ),
+    )
+}
+
+/**
+ * Key hints for a HUD: `[[["W", "A", "S", "D"], "drive"], [["Space"], "stop"]]` (a string key list works too: "W A S D").
+ * @param {{ hints: [string | string[], any][], vertical?: boolean, className?: string }} props
+ */
+export function KeyHints({ hints = [], vertical = false, className, ...rest }) {
+    return h(
+        "div",
+        { className: cx("dr-keyhints", vertical && "dr-keyhints--vertical", className), ...rest },
+        hints.map(([keys, label], index) =>
+            h(
+                "span",
+                { key: index, className: "dr-keyhints__item" },
+                (Array.isArray(keys) ? keys : String(keys).split(" ")).map((key, keyIndex) =>
+                    h("kbd", { key: keyIndex, className: "dr-kbd" }, key)
+                ),
+                h("span", { className: "dr-keyhints__label" }, label),
+            )
+        ),
+    )
+}
+
+/** Keeps calling `onTick(value)` at `hz` while `value` is non-zero (a joystick held still still drives). */
+export function useRepeatWhileHeld(value, onTick, hz = 10) {
+    const latest = useRef(onTick)
+    latest.current = onTick
+    const active = value && (value.x || value.y)
+    useEffect(() => {
+        if (!active) {
+            return
+        }
+        const timer = setInterval(() => latest.current(value), 1000 / hz)
+        return () => clearInterval(timer)
+    }, [active, value?.x, value?.y, hz])
+}

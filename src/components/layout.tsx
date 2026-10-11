@@ -9,12 +9,14 @@ import type {
     IframeHTMLAttributes,
     PointerEvent as ReactPointerEvent,
     ReactNode,
+    Ref,
 } from "react"
 import { cx } from "../cx.ts"
 import { useDrag, usePersistentState } from "../hooks.ts"
 import { Icon } from "./icon.tsx"
 
 export interface CardProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
+    ref?: Ref<HTMLElement>
     title?: ReactNode
     description?: ReactNode
     /** the right side of the header */

@@ -78,7 +78,9 @@ export {
 } from "./three/cloud_quality.ts"
 export { GradientPicker } from "./three/gradient_picker.tsx"
 export { Viewer } from "./three/viewer.ts"
+export type { FrameInfo, PickResult, RenderStats, ViewerOptions } from "./three/viewer.ts"
 export { STALE_MS, TfTree, WORLD_NAMES } from "./three/tf.ts"
+export type { TfProblems, TfSnapshot, TfSnapshotEdge } from "./three/tf.ts"
 export { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./three/follow.ts"
 export { DEFAULT_GRADIENT, gradientCss, GRADIENTS, gradientTexture, RAMPS, sampleGradient } from "./three/gradients.ts"
 export {

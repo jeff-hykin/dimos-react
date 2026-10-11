@@ -154,3 +154,17 @@ Deno.test("DimThemeProvider takes Desktop's saved skin and follows a live change
     await React.act(async () => root.unmount())
     await dom.happyDOM.close()
 })
+
+Deno.test("component CSS braces balance (one unclosed rule swallows every rule after it)", async () => {
+    const { COMPONENT_CSS } = await import("../src/theme/css.js")
+    let depth = 0
+    for (const char of COMPONENT_CSS.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"[^"]*"/g, "")) {
+        depth += char === "{" ? 1 : char === "}" ? -1 : 0
+        if (depth < 0 || depth > 2) {
+            throw new Error(`unbalanced braces (depth ${depth})`)
+        }
+    }
+    if (depth !== 0) {
+        throw new Error(`unbalanced braces at the end (depth ${depth})`)
+    }
+})

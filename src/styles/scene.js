@@ -340,6 +340,7 @@ export const SCENE_CSS = /* css */ `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
 .dr-gradient-picker {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));

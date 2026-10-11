@@ -30,9 +30,9 @@
         "typecheck": "tsc -p .",
         "lint": "eslint . && prettier --check .",
         "format": "prettier --write . && eslint --fix .",
-        "release": "node tools/release.mjs",
         "sync-tokens": "node tools/sync_tokens.mjs",
-        "vendor": "node tools/vendor.mjs"
+        "vendor": "node tools/vendor.mjs",
+        "prepare": "vite build"
     },
     "peerDependencies": {
         "react": ">=18",

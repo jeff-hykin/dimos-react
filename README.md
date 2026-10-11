@@ -4,8 +4,9 @@ React UI toolkit for [dimOS Desktop](https://github.com/dimensionalOS/dimos-desk
 Desktop's skin live, URL state the backend can drive, zenoh data hooks, and a generic three.js 3D view (TF, point
 clouds, paths, poses, robot models).
 
-Plain JavaScript + JSDoc, **no build step**: React's `createElement` is exported as `h`, and React / three come from
-your page's import map, so the library and your app share one copy.
+TypeScript + TSX. No-build pages import the source straight from a GitHub tag through esm.sh (it compiles the .ts/.tsx);
+bundlers can use the Vite build (`dist/`, with `.d.ts` types). React, react-dom and three are peer dependencies — never
+bundled — so the library and your app share one copy.
 
 ## Quick start
 
@@ -19,8 +20,8 @@ your page's import map, so the library and your app share one copy.
             "react-dom/": "https://esm.sh/react-dom@19.2.0/",
             "three": "https://esm.sh/three@0.180.0",
             "three/": "https://esm.sh/three@0.180.0/",
-            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/mod.js?external=react,react-dom,three",
-            "dimos-react/three": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/three.js?external=react,react-dom,three"
+            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.2.0/src/index.ts?external=react,react-dom,three",
+            "dimos-react/three": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.2.0/src/three.ts?external=react,react-dom,three"
         }
     }
 </script>
@@ -28,59 +29,67 @@ your page's import map, so the library and your app share one copy.
 <script type="module" src="./main.js"></script>
 ```
 
-```js
-// main.js
+```tsx
+// main.tsx (a Vite / TSX app; a no-build page writes the same with React's createElement)
 import { createRoot } from "react-dom/client"
-import { AppProvider, Button, Card, h, Toggle, TopBar, useToast, useUrlState } from "dimos-react"
+import { AppProvider, Button, Card, Toggle, TopBar, useToast, useUrlState } from "dimos-react"
 
 function App() {
     const toast = useToast()
     const [tab, setTab] = useUrlState("tab", "overview")
     const [follow, setFollow] = useUrlState("follow", true, { codec: "boolean" })
-    return h(
-        "div",
-        null,
-        h(TopBar, { title: "My app", icon: "robot" }),
-        h(
-            Card,
-            { title: tab },
-            h(Toggle, { value: follow, onChange: setFollow, label: "Follow robot" }),
-            h(Button, {
-                variant: "primary",
-                onClick: () => {
-                    setTab("map")
-                    toast.ok("Switched")
-                },
-            }, "Show map"),
-        ),
+    return (
+        <div>
+            <TopBar title="My app" icon="robot" />
+            <Card title={tab}>
+                <Toggle value={follow} onChange={setFollow} label="Follow robot" />
+                <Button
+                    variant="primary"
+                    onClick={() => {
+                        setTab("map")
+                        toast.ok("Switched")
+                    }}
+                >
+                    Show map
+                </Button>
+            </Card>
+        </div>
     )
 }
 
-createRoot(document.getElementById("root")).render(h(AppProvider, null, h(App)))
+createRoot(document.getElementById("root")!).render(
+    <AppProvider>
+        <App />
+    </AppProvider>,
+)
 ```
+
+`h` (React's `createElement`) is no longer exported (v0.2): a no-build app imports it from React,
+`import { createElement as h } from "react"`.
 
 `AppProvider` = `DimThemeProvider` (Desktop's skin, live) + the data source (Desktop's zenoh-gateway) +
 `UrlStateProvider` (backend url events) + toasts + confirm/prompt dialogs. Each also works on its own.
 
-The demo / storybook renders every component: `deno task demo`, then open http://localhost:8777/demo/ (`?skin=research`,
-`?skin=vibeslop`, … picks a skin; `?section=scene` one section).
+The demo / storybook renders every component: `npm run dev`, then open the printed URL (`?skin=research`,
+`?skin=vibeslop`, … picks a skin; `?section=scene` one section). `npm run build:demo` writes it as one self-contained
+file, `dist-demo/index.html`.
 
 ## Theme
 
 Desktop serves every skin's tokens at `/theme.css` and saves the user's choice in localStorage (`portal.theme`,
 `portal.corners`). `<DimThemeProvider>` links that stylesheet when the page is a Desktop app (`/apps/<name>/`), sets
 `html[data-skin]` / `html[data-corners]`, and follows every change live (Settings → Appearance in Desktop reaches every
-open app through the `storage` event). Off Desktop it uses a bundled copy of the tokens (`src/theme/tokens.js`,
-regenerated with `deno task sync-tokens`).
+open app through the `storage` event). Off Desktop it uses a bundled copy of the tokens (`src/theme/tokens.ts`,
+regenerated with `npm run sync-tokens`).
 
-```js
-h(DimThemeProvider, null, h(App)) // Desktop's skin, followed live
-h(DimThemeProvider, { skin: "research" }, h(App)) // pinned (screenshots, demos)
+```tsx
+<DimThemeProvider><App /></DimThemeProvider> // Desktop's skin, followed live
+<DimThemeProvider skin="research"><App /></DimThemeProvider> // pinned (screenshots, demos)
 const { skin, dark, corners, colors } = useTheme() // colors: --primary, --scene-bg, … for canvases / 3D
 ```
 
 Every component is styled only with Desktop's tokens (`var(--primary)`, `var(--radius)`, `color-mix()` of tokens: no
-color literals, checked by `test/theme_test.js`), with light rules plus `:root[data-dr-dark]` rules for dark skins, so
+color literals, checked by `test/theme.test.ts`), with light rules plus `:root[data-dr-dark]` rules for dark skins, so
 an app looks like Desktop in every skin. Your own CSS can use the same tokens. `--dim-inset-bottom` etc. say how much of
 the page Desktop's dock covers.
 
@@ -129,7 +138,7 @@ const [t, setT] = useUrlState("t", 0, { codec: "number", replace: true }) // cod
 const [params, setParams] = useUrlParams() // all of them
 ```
 
-`test/url_state_test.js` proves the round trip: a backend event → the URL → the rendered UI, then back/forward and a
+`test/url_state.test.ts` proves the round trip: a backend event → the URL → the rendered UI, then back/forward and a
 fresh deep link reproduce the same UI. Without React: `createUrlStore()`, `bindUrlEvents(source, store)`. `mode: "hash"`
 keeps params in `#a=1&b=2` instead of the query string.
 
@@ -140,9 +149,9 @@ keeps params in `#a=1&b=2` instead of the query string.
 or a `frame` prop. Depth (16UC1 / 32FC1) goes through a colormap (`colormap`, `near` / `far` in meters, null = auto);
 `overlayTopic` draws `vision_msgs.Detection2DArray` boxes over it; `onInfo` reports size, fps, quality.
 
-```js
-h(ImageView, { topic: "dimos/color_image/sensor_msgs.Image", style: { height: 240 } })
-h(ImageView, { topic: "dimos/depth/sensor_msgs.Image", colormap: "magma", near: 0.3, far: 6 })
+```tsx
+<ImageView topic="dimos/color_image/sensor_msgs.Image" style={{ height: 240 }} />
+<ImageView topic="dimos/depth/sensor_msgs.Image" colormap="magma" near={0.3} far={6} />
 ```
 
 `PlaybackBar` is a recording player's bar: play / pause, time, speed, loop, a scrubber that zooms (ctrl/⌘ + wheel) and
@@ -150,7 +159,7 @@ pans, and expanded, a lane per stream with a tick per message
 (`lanes: [{ id, label, meta, count, leading, menu,
 active, ticks: { times } | { counts } }]`). `onScrubStart` /
 `onSeek(t)` / `onScrubEnd` while dragging; `keyboard` adds space / ← → / Home / End. The colormaps (`RAMPS`,
-`sampleGradient`) come without three.js from `mod.js`.
+`sampleGradient`) come without three.js from the main entry.
 
 ## View panels, driving input, cameras
 
@@ -158,7 +167,7 @@ active, ticks: { times } | { counts } }]`). `onScrubStart` /
   `aspect`), "dock" (`dock: { region, rect, maximized, onMaximize, tiles? }`: a layout places it, a maximize button,
   dragging a tile's header onto another swaps them) or "main" (fills its parent). Helpers: `clampPanelBox`, `swapTiles`,
   `startPanelDrag`, `startPanelResize`, `PanelInfo` (a header readout), class `dr-view-panel-title`.
-- `Map2D` (from `three.js`) — a top-down 2D map filling its parent: `topic` (OccupancyGrid, or a PointCloud2 as a height
+- `Map2D` (from `dimos-react/three`) — a top-down 2D map filling its parent: `topic` (OccupancyGrid, or a PointCloud2 as a height
   heatmap), `overlay` (a costmap over it), `path` (a nav_msgs.Path key), the robot arrow + trail at `robotFrame`, axes,
   grid, scale bar; wheel/pinch zoom, drag pan, follows `followFrame` until a pan; `onPick({ x, y, frame })` on a click
   (e.g. a goal); `onView` / `view` to remember the view; `onMap(renderer)` for `recenter()` / `fit()`. Placed through
@@ -170,66 +179,45 @@ active, ticks: { times } | { counts } }]`). `onScrubStart` /
   topic is its H.264 video track at this viewer's latency ↔ quality preset (`useVideoQuality(topic)`, `VIDEO_PRESETS`,
   changed in place), depth and replayed frames go through `ImageView`; optional 2D detection overlay. `CameraTabs`,
   `CameraStreams` / `CameraStreamsProvider` (shared, counted subscriptions; `element()` gives a `<video>` for textures),
-  `cameraTabs`, `pickCamera`, `retargetCameras`, `cameraInfoFor`. The `three.js` entry adds `DepthMaterial` (the depth
+  `cameraTabs`, `pickCamera`, `retargetCameras`, `cameraInfoFor`. The `dimos-react/three` entry adds `DepthMaterial` (the depth
   colormap as a three.js material, for a camera's 3D projection).
 
 ## 3D view (three.js)
 
-The 3D view is its own entry, `three.js`, so apps without one never load three. It is the Controller's view made
+The 3D view is its own entry, `dimos-react/three` (`src/three.ts`), so apps without one never load three. It is the Controller's view made
 generic: a Z-up (ROS) scene in a fixed frame, orbit/pan/zoom (mouse: left-drag orbit, right- or shift-drag pan, wheel
 zoom; touch: one finger orbit, two fingers pan and pinch zoom), a smoothed follow camera, TF streaming, and layers for
 point clouds, paths, poses and stand-in robot models. Layers take data **from a topic** (through the data source: live
 zenoh-gateway by default, or a replay / test source via `DataSourceProvider`) **or from props**.
 
-```js
-import {
-    DimThemeProvider,
-    h,
-    ZenohProvider,
-} from "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/mod.js?external=react,react-dom,three"
-import {
-    Path,
-    PointCloud,
-    Pose,
-    RobotModel,
-    Scene3D,
-    SceneControls,
-    SceneStats,
-    TfFeed,
-    TfFrames,
-} from "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.0/three.js?external=react,react-dom,three"
+```tsx
+import { Path, PointCloud, Pose, RobotModel, Scene3D, SceneControls, SceneStats, TfFeed, TfFrames } from "dimos-react/three"
 
 // live, from topics: dimos/<topic>/<msg type> keys on Desktop's zenoh-gateway
-h(
-    Scene3D,
-    { followFrame: "base_link", style: { height: "100vh" } },
-    h(TfFeed), // every tf2_msgs.TFMessage topic → the TF tree
-    h(TfFrames, { axesSize: 0.25 }), // axes + names + parent links
-    h(PointCloud, { topic: "dimos/lidar/sensor_msgs.PointCloud2", style: "voxel", size: 0.05 }),
-    h(PointCloud, { topic: "dimos/global_map/sensor_msgs.PointCloud2", mode: "accumulate", size: 0.1 }),
-    h(Path, { topic: "dimos/path/nav_msgs.Path" }),
-    h(Pose, { topic: "dimos/odom/nav_msgs.Odometry", trail: true }),
-    h(RobotModel, { kind: "dog", frame: "base_link" }), // dog | humanoid | wheeled | drone | arrow
-    h(SceneControls), // frame-all, top-down, resume-follow buttons (onFrameAll / onTopDown override)
-    h(SceneStats),
-) // fps · points · frame ms · latency
+<Scene3D followFrame="base_link" style={{ height: "100vh" }}>
+    <TfFeed /> {/* every tf2_msgs.TFMessage topic → the TF tree */}
+    <TfFrames axesSize={0.25} /> {/* axes + names + parent links */}
+    <PointCloud topic="dimos/lidar/sensor_msgs.PointCloud2" style="voxel" size={0.05} />
+    <PointCloud topic="dimos/global_map/sensor_msgs.PointCloud2" mode="accumulate" size={0.1} />
+    <Path topic="dimos/path/nav_msgs.Path" />
+    <Pose topic="dimos/odom/nav_msgs.Odometry" trail />
+    <RobotModel kind="dog" frame="base_link" /> {/* dog | humanoid | wheeled | drone | arrow */}
+    <SceneControls /> {/* frame-all, top-down, resume-follow buttons (onFrameAll / onTopDown override) */}
+    <SceneStats /> {/* fps · points · frame ms · latency */}
+</Scene3D>
 ```
 
 From props (a replay, a file, computed data): the same layers, no topic.
 
-```js
-h(
-    Scene3D,
-    { fixedFrame: "world", style: { height: 480 } },
-    h(TfFeed, {
-        transforms: [{ parent: "world", child: "base_link", translation: [1, 2, 0], rotation: [0, 0, 0, 1] }],
-    }),
-    h(PointCloud, { points: float32xyz, intensity: uint8, frame: "world", colorMode: "intensity", gradient: "turbo" }),
-    h(Path, { poses: [[0, 0, 0], [1, 0, 0], [2, 1, 0]], frame: "world", color: "var(--ok)" }),
-    h(Pose, { pose: { x: 1, y: 2, yaw: 0.5 }, frame: "world" }),
-    h(PoseArray, { poses: waypoints, frame: "world" }),
-    h(RobotModel, { kind: "wheeled", pose: { x: 1, y: 2, yaw: 0.5 }, poseFrame: "world" }),
-)
+```tsx
+<Scene3D fixedFrame="world" style={{ height: 480 }}>
+    <TfFeed transforms={[{ parent: "world", child: "base_link", translation: [1, 2, 0], rotation: [0, 0, 0, 1] }]} />
+    <PointCloud points={float32xyz} intensity={uint8} frame="world" colorMode="intensity" gradient="turbo" />
+    <Path poses={[[0, 0, 0], [1, 0, 0], [2, 1, 0]]} frame="world" color="var(--ok)" />
+    <Pose pose={{ x: 1, y: 2, yaw: 0.5 }} frame="world" />
+    <PoseArray poses={waypoints} frame="world" />
+    <RobotModel kind="wheeled" pose={{ x: 1, y: 2, yaw: 0.5 }} poseFrame="world" />
+</Scene3D>
 ```
 
 A replay app can also keep the topic props and feed its own source: `memorySource()` + `DataSourceProvider`, then
@@ -240,7 +228,7 @@ follows; orbit and zoom keep following, a pan pauses it until `viewer.resumeFoll
 `onPick({ point, on,
 event })` (click → nearest cloud point / mesh / ground point), `cameraPosition`, `cameraTarget`,
 `tf` (bring your own `TfTree`, e.g. to share it with a `FramePicker` outside the scene), `onViewer(viewer)`. DOM
-children are laid over the canvas (use `className: "dr-scene-overlay"` and position them).
+children are laid over the canvas (use `className="dr-scene-overlay"` and position them).
 
 **Layer props**: `PointCloud` — `topic` | `points` (+ `intensity`, `frame`), `mode` latest|accumulate, `windowSeconds`,
 `maxPoints`, look: `style` voxel|disc|square|splat, `size` (m), `colorMode` height|intensity|range| solid, `gradient`
@@ -252,7 +240,7 @@ PoseWithCovarianceStamped) | `pose` (+ `frame`), `axesSize`, `trail`, `trailLeng
 `--axis-x/y/z`. Every layer takes `onStatus({ info, problem, frame })` (e.g. "no TF path from lidar to world").
 
 Viewer options (Scene3D props, read once): `near`, `far`, `fov` (a small model like a URDF wants `near: 0.001`),
-`gridSize` (m) / `gridDivisions`, `freeOrbit` (orbit below the ground too). `h(KeyboardFly, { speed, lookSpeed })`
+`gridSize` (m) / `gridDivisions`, `freeOrbit` (orbit below the ground too). `<KeyboardFly speed lookSpeed />`
 inside a Scene3D adds keyboard flying: W/A/S/D over the ground, Q/E down/up, I/J/K/L look around. `viewer.capture()`
 returns the view as a PNG data URL.
 
@@ -266,8 +254,8 @@ returns the view as a PNG data URL.
 (`frame = { now, fixedFrame, camera }`). Push new data into the returned ref from your own effects rather than
 re-creating the layer.
 
-```js
-function Marker({ frame, color = "var(--warn)" }) {
+```tsx
+function Marker({ frame, color = "var(--warn)" }: { frame: string; color?: string }) {
     useLayer(({ viewer, tf }) => {
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.2),
@@ -307,7 +295,7 @@ costmap floor plan or gray map), `tf` (TFMessage) and `camera3d` (Image / Compre
 depth as a heat map; off by default). A 2D overlay type, `detection2d`, draws Detection2DArray boxes over camera images
 (`overlayTypeFor(type).draw(ctx, message, image)`).
 
-```js
+```tsx
 import {
     FrameHighlight,
     LayersPanel,
@@ -326,29 +314,30 @@ import {
 function View() {
     const layers = useLayerManager() // which topics are on + each one's settings persist (localStorage, or `persist`)
     const tf = useMemo(() => new TfTree(), []) // shared by the scene and the TF panel
-    const [hovered, setHovered] = useState(null)
+    const [hovered, setHovered] = useState<string | null>(null)
     const issues = useTfIssues({ tf, layers: () => layers.layerFrames() })
-    return h(
-        Row,
-        null,
-        h(
-            Scene3D,
-            { tf, followFrame: "base_link", style: { height: 600, flex: 1 } },
-            h(TfFeed),
-            h(TopicLayers, { manager: layers }),
-            h(RobotModel, { kind: "dog" }),
-            h(FrameHighlight, { frame: hovered }),
-            h(TfFootnote, { issues }),
-            h(SceneControls),
-        ),
-        h(Column, null, h(LayersPanel, { manager: layers }), h(TfPanel, { tf, issues, onHover: setHovered })),
+    return (
+        <Row>
+            <Scene3D tf={tf} followFrame="base_link" style={{ height: 600, flex: 1 }}>
+                <TfFeed />
+                <TopicLayers manager={layers} />
+                <RobotModel kind="dog" />
+                <FrameHighlight frame={hovered} />
+                <TfFootnote issues={issues} />
+                <SceneControls />
+            </Scene3D>
+            <Column>
+                <LayersPanel manager={layers} />
+                <TfPanel tf={tf} issues={issues} onHover={setHovered} />
+            </Column>
+        </Row>
     )
 }
 ```
 
-A single typed layer is `h(Layer, { type: "occupancy", topic: "dimos/costmap/nav_msgs.OccupancyGrid", settings })`. Your
+A single typed layer is `<Layer type="occupancy" topic="dimos/costmap/nav_msgs.OccupancyGrid" settings={settings} />`. Your
 own type: `registerLayer({ id, label, types, defaults, create(context, topic, settings), Settings })` (see
-`src/three/layers/registry.js`; a later registration with the same id replaces a built-in one).
+`src/three/layers/registry.ts`; a later registration with the same id replaces a built-in one).
 
 **Replays.** `memorySource({ clock: () => playheadMs, route })` makes the playhead the data clock: point-cloud windows
 fade, marker lifetimes run and TF goes stale by it (a paused replay doesn't age). Call `source.seek()` when the playhead
@@ -369,34 +358,44 @@ splats that can't keep up fall back to cubes, `splatFallback`).
 topic; a replay source may publish frames (`{ kind, width, height, encoding, data }`, jpeg/png/webp or raw), decoded
 Image / CompressedImage values or their LCM bytes, and CameraStreams decodes them.
 
-## Using from Vite / npm
+## Installing
 
-The repo is a plain npm package (no build). Pin a tag as a tarball dependency:
+- **No build (import map / esm.sh)** — the main path, as in the quick start:
+  `https://esm.sh/gh/jeff-hykin/dimos-react@vX.Y.Z/src/index.ts` and `.../src/three.ts`, with
+  `?external=react,react-dom,three` so your page's React and three are used. esm.sh compiles the TypeScript / TSX from
+  the tag (types stripped, JSX through `react/jsx-runtime`, which the `react/` import-map entry covers). The source
+  stays importable this way: every relative import names its file with its extension, and nothing relies on a bundler
+  (`test/imports.test.ts` checks both).
+- **Deno / vendored source**: Deno runs and type-checks the `.ts`/`.tsx` source as-is (copy `src/` in, map `react`,
+  `react-dom` and `three` in your import map; `deno check` wants `@types/react` and `@types/three` for the types).
+- **Vite / npm**: a tarball or git dependency on a tag; its `prepare` script runs `npm run build`, so the package exposes
+  `dist/` (`import { AppProvider } from "dimos-react"`, `import { Scene3D } from "dimos-react/three"`), typed by
+  `dist/*.d.ts` (the old `declare module "dimos-react"` shim can go). react, react-dom and three are peer dependencies.
 
-```json
-"dependencies": { "dimos-react": "https://codeload.github.com/jeff-hykin/dimos-react/tar.gz/refs/tags/vX.Y.Z" }
-```
+    ```json
+    "dependencies": { "dimos-react": "github:jeff-hykin/dimos-react#vX.Y.Z" }
+    ```
 
-then `import { AppProvider, Button } from "dimos-react"` and `import { Scene3D } from "dimos-react/three"`; react,
-react-dom and three are peer dependencies (your app's copies are used). There are no .d.ts files yet; a TypeScript app
-adds a shim:
-
-```ts
-// src/dimos-react.d.ts
-declare module "dimos-react"
-declare module "dimos-react/three"
-```
-
-## Tests
+## Development
 
 ```sh
-deno task test     # theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock
+npm install
+npm run dev         # the demo / storybook, live
+npm test            # vitest: theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock, the export list
+npm run typecheck   # tsc, strict
+npm run lint        # eslint + prettier --check (npm run format fixes)
+npm run build       # dist/ (not committed): index.js, three.js, shared chunks, .d.ts
+npm run build:demo  # dist-demo/index.html, the demo as one self-contained file
 ```
+
+**Releasing**: bump `version` in package.json, commit, `git tag vX.Y.Z`, push the tag. Nothing is built into git:
+esm.sh compiles the tagged source, and npm/git installs build `dist/` themselves (`prepare`).
 
 ## Layout
 
-`mod.js` (everything but 3D) · `three.js` (3D) · `src/theme` (provider, tokens, CSS assembly) · `src/styles` (component
-CSS, tokens only) · `src/components` · `src/three` · `src/data.js` · `src/url_state.js` · `src/vendor` (dim-app's zenoh
-client, the dimos LCM schemas; `deno task vendor`) · `demo/`.
+`src/index.ts` (everything but 3D) · `src/three.ts` (3D) · `src/theme` (provider, tokens, CSS assembly) · `src/styles`
+(component CSS as strings the theme provider puts in the page, tokens only) · `src/components` · `src/three` ·
+`src/data.ts` · `src/url_state.tsx` · `src/vendor` (dim-app's zenoh client, the dimos LCM schemas; plain JS,
+`npm run vendor`) · `demo/` (a Vite app) · `tools/` (vendor, sync-tokens).
 
 The 3D code is ported from dim-controller's view; the icons are the shared dimOS set.

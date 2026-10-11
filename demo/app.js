@@ -81,6 +81,7 @@ function ControlsSection() {
     const [speed, setSpeed] = useState(0.6)
     const [range, setRange] = useState([0.2, 1.4])
     const [count, setCount] = useState(12)
+    const [rangeMax, setRangeMax] = useState(null)
     const [mode, setMode] = useState("accumulate")
     const [checks, setChecks] = useState({ grid: true, labels: false })
     const [follow, setFollow] = useState(true)
@@ -174,6 +175,17 @@ function ControlsSection() {
                     Field,
                     { label: "Max points", error: count > 100 ? "too many" : null },
                     h(NumberInput, { value: count, onChange: setCount, min: 0, step: 1, unit: "k" }),
+                ),
+                h(
+                    Field,
+                    { label: "Range max (nullable)", hint: "empty = auto" },
+                    h(NumberInput, {
+                        value: rangeMax,
+                        onChange: setRangeMax,
+                        nullable: true,
+                        placeholder: "auto",
+                        step: 0.5,
+                    }),
                 ),
                 h(
                     Field,

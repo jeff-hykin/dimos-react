@@ -15,6 +15,7 @@ export declare const FatLines: any
 export type FatLines = any
 export declare function FramePicker(props: Record<string, any>): ReactNode
 export declare const GRADIENTS: any
+export declare function GradientPicker(props: Record<string, any>): ReactNode
 export declare function KeyboardFly(props: Record<string, any>): ReactNode
 export declare const LabelPool: any
 export type LabelPool = any

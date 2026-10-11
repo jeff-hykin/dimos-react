@@ -486,6 +486,7 @@ function applyTransforms(tf, transforms, isStatic) {
 /**
  * The TF tree drawn: an axes gizmo per frame (theme --axis-x/y/z), its name, and a line to its parent. A big tree
  * names only `named` frames (and the fixed frame) past `maxNames`.
+ * @param {Record<string, any>} props
  */
 export function TfFrames(
     { axesSize = 0.25, names = true, links = true, maxNames = 16, named = [], maxFrames = 512, onStatus },
@@ -1340,7 +1341,10 @@ export function FramePicker({ value, onChange, tf, noneLabel = null, placeholder
     return h(Select, { value: value ?? null, onChange, options, placeholder, ...rest })
 }
 
-/** The scene's render numbers as a small overlay (fps, points, frame time, latency). */
+/**
+ * The scene's render numbers as a small overlay (fps, points, frame time, latency).
+ * @param {Record<string, any>} props
+ */
 export function SceneStats({ className }) {
     const viewer = useViewer()
     const empty = useMemo(() => new Store({ fps: 0, frameMs: 0, latencyP50: null, points: 0 }), [])

@@ -8,6 +8,7 @@ import {
     CommandPalette,
     ContextMenu,
     Menu,
+    MenuAt,
     NavRail,
     Popover,
     Segmented,
@@ -159,6 +160,7 @@ export function NavSection() {
             ),
             h("p", { className: "dr-muted dr-small" }, `Last action: ${last}`),
         ),
+        h(MenuAtDemo, { onAction: setLast }),
         h(
             Card,
             { title: "ContextMenu (right-click / long-press)" },
@@ -266,5 +268,38 @@ export function NavSection() {
             h(Button, { icon: "search", onClick: () => palette.setOpen(true) }, "Command palette (⌘K)"),
             h(CommandPalette, { open: palette.open, onClose: () => palette.setOpen(false), commands }),
         ),
+    )
+}
+
+/** MenuAt: a menu opened by the page's own logic (here a plain click) at the pointer, with an inline header line. */
+function MenuAtDemo({ onAction }) {
+    const [menu, setMenu] = useState(null)
+    return h(
+        Card,
+        { title: "MenuAt (a menu at a point)" },
+        h(
+            "div",
+            { className: "demo-target", onClick: (event) => setMenu({ x: event.clientX, y: event.clientY }) },
+            "Click anywhere here",
+        ),
+        menu
+            ? h(
+                MenuAt,
+                {
+                    x: menu.x,
+                    y: menu.y,
+                    onClose: () => setMenu(null),
+                    items: [
+                        { label: "Go here", icon: "pin", onSelect: () => onAction("Go here") },
+                        { label: "Label this spot…", icon: "edit", onSelect: () => onAction("Label") },
+                    ],
+                },
+                h(
+                    "div",
+                    { className: "dr-mono dr-small dr-muted", style: { padding: "4px 8px" } },
+                    `${menu.x}, ${menu.y}`,
+                ),
+            )
+            : null,
     )
 }

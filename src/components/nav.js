@@ -163,20 +163,29 @@ export function placeFloating(anchor, size, placement = "bottom-start", gap = 6)
 function Floating({ anchor, point, placement, onClose, className, children, role = "dialog", style, ...rest }) {
     const box = useRef(null)
     const [position, setPosition] = useState({ x: -9999, y: -9999 })
-    useIsoLayoutEffect(() => {
-        const update = () => {
-            const element = box.current
-            if (!element) {
-                return
-            }
-            const size = { width: element.offsetWidth, height: element.offsetHeight }
-            const rect = point
-                ? { left: point.x, right: point.x, top: point.y, bottom: point.y, width: 0, height: 0 }
-                : anchor?.getBoundingClientRect()
-            if (rect) {
-                setPosition(placeFloating(rect, size, point ? "bottom-start" : placement, point ? 2 : 6))
-            }
+    const place = useRef(() => {})
+    place.current = () => {
+        const element = box.current
+        if (!element) {
+            return
         }
+        const size = { width: element.offsetWidth, height: element.offsetHeight }
+        const rect = point
+            ? { left: point.x, right: point.x, top: point.y, bottom: point.y, width: 0, height: 0 }
+            : anchor?.getBoundingClientRect()
+        if (rect) {
+            setPosition(placeFloating(rect, size, point ? "bottom-start" : placement, point ? 2 : 6))
+        }
+    }
+    // the box mounts a render later (Portal), so it places itself once it exists
+    const setBox = useCallback((element) => {
+        box.current = element
+        if (element) {
+            place.current()
+        }
+    }, [])
+    useIsoLayoutEffect(() => {
+        const update = () => place.current()
         update()
         addEventListener("resize", update)
         addEventListener("scroll", update, true)
@@ -203,7 +212,7 @@ function Floating({ anchor, point, placement, onClose, className, children, role
         Portal,
         null,
         h("div", {
-            ref: box,
+            ref: setBox,
             role,
             className: cx("dr-floating", className),
             style: { left: position.x, top: position.y, ...style },
@@ -405,6 +414,20 @@ export function ContextMenu({ items, children, disabled, className, ...rest }) {
                 h(MenuList, { items: menu.items, onClose: () => setMenu(null) }),
             )
             : null,
+    )
+}
+
+/**
+ * A menu open at a screen point, for triggers ContextMenu can't tell apart (a 3D view's right click that isn't a
+ * right-drag pan, say). `children` go above the items (a heading line, or an inline form instead of `items`).
+ * @param {{ x: number, y: number, items?: any[], onClose: () => void, children?: any, className?: string } & Record<string, any>} props
+ */
+export function MenuAt({ x, y, items = [], onClose, children, className, ...rest }) {
+    return h(
+        Floating,
+        { point: { x, y }, onClose, role: "presentation", className, ...rest },
+        children,
+        items.length ? h(MenuList, { items, onClose, autoFocus: !children }) : null,
     )
 }
 

@@ -6,6 +6,7 @@ import { encode } from "../../src/lcm.js"
 import { Badge, Card, DataSourceProvider, Field, memorySource, Row, Select, Toggle } from "../../mod.js"
 import {
     FramePicker,
+    GradientPicker,
     KeyboardFly,
     Path,
     PointCloud,
@@ -152,6 +153,7 @@ export function SceneSection() {
     const [followFrame, setFollowFrame] = useState("base_link")
     const [style, setStyle] = useState("voxel")
     const [names, setNames] = useState(true)
+    const [gradient, setGradient] = useState("memworld")
     return h(
         DataSourceProvider,
         { source },
@@ -172,7 +174,7 @@ export function SceneSection() {
                 },
                 h(TfFeed),
                 h(TfFrames, { names, axesSize: 0.3 }),
-                h(PointCloud, { points: room, frame: "world", style, size: 0.06, colorMode: "height" }),
+                h(PointCloud, { points: room, frame: "world", style, size: 0.06, colorMode: "height", gradient }),
                 h(PointCloud, {
                     topic: LIDAR_KEY,
                     style: "disc",
@@ -217,6 +219,11 @@ export function SceneSection() {
                     }),
                 ),
                 h(Field, { label: "Frame names" }, h(Toggle, { value: names, onChange: setNames })),
+                h(
+                    Field,
+                    { label: "Gradient", style: { minWidth: 260 } },
+                    h(GradientPicker, { value: gradient, onChange: setGradient }),
+                ),
             ),
         ),
     )

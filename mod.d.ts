@@ -50,6 +50,7 @@ export declare function FloatingPanel(props: Record<string, any>): ReactNode
 export declare const Fragment: any
 export declare const GRADIENTS: any
 export declare function Heading(props: Record<string, any>): ReactNode
+export declare function HoldButton(props: Record<string, any>): ReactNode
 export declare function Hud(props: Record<string, any>): ReactNode
 export declare const ICONS: any
 export declare const IMAGE_OVERLAY_TYPES: any
@@ -72,6 +73,7 @@ export declare function LogView(props: Record<string, any>): ReactNode
 export declare function Markdown(props: Record<string, any>): ReactNode
 export declare function MediaFrame(props: Record<string, any>): ReactNode
 export declare function Menu(props: Record<string, any>): ReactNode
+export declare function MenuAt(props: Record<string, any>): ReactNode
 export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
 export declare function NumberInput(props: Record<string, any>): ReactNode
@@ -87,6 +89,7 @@ export declare const RAMPS: any
 export declare function Radio(props: Record<string, any>): ReactNode
 export declare function RadioGroup(props: Record<string, any>): ReactNode
 export declare function RangeSlider(props: Record<string, any>): ReactNode
+export declare function ResizeHandle(props: Record<string, any>): ReactNode
 export declare function Row(props: Record<string, any>): ReactNode
 export declare const SKINS: any
 export declare const SKIN_KEY: any
@@ -107,6 +110,7 @@ export declare function SplitPane(props: Record<string, any>): ReactNode
 export declare function Stat(props: Record<string, any>): ReactNode
 export declare function StatusDot(props: Record<string, any>): ReactNode
 export declare function Stepper(props: Record<string, any>): ReactNode
+export declare function StickIndicator(props: Record<string, any>): ReactNode
 export declare const Store: any
 export type Store = any
 export declare function Switch(props: Record<string, any>): ReactNode

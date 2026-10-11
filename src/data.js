@@ -187,12 +187,18 @@ export function memorySource({ topics = [], state = "connected" } = {}) {
 const DataSourceContext = createContext(null)
 let defaultSource = null
 
-/** Makes `source` the data source of everything below. */
+/**
+ * Makes `source` the data source of everything below.
+ * @param {Record<string, any>} props
+ */
 export function DataSourceProvider({ source, children }) {
     return createElement(DataSourceContext.Provider, { value: source }, children)
 }
 
-/** DataSourceProvider with the live zenoh-gateway source (props go to getZenoh on first use). */
+/**
+ * DataSourceProvider with the live zenoh-gateway source (props go to getZenoh on first use).
+ * @param {Record<string, any>} props
+ */
 export function ZenohProvider({ children, ...options }) {
     const source = useMemo(() => zenohSource(options), [])
     return createElement(DataSourceContext.Provider, { value: source }, children)

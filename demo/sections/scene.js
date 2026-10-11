@@ -6,6 +6,7 @@ import { encode } from "../../src/lcm.js"
 import { Badge, Card, DataSourceProvider, Field, memorySource, Row, Select, Toggle } from "../../mod.js"
 import {
     FramePicker,
+    KeyboardFly,
     Path,
     PointCloud,
     Pose,
@@ -183,6 +184,7 @@ export function SceneSection() {
                 h(Pose, { topic: ODOM_KEY, trail: true, axesSize: 0, color: "var(--accent-alt)", width: 2 }),
                 h(PoseArray, { poses: waypoints, frame: "world", length: 0.6 }),
                 h(RobotModel, { kind: "dog", frame: "base_link" }),
+                h(KeyboardFly, { speed: 4 }),
                 h(SceneStats),
                 h(SceneControls),
                 h(
@@ -193,6 +195,7 @@ export function SceneSection() {
                         { gap: 8 },
                         h(Toggle, { value: follow, onChange: setFollow, label: "Follow" }),
                         h(FrameCount),
+                        h(Badge, null, "WASD/QE fly · IJKL look"),
                     ),
                 ),
             ),

@@ -255,9 +255,11 @@ export function pointCloud2ToPositions(cloud) {
  *   onPick?: (pick: { point: THREE.Vector3, on: string, event: MouseEvent }) => void,
  *   onViewer?: (viewer: Viewer) => void, className?: string, style?: object, children?: any,
  *   cameraPosition?: [number, number, number], cameraTarget?: [number, number, number],
+ *   near?: number, far?: number, fov?: number, gridSize?: number, gridDivisions?: number, freeOrbit?: boolean,
  * }} props
  *   `fixedFrame`: the frame everything is drawn in (default: the TF tree's world-ish root). `followFrame`: a TF frame
- *   the camera follows (orbit and zoom keep following; a pan pauses it until viewer.resumeFollow()).
+ *   the camera follows (orbit and zoom keep following; a pan pauses it until viewer.resumeFollow()). `near`, `far`,
+ *   `fov`, `gridSize`, `gridDivisions`, `freeOrbit`: the Viewer's options, read once when it mounts.
  */
 export function Scene3D({
     fixedFrame,
@@ -272,6 +274,12 @@ export function Scene3D({
     children,
     cameraPosition,
     cameraTarget,
+    near,
+    far,
+    fov,
+    gridSize,
+    gridDivisions,
+    freeOrbit,
     ...rest
 }) {
     const hostRef = useRef(null)
@@ -281,7 +289,16 @@ export function Scene3D({
     const fixed = fixedFrame ?? autoFixed
 
     useEffect(() => {
-        const created = new Viewer(hostRef.current, { clock: clock ?? (() => Date.now()), grid })
+        const created = new Viewer(hostRef.current, {
+            clock: clock ?? (() => Date.now()),
+            grid,
+            near,
+            far,
+            fov,
+            gridSize,
+            gridDivisions,
+            freeOrbit,
+        })
         setViewer(created)
         const onTheme = () => created.setTheme()
         addEventListener("dimos-react-theme", onTheme)
@@ -1365,4 +1382,109 @@ export function SceneControls({ className, children }) {
         paused ? button("target", "Resume following", () => viewer?.resumeFollow()) : null,
         children,
     )
+}
+
+const FLY_KEYS = new Set([..."wasdqeijkl"])
+
+/**
+ * Keyboard flying for the enclosing scene, beside the mouse orbit: W/S forward/back and A/D left/right over the ground,
+ * Q/E down/up, I/K look up/down and J/L look left/right (the camera stays put, the orbit target swings around it).
+ * `speed` (m/s), `lookSpeed` (rad/s). Keys typed into inputs, and chords with ⌘/Ctrl/Alt, are ignored.
+ */
+export function KeyboardFly({ speed = 2, lookSpeed = 1.5, enabled = true }) {
+    const viewer = useViewer()
+    const settings = useRef({ speed, lookSpeed })
+    settings.current = { speed, lookSpeed }
+    useEffect(() => {
+        if (!viewer || !enabled) {
+            return
+        }
+        const held = new Set()
+        const typing = (event) => event.target?.closest?.("input, select, textarea, [contenteditable]")
+        const keydown = (event) => {
+            if (typing(event)) {
+                return
+            }
+            // macOS sends no keyup for a letter released while ⌘ is held: a chord would leave the key stuck
+            if (event.metaKey || event.ctrlKey || event.altKey) {
+                held.clear()
+                return
+            }
+            const key = event.key.toLowerCase()
+            if (FLY_KEYS.has(key)) {
+                held.add(key)
+            }
+        }
+        const keyup = (event) => held.delete(event.key.toLowerCase())
+        const blur = () => held.clear()
+        addEventListener("keydown", keydown)
+        addEventListener("keyup", keyup)
+        addEventListener("blur", blur)
+        const { camera, controls } = viewer
+        const forward = new THREE.Vector3()
+        const right = new THREE.Vector3()
+        const offset = new THREE.Vector3()
+        const move = new THREE.Vector3()
+        let last = 0
+        const off = viewer.onFrame(({ now }) => {
+            const dt = last ? Math.min(0.1, (now - last) / 1000) : 0
+            last = now
+            if (held.size === 0 || dt === 0) {
+                return
+            }
+            const step = settings.current.speed * dt
+            const turn = settings.current.lookSpeed * dt
+            forward.subVectors(controls.target, camera.position).setZ(0)
+            if (forward.lengthSq() < 1e-12) {
+                forward.set(0, 1, 0)
+            }
+            forward.normalize()
+            right.crossVectors(forward, camera.up).normalize()
+            move.set(0, 0, 0)
+            if (held.has("w")) {
+                move.add(forward)
+            }
+            if (held.has("s")) {
+                move.sub(forward)
+            }
+            if (held.has("d")) {
+                move.add(right)
+            }
+            if (held.has("a")) {
+                move.sub(right)
+            }
+            if (move.lengthSq() > 0) {
+                move.normalize().multiplyScalar(step)
+            }
+            move.addScaledVector(camera.up, ((held.has("e") ? 1 : 0) - (held.has("q") ? 1 : 0)) * step)
+            camera.position.add(move)
+            controls.target.add(move)
+            offset.subVectors(controls.target, camera.position)
+            if (held.has("j")) {
+                offset.applyAxisAngle(camera.up, turn)
+            }
+            if (held.has("l")) {
+                offset.applyAxisAngle(camera.up, -turn)
+            }
+            if (held.has("i") || held.has("k")) {
+                const pitched = offset.clone().applyAxisAngle(
+                    right,
+                    (held.has("i") ? 1 : 0) * turn - (held.has("k") ? 1 : 0) * turn,
+                )
+                // never pitch fully vertical (the view would flip)
+                if (Math.abs(pitched.clone().normalize().dot(camera.up)) < 0.985) {
+                    offset.copy(pitched)
+                }
+            }
+            controls.target.copy(camera.position).add(offset)
+            viewer.requestRender()
+        })
+        return () => {
+            off()
+            removeEventListener("keydown", keydown)
+            removeEventListener("keyup", keyup)
+            removeEventListener("blur", blur)
+        }
+    }, [viewer, enabled])
+    return null
 }

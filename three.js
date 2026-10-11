@@ -2,6 +2,7 @@
 export {
     colorFor,
     FramePicker,
+    KeyboardFly,
     Path,
     placeInFixedFrame,
     PointCloud,

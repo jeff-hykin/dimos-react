@@ -210,6 +210,11 @@ PoseWithCovarianceStamped) | `pose` (+ `frame`), `axesSize`, `trail`, `trailLeng
 `onPose(matrixInFixedFrame)`. Colors accept any CSS color or a theme token (`"var(--primary)"`); axes use the theme's
 `--axis-x/y/z`. Every layer takes `onStatus({ info, problem, frame })` (e.g. "no TF path from lidar to world").
 
+Viewer options (Scene3D props, read once): `near`, `far`, `fov` (a small model like a URDF wants `near: 0.001`),
+`gridSize` (m) / `gridDivisions`, `freeOrbit` (orbit below the ground too). `h(KeyboardFly, { speed, lookSpeed })`
+inside a Scene3D adds keyboard flying: W/A/S/D over the ground, Q/E down/up, I/J/K/L look around. `viewer.capture()`
+returns the view as a PNG data URL.
+
 **Hooks**: `useViewer()`, `useTf()`, `useFixedFrame()`, `useScene()`, `useSceneFrame(fn)` (per animation frame),
 `useTfFrames()` (frame names, throttled), and `FramePicker` (a Select of TF frames).
 
@@ -240,7 +245,7 @@ function Marker({ frame, color = "var(--warn)" }) {
 `renderer`, `fixedFrame`, `requestRender()`, `noteData(timestampMs)`, `onFrame(fn)`, `pick(clientX, clientY)`,
 `frame(target, distance)`, `frameAll()`, `topDown(target, extent)`, `dataBounds()`, `pauseFollow()` / `resumeFollow()`,
 `followPaused` and `stats` (stores: `{ fps, frameMs, latencyP50, latencyP95, drawCalls, points }`), `setTheme()`,
-`setGrid(visible)`, `dispose()`. `TfTree` (pure, no DOM): `set(parent, child, xyz, quat, isStatic)`,
+`setGrid(visible)`, `capture(type?)`, `dispose()`. `TfTree` (pure, no DOM): `set(parent, child, xyz, quat, isStatic)`,
 `setMessage(tfMessage)`, `lookup(frame, fixed)` → `Matrix4 | null`, `defaultFixedFrame()`, `frames()`, `snapshot()`
 (with problems: double parents, several roots, cycles, stale edges), `onChange(fn)`.
 

@@ -54,6 +54,8 @@ export class Viewer {
     #listeners = new Set()
     #grid = null
     #gridVisible = true
+    #gridSize = 200
+    #gridDivisions = 200
     #frameTimes = []
     #cpuTimes = []
     #pendingData = []
@@ -78,13 +80,35 @@ export class Viewer {
 
     /**
      * @param {HTMLElement} host the element the canvas fills (give it a size; it is watched for resizes)
-     * @param {{ clock?: () => number, grid?: boolean, antialias?: boolean }} [options] `clock`: the clock message
-     *   timestamps are in (ms, for latency; default Date.now)
+     * @param {{ clock?: () => number, grid?: boolean, antialias?: boolean, near?: number, far?: number, fov?: number,
+     *   gridSize?: number, gridDivisions?: number, freeOrbit?: boolean }} [options] `clock`: the clock message
+     *   timestamps are in (ms, for latency; default Date.now). `near` / `far` / `fov`: the camera (defaults 0.05 m,
+     *   10 km, 60°; a small model like a URDF wants near ≈ 0.001). `gridSize` (m) / `gridDivisions`: the ground grid
+     *   (default 200 m in 1 m cells). `freeOrbit`: the camera may orbit below the ground (default: it stays above).
      */
-    constructor(host, { clock = () => Date.now(), grid = true, antialias = false } = {}) {
+    constructor(
+        host,
+        {
+            clock = () => Date.now(),
+            grid = true,
+            antialias = false,
+            near = 0.05,
+            far = 10000,
+            fov = 60,
+            gridSize = 200,
+            gridDivisions = 200,
+            freeOrbit = false,
+        } = {},
+    ) {
         this.#host = host
         this.#clock = clock
         this.#gridVisible = grid
+        this.#gridSize = gridSize
+        this.#gridDivisions = gridDivisions
+        this.camera.near = near
+        this.camera.far = far
+        this.camera.fov = fov
+        this.camera.updateProjectionMatrix()
         this.renderer = new THREE.WebGLRenderer({ antialias, alpha: true, powerPreference: "high-performance" })
         this.renderer.setPixelRatio(pixelRatio())
         this.renderer.setClearColor(0x000000, 0)
@@ -100,7 +124,7 @@ export class Viewer {
         this.controls.enableDamping = true
         this.controls.dampingFactor = 0.18
         this.controls.screenSpacePanning = false
-        this.controls.maxPolarAngle = Math.PI * 0.495
+        this.controls.maxPolarAngle = freeOrbit ? Math.PI : Math.PI * 0.495
         this.controls.addEventListener("change", () => this.requestRender())
         this.controls.addEventListener("start", () => this.#panGate.start())
 
@@ -120,8 +144,8 @@ export class Viewer {
     #makeGrid(dark) {
         const colors = themeColors()
         const grid = new THREE.GridHelper(
-            200,
-            200,
+            this.#gridSize,
+            this.#gridDivisions,
             cssColor(colors.sceneGridMajor || colors.border, "gray"),
             cssColor(colors.sceneGrid || colors.surface, "gray"),
         )
@@ -180,6 +204,19 @@ export class Viewer {
                 placed.push(rect)
             }
         }
+    }
+
+    /**
+     * The view as an image, now: runs the frame listeners, renders and reads the canvas in the same task (no
+     * preserveDrawingBuffer needed). Returns a data URL (`type` default image/png).
+     */
+    capture(type = "image/png") {
+        const info = { now: performance.now(), fixedFrame: this.fixedFrame, camera: this.camera }
+        for (const listener of this.#listeners) {
+            listener(info)
+        }
+        this.renderer.render(this.scene, this.camera)
+        return this.renderer.domElement.toDataURL(type)
     }
 
     /** Draw on the next frame. */

@@ -6,23 +6,8 @@ import * as THREE from "three"
 import { sampleGradient } from "../colormaps.ts"
 import { depthScale } from "../components/media.tsx"
 
-/** A depth image's raw pixels: 16UC1 (millimeters) or 32FC1 (meters), row-major, one value per pixel. */
-export type DepthPixels = Uint16Array | Float32Array
-
-/** A depth image as camera streams deliver it. */
-export interface DepthImage {
-    width: number
-    height: number
-    encoding: string
-    data: DepthPixels
-}
-
-/** How depth is colored: a colormap name and a fixed range in meters (null = automatic). */
-export interface DepthLook {
-    colormap: string
-    near: number | null
-    far: number | null
-}
+import type { DepthImage, DepthLook } from "./depth_types.ts"
+export type { DepthImage, DepthLook, DepthPixels } from "./depth_types.ts"
 
 const DEFAULT_DEPTH_LOOK: DepthLook = { colormap: "turbo", near: null, far: null }
 

@@ -6,7 +6,7 @@
 //     h(CameraView, { topic: { key, name, type }, overlay: detectionsTopic, onInfo: (info) => … })
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
-import type { DepthImage, DepthLook } from "../camera/depth.ts"
+import type { DepthImage, DepthLook } from "../camera/depth_types.ts"
 import { cx } from "../cx.ts"
 import { useDataSource } from "../data.ts"
 import type { DataSource, Message, Subscription, Topic } from "../data.ts"

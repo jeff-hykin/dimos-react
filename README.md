@@ -88,6 +88,7 @@ the page Desktop's dock covers.
 
 All take `className`, `style` and DOM props; controls take `value` + `onChange(value)` (the value, not the event).
 
+<<<<<<< HEAD
 | Group         | Components                                                                                                                                                                                                                                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Buttons       | `Button` (variant default/primary/ghost/danger, size, icon, pressed, loading), `IconButton`, `ButtonGroup`                                                                                                                                                                                                            |
@@ -99,6 +100,19 @@ All take `className`, `style` and DOM props; controls take `value` + `onChange(v
 | Data          | `Table` (sortable; `sortRows: false` when a backend sorts), `Tree`, `List`, `ListRow`, `KeyValue`, `KeyValueRow`, `Stat`, `LogView`, `CodeBlock`, `Sparkline`, `Timeline` (scrubber)                                                                                                                                  |
 | Input devices | `Joystick`, `DPad`                                                                                                                                                                                                                                                                                                    |
 | Hooks         | `usePersistentState`, `useHotkeys`, `useHeldKeys`, `useEscape`, `useMobile`, `useMediaQuery`, `useDrag`, `useNow`, `useGamepad`                                                                                                                                                                                       |
+=======
+| Group         | Components                                                                                                                                                                                                                          |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons       | `Button` (variant default/primary/ghost/danger, size, icon, pressed, loading), `IconButton`, `ButtonGroup`                                                                                                                          |
+| Forms         | `Field`, `TextInput`, `NumberInput`, `TextArea`, `SearchInput`, `Select`, `Checkbox`, `Toggle` (`Switch`), `Radio`, `RadioGroup`, `Slider`, `RangeSlider`, `ColorSwatch`, `FileDrop`                                                |
+| Status        | `Badge`, `Chip`, `StatusDot`, `ConnectionStatus`, `Kbd`, `KeyHints`, `Spinner`, `Progress`, `ProgressRing`, `Skeleton`                                                                                                              |
+| Feedback      | `Alert`, `toast()` / `useToast()` / `ToastProvider`, `Modal`, `useConfirm()`, `usePrompt()` (`DialogProvider`), `EmptyState`, `ErrorBoundary`                                                                                       |
+| Layout        | `AppShell`, `TopBar`, `Toolbar`, `BottomBar`, `Card`, `Panel` (collapsible, glass), `FloatingPanel` (draggable), `SplitPane`, `Hud`, `Row`, `Column`, `Spacer`, `Separator`, `Heading`, `Label`, `Text`, `Link`, `Icon` (+ `ICONS`) |
+| Navigation    | `Tabs`, `Segmented`, `Menu`, `ContextMenu`, `Popover`, `Tooltip`, `Sidebar`, `NavRail`, `Stepper`, `Breadcrumbs`, `CommandPalette` (`useCommandPalette`)                                                                            |
+| Data          | `Table` (sortable; `sortRows: false` when a backend sorts), `Tree`, `List`, `ListRow`, `KeyValue`, `KeyValueRow`, `Stat`, `LogView`, `CodeBlock`, `Sparkline`, `Timeline` (scrubber), `MediaFrame` (+ `captureFrame`)               |
+| Input devices | `Joystick`, `DPad`                                                                                                                                                                                                                  |
+| Hooks         | `usePersistentState`, `useHotkeys`, `useHeldKeys`, `useEscape`, `useMobile`, `useMediaQuery`, `useDrag`, `useNow`, `useGamepad`                                                                                                     |
+>>>>>>> 1a2cfa9 (MediaFrame: a video stream (a zenoh-gateway camera track) or an image in a themed frame; captureFrame() grabs a <video>'s frame; demo entry)
 
 ## Live data (zenoh)
 

@@ -748,3 +748,70 @@ export function Timeline({
         h("span", { className: "dr-timeline__time dr-timeline__time--end" }, show(end)),
     )
 }
+
+/**
+ * A video stream or an image in a themed frame. `stream` (a MediaStream, e.g. a zenoh-gateway camera track) plays in a
+ * muted inline <video>; without `stream`, `src` shows as an image. `placeholder` covers it until there is something to
+ * show. `ref` reaches the <video>/<img> (for captureFrame).
+ * @param {{ stream?: MediaStream | null, src?: string | null, alt?: string, fit?: "contain" | "cover",
+ *   height?: string | number, placeholder?: any, ref?: any, className?: string, style?: object }} props
+ */
+export function MediaFrame(
+    { stream, src, alt = "", fit = "contain", height = 360, placeholder = "No video", ref, className, style, ...rest },
+) {
+    const element = useRef(null)
+    const [playing, setPlaying] = useState(false)
+    const isVideo = stream !== undefined
+    useEffect(() => {
+        const video = element.current
+        if (isVideo && video && video.srcObject !== (stream ?? null)) {
+            video.srcObject = stream ?? null
+            setPlaying(false)
+        }
+    }, [isVideo, stream])
+    const setRef = (node) => {
+        element.current = node
+        if (typeof ref === "function") {
+            ref(node)
+        } else if (ref) {
+            ref.current = node
+        }
+    }
+    const shown = isVideo ? stream && playing : Boolean(src)
+    return h(
+        "div",
+        {
+            className: cx("dr-media", className),
+            style: { maxHeight: height, aspectRatio: "16 / 9", ...style },
+            ...rest,
+        },
+        isVideo
+            ? h("video", {
+                ref: setRef,
+                className: "dr-media__el",
+                style: { objectFit: fit },
+                autoPlay: true,
+                muted: true,
+                playsInline: true,
+                onPlaying: () => setPlaying(true),
+                onEmptied: () => setPlaying(false),
+            })
+            : src
+            ? h("img", { ref: setRef, className: "dr-media__el", style: { objectFit: fit }, src, alt })
+            : null,
+        !shown && placeholder ? h("div", { className: "dr-media__placeholder" }, placeholder) : null,
+    )
+}
+
+/** The frame a <video> is showing, as a data URL (null before its first frame). */
+export function captureFrame(video, type = "image/png") {
+    if (!video?.videoWidth) {
+        return null
+    }
+    const canvas = Object.assign(document.createElement("canvas"), {
+        width: video.videoWidth,
+        height: video.videoHeight,
+    })
+    canvas.getContext("2d").drawImage(video, 0, 0)
+    return canvas.toDataURL(type)
+}

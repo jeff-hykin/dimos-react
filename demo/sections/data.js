@@ -1,9 +1,10 @@
 // Demo: tables, trees, key/value, stats, lists, logs, code, sparklines, timeline.
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { h } from "../../src/h.js"
 import {
     Badge,
     Button,
+    captureFrame,
     Card,
     CodeBlock,
     IconButton,
@@ -13,6 +14,7 @@ import {
     LiveValue,
     LogView,
     Markdown,
+    MediaFrame,
     Sparkline,
     Stat,
     Table,
@@ -93,6 +95,37 @@ class Follow(Module):
     def tick(self, detections):
         return min(detections, key=lambda d: d.distance)`
 
+/** A canvas animation as a MediaStream stands in for a camera track. */
+function MediaDemo() {
+    const [stream, setStream] = useState(null)
+    const [still, setStill] = useState(null)
+    const video = useRef(null)
+    useEffect(() => {
+        const canvas = Object.assign(document.createElement("canvas"), { width: 320, height: 180 })
+        const context = canvas.getContext("2d")
+        const color = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()
+        let frame = 0
+        const timer = setInterval(() => {
+            context.clearRect(0, 0, 320, 180)
+            context.fillStyle = color
+            context.fillRect(20 + (frame++ * 4) % 260, 70, 40, 40)
+        }, 33)
+        setStream(canvas.captureStream?.(30) ?? null)
+        return () => clearInterval(timer)
+    }, [])
+    return h(
+        Card,
+        { title: "MediaFrame + captureFrame" },
+        h(
+            "div",
+            { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
+            h(MediaFrame, { stream, ref: video, height: 180 }),
+            h(MediaFrame, { src: still, alt: "snapshot", height: 180, placeholder: "No snapshot" }),
+        ),
+        h(Button, { style: { marginTop: 8 }, onClick: () => setStill(captureFrame(video.current)) }, "Snapshot"),
+    )
+}
+
 export function DataSection() {
     const [selectedTopic, setSelectedTopic] = useState(TOPICS[0].key)
     const [frame, setFrame] = useState("base_link")
@@ -170,6 +203,7 @@ export function DataSection() {
                 ],
             }),
         ),
+        h(MediaDemo),
         h(
             Card,
             { title: "List + ListRow" },

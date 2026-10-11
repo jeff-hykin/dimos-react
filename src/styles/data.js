@@ -422,4 +422,33 @@ export const DATA_CSS = /* css */ `
     box-shadow: var(--shadow-sm, none);
 }
 :root[data-dr-dark] .dr-timeline__thumb { box-shadow: var(--glow); }
+
+/* media frame: a video stream or an image */
+.dr-media {
+    position: relative;
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    background: var(--input-bg);
+    border: 1px solid var(--hair, var(--border));
+    border-radius: var(--radius-sm);
+}
+.dr-media__el {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: inherit;
+}
+.dr-media__placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted-fg);
+    font: 500 11px/1.4 var(--mono);
+    letter-spacing: var(--track-label);
+    text-transform: var(--label-case);
+    pointer-events: none;
+}
 `

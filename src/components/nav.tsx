@@ -77,7 +77,8 @@ export interface TabsProps<T extends string | number = string> extends Omit<
     "onChange"
 > {
     items: readonly ChoiceInput<T>[]
-    value: T
+    /** null: none selected (e.g. tabs that open a panel, all closed) */
+    value: T | null
     onChange?: (value: T) => void
     variant?: "line" | "pill"
     size?: "sm" | "md"
@@ -127,6 +128,10 @@ function choiceGroup<T extends string | number>(
         >
             {list.map((item) => {
                 const active = item.value === value
+                // with none selected, the first enabled item is the one Tab reaches
+                const focusable =
+                    active ||
+                    (!list.some((other) => other.value === value) && item === list.find((other) => !other.disabled))
                 return (
                     <button
                         key={item.value}
@@ -134,7 +139,7 @@ function choiceGroup<T extends string | number>(
                         role="tab"
                         data-value={item.value}
                         aria-selected={active}
-                        tabIndex={active ? 0 : -1}
+                        tabIndex={focusable ? 0 : -1}
                         disabled={item.disabled}
                         title={item.title}
                         className={cx(`${baseClass}__item`, active && `${baseClass}__item--active`)}

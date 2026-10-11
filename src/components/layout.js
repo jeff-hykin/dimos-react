@@ -443,12 +443,15 @@ export function Embed({ title, className, ...rest }) {
 
 /**
  * A big selectable card (a picker's choice: a robot, a template, a recording). A button: `onClick`, `selected`,
- * `disabled`. `media` (an image, an icon element) or `icon` (an Icon name) on top, then `title` and `subtitle`. With
+ * `disabled`. `media` (an image, an icon element) or `icon` (an Icon name) on top, then `title` and `subtitle`, then
+ * `children`. `align` "center" (a picker's icons) | "start" (text cards: a featured item with its description). With
  * `loading` it is a placeholder (no click).
  * @param {{ title?: any, subtitle?: any, media?: any, icon?: string, selected?: boolean, loading?: boolean,
- *   onClick?: (event: any) => void, disabled?: boolean, className?: string }} props
+ *   align?: "center" | "start", onClick?: (event: any) => void, disabled?: boolean, className?: string }} props
  */
-export function Tile({ title, subtitle, media, icon, selected, loading = false, className, children, ...rest }) {
+export function Tile(
+    { title, subtitle, media, icon, selected, loading = false, align = "center", className, children, ...rest },
+) {
     if (loading) {
         return h(
             "div",
@@ -462,7 +465,7 @@ export function Tile({ title, subtitle, media, icon, selected, loading = false, 
         "button",
         {
             type: "button",
-            className: cx("dr-tile", selected && "dr-tile--selected", className),
+            className: cx("dr-tile", align === "start" && "dr-tile--start", selected && "dr-tile--selected", className),
             "aria-pressed": selected === undefined ? undefined : !!selected,
             ...rest,
         },

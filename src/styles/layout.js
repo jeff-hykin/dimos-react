@@ -84,6 +84,13 @@ export const LAYOUT_CSS = /* css */ `
 .dr-topbar-left { color: var(--head-color, var(--primary)); }
 .dr-topbar-center { flex: 1; justify-content: center; }
 .dr-topbar-right { justify-content: flex-end; }
+/* a phone: the center (a search, tabs) gets a row of its own under the title and the right-side controls */
+@media (max-width: 700px) {
+    .dr-topbar { flex-wrap: wrap; row-gap: 8px; }
+    .dr-topbar-left { flex: 1; overflow: hidden; }
+    .dr-topbar-center:not(:empty) { order: 3; flex-basis: 100%; }
+    .dr-topbar-center:not(:empty) > * { flex: 1; }
+}
 .dr-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .dr-toolbar--vertical { flex-direction: column; flex-wrap: nowrap; }
 .dr-toolbar--floating { padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
@@ -169,6 +176,8 @@ export const LAYOUT_CSS = /* css */ `
 .dr-tile:focus-visible { outline: none; box-shadow: var(--dr-focus); }
 .dr-tile:active:not(:disabled) { transform: translateY(1px); }
 .dr-tile:disabled { opacity: 0.5; cursor: default; }
+.dr-tile--start { align-items: stretch; text-align: left; padding: 12px 14px; }
+.dr-tile--start .dr-tile__title, .dr-tile--start .dr-tile__subtitle { white-space: normal; }
 .dr-tile--selected { border-color: var(--primary); background: var(--sel); }
 .dr-tile--loading { cursor: default; }
 .dr-tile__media { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; color: var(--primary); }

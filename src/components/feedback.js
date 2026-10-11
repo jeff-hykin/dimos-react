@@ -20,6 +20,7 @@ const TONE_ICONS = { info: "info", ok: "check-circle", warn: "warn", danger: "x-
 
 /**
  * An inline notice. `tone`: "info" | "ok" | "warn" | "danger"; `title`; `actions` (buttons); `onClose` adds an ✕.
+ * @param {Record<string, any>} props
  */
 export function Alert({ tone = "info", title, icon, actions, onClose, className, children, ...rest }) {
     return h(
@@ -114,7 +115,10 @@ function ToastItem({ entry }) {
     )
 }
 
-/** Where toasts appear (bottom-right, above Desktop's dock). `position`: "bottom-right" | "bottom" | "top-right" | "top". */
+/**
+ * Where toasts appear (bottom-right, above Desktop's dock). `position`: "bottom-right" | "bottom" | "top-right" | "top".
+ * @param {Record<string, any>} props
+ */
 export function ToastViewport({ position = "bottom-right" }) {
     const list = useToasts()
     const [mounted, setMounted] = useState(false)
@@ -133,7 +137,10 @@ export function ToastViewport({ position = "bottom-right" }) {
 }
 
 const ToastContext = createContext(toast)
-/** Adds a ToastViewport; `useToast()` below it returns toast(). */
+/**
+ * Adds a ToastViewport; `useToast()` below it returns toast().
+ * @param {Record<string, any>} props
+ */
 export function ToastProvider({ position, children }) {
     return h(ToastContext.Provider, { value: toast }, children, h(ToastViewport, { position }))
 }
@@ -147,6 +154,7 @@ export function useToast() {
 /**
  * A modal dialog over a scrim. `open` + `onClose`; `title`, `footer` (buttons); `size` "sm" | "md" | "lg";
  * `dismissable` (default true): Escape and a scrim click close it.
+ * @param {Record<string, any>} props
  */
 export function Modal({ open, onClose, title, footer, size = "md", dismissable = true, className, children, ...rest }) {
     const titleId = useId()
@@ -214,7 +222,10 @@ export function Modal({ open, onClose, title, footer, size = "md", dismissable =
 
 const DialogContext = createContext(null)
 
-/** Hosts useConfirm / usePrompt dialogs (AppProvider includes it). */
+/**
+ * Hosts useConfirm / usePrompt dialogs (AppProvider includes it).
+ * @param {Record<string, any>} props
+ */
 export function DialogProvider({ children }) {
     const [dialog, setDialog] = useState(null)
     const [text, setText] = useState("")
@@ -296,7 +307,10 @@ export function usePrompt() {
 
 // ── progress ──
 
-/** A spinning ring; `label` for screen readers. */
+/**
+ * A spinning ring; `label` for screen readers.
+ * @param {Record<string, any>} props
+ */
 export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
     return h("span", {
         className: cx("dr-spinner", className),
@@ -307,7 +321,10 @@ export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
     })
 }
 
-/** A bar: `value` 0..1, or none for an indeterminate one. `tone` colors it. */
+/**
+ * A bar: `value` 0..1, or none for an indeterminate one. `tone` colors it.
+ * @param {Record<string, any>} props
+ */
 export function Progress({ value, tone = "primary", label, className, ...rest }) {
     const known = typeof value === "number" && Number.isFinite(value)
     return h(
@@ -333,7 +350,10 @@ export function Progress({ value, tone = "primary", label, className, ...rest })
     )
 }
 
-/** A ring: `value` 0..1 (uploads, downloads); shows the percent inside unless `children` replace it. */
+/**
+ * A ring: `value` 0..1 (uploads, downloads); shows the percent inside unless `children` replace it.
+ * @param {Record<string, any>} props
+ */
 export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary", className, children, ...rest }) {
     const radius = (size - stroke) / 2
     const length = 2 * Math.PI * radius
@@ -374,13 +394,17 @@ export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary
     )
 }
 
-/** A loading placeholder block. */
+/**
+ * A loading placeholder block.
+ * @param {Record<string, any>} props
+ */
 export function Skeleton({ width = "100%", height = 14, className, style, ...rest }) {
     return h("span", { className: cx("dr-skeleton", className), style: { width, height, ...style }, ...rest })
 }
 
 /**
  * A first-run / empty / error message with next steps. `layer` centers it over a whole view (a canvas, a 3D scene).
+ * @param {Record<string, any>} props
  */
 export function EmptyState(
     { icon = "info", title, message, actions, tone, layer = false, className, children, ...rest },

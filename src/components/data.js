@@ -254,7 +254,10 @@ export function Tree({
 
 // ── key / value ──
 
-/** One label / value row. */
+/**
+ * One label / value row.
+ * @param {Record<string, any>} props
+ */
 export function KeyValueRow({ label, children, mono = true, className, ...rest }) {
     return h(
         "div",
@@ -307,7 +310,10 @@ export function Stat({ label, value, unit, delta, tone, hint, className, ...rest
 
 // ── lists ──
 
-/** A vertical list of ListRows. */
+/**
+ * A vertical list of ListRows.
+ * @param {Record<string, any>} props
+ */
 export function List({ children, className, divided = true, ...rest }) {
     return h(
         "div",

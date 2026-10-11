@@ -661,6 +661,7 @@ export function TopicLayers({ manager }) {
 /**
  * The TF tree drawn: an axes gizmo per frame (theme --axis-x/y/z), its name, and a line to its parent. A big tree
  * names only `named` frames (and the fixed frame) past `maxNames`.
+ * @param {Record<string, any>} props
  */
 export function TfFrames(
     { axesSize = 0.25, names = true, links = true, maxNames = 16, named = [], maxFrames = 512, onStatus },

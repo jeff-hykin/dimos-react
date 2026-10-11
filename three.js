@@ -82,6 +82,7 @@ export {
     setCloudQuality,
     setCloudRate,
 } from "./src/three/cloud_quality.js"
+export { GradientPicker } from "./src/three/gradient_picker.js"
 export { Viewer } from "./src/three/viewer.js"
 export { STALE_MS, TfTree, WORLD_NAMES } from "./src/three/tf.js"
 export { CATCH_UP_SECONDS, PanGate, SmoothFollow } from "./src/three/follow.js"

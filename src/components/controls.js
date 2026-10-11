@@ -48,7 +48,35 @@ export function Button({
     )
 }
 
-/** A square icon-only button; `label` is its accessible name and tooltip. */
+/**
+ * A button that acts while held (jog controls): `onHold()` on press, `onRelease()` on release, cancel or a lost
+ * capture, so a missed pointerup still stops. Takes Button's props.
+ * @param {Record<string, any>} props
+ */
+export function HoldButton({ onHold, onRelease, disabled, className, ...rest }) {
+    return h(Button, {
+        className: cx("dr-btn--hold", className),
+        disabled,
+        style: { touchAction: "none", userSelect: "none", WebkitUserSelect: "none", ...rest.style },
+        onPointerDown: (event) => {
+            if (disabled || event.button !== 0) {
+                return
+            }
+            event.currentTarget.setPointerCapture?.(event.pointerId)
+            onHold?.()
+        },
+        onPointerUp: () => onRelease?.(),
+        onPointerCancel: () => onRelease?.(),
+        onLostPointerCapture: () => onRelease?.(),
+        onContextMenu: (event) => event.preventDefault(),
+        ...rest,
+    })
+}
+
+/**
+ * A square icon-only button; `label` is its accessible name and tooltip.
+ * @param {Record<string, any>} props
+ */
 export function IconButton({ icon, label, size = "md", variant = "ghost", round = false, className, ...rest }) {
     return h(Button, {
         variant,
@@ -60,12 +88,18 @@ export function IconButton({ icon, label, size = "md", variant = "ghost", round 
     }, h(Icon, { name: icon, size: size === "sm" ? 14 : size === "lg" ? 20 : 17 }))
 }
 
-/** Buttons side by side, joined into one control. */
+/**
+ * Buttons side by side, joined into one control.
+ * @param {Record<string, any>} props
+ */
 export function ButtonGroup({ className, children, ...rest }) {
     return h("div", { className: cx("dr-btn-group", className), role: "group", ...rest }, children)
 }
 
-/** A label + control + hint/error, stacked (or `inline`: label left, control right). */
+/**
+ * A label + control + hint/error, stacked (or `inline`: label left, control right).
+ * @param {Record<string, any>} props
+ */
 export function Field({ label, hint, error, inline = false, htmlFor, className, children, ...rest }) {
     return h(
         "div",
@@ -84,6 +118,7 @@ export function Field({ label, hint, error, inline = false, htmlFor, className, 
  * Single-line text. `onChange(text)` on every keystroke; `onEnter(text)` on Enter. Or `onCommit(text)` alone: the box
  * keeps what's typed and reports it once, on Enter or blur, when it differs from `value` (renames, labels); Escape
  * puts `value` back.
+ * @param {Record<string, any>} props
  */
 export function TextInput(
     {
@@ -146,7 +181,10 @@ export function TextInput(
     )
 }
 
-/** A search box: a magnifier, and a clear button once there is text. */
+/**
+ * A search box: a magnifier, and a clear button once there is text.
+ * @param {Record<string, any>} props
+ */
 export function SearchInput({ value, onChange, placeholder = "Search…", className, ...rest }) {
     return h(
         "span",
@@ -177,7 +215,10 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
     )
 }
 
-/** Multi-line text. */
+/**
+ * Multi-line text.
+ * @param {Record<string, any>} props
+ */
 export function TextArea({ value, onChange, mono = false, rows = 4, className, ...rest }) {
     return h("textarea", {
         className: cx("dr-input dr-textarea", mono && "dr-mono", className),
@@ -192,10 +233,11 @@ const clamp = (value, min, max) => Math.min(max ?? Infinity, Math.max(min ?? -In
 
 /**
  * A number box that only reports finite numbers: typing keeps the text, Enter/blur commits; ↑/↓ step (shift: ×10).
- * `unit` shows after the number; `allowEmpty`: clearing the box reports null (e.g. "automatic").
+ * `unit` shows after the number. `nullable`: clearing the box reports null (e.g. "auto"; pair with a placeholder).
+ * @param {Record<string, any>} props
  */
 export function NumberInput(
-    { value, onChange, min, max, step = 1, unit, size = "md", precision, allowEmpty = false, className, ...rest },
+    { value, onChange, min, max, step = 1, unit, size = "md", precision, nullable = false, className, ...rest },
 ) {
     const shown = (number) =>
         number === null || number === undefined || !Number.isFinite(number)
@@ -212,9 +254,9 @@ export function NumberInput(
     }, [value, precision])
     const commit = (raw) => {
         const number = Number(raw)
-        if (allowEmpty && raw.trim() === "") {
+        if (raw.trim() === "" && nullable) {
             setText("")
-            if (value !== null && value !== undefined) {
+            if (value !== null) {
                 onChange?.(null)
             }
             return
@@ -276,6 +318,7 @@ export function normalizeOptions(options = []) {
 /**
  * A native select (keyboard, mobile pickers and screen readers for free), themed. `options`: strings,
  * [value, label] pairs or { value, label, disabled, group }. `onChange` gets the option's value (its original type).
+ * @param {Record<string, any>} props
  */
 export function Select({ value, onChange, options, placeholder, size = "md", className, ...rest }) {
     const items = normalizeOptions(options)
@@ -314,7 +357,10 @@ export function Select({ value, onChange, options, placeholder, size = "md", cla
     )
 }
 
-/** A checkbox with its label. `indeterminate` shows a dash. */
+/**
+ * A checkbox with its label. `indeterminate` shows a dash.
+ * @param {Record<string, any>} props
+ */
 export function Checkbox({ value, onChange, label, indeterminate = false, disabled, className, children, ...rest }) {
     const ref = useRef(null)
     useEffect(() => {
@@ -338,7 +384,10 @@ export function Checkbox({ value, onChange, label, indeterminate = false, disabl
     )
 }
 
-/** An on/off switch (role="switch"). */
+/**
+ * An on/off switch (role="switch").
+ * @param {Record<string, any>} props
+ */
 export function Toggle({ value, onChange, label, size = "md", disabled, className, ...rest }) {
     return h(
         "label",
@@ -358,7 +407,10 @@ export function Toggle({ value, onChange, label, size = "md", disabled, classNam
 }
 export const Switch = Toggle
 
-/** One radio button (use RadioGroup for a set). */
+/**
+ * One radio button (use RadioGroup for a set).
+ * @param {Record<string, any>} props
+ */
 export function Radio({ checked, onChange, label, name, value, disabled, className, ...rest }) {
     return h(
         "label",
@@ -377,7 +429,10 @@ export function Radio({ checked, onChange, label, name, value, disabled, classNa
     )
 }
 
-/** A set of radios: `options` as for Select; `direction` "column" | "row". */
+/**
+ * A set of radios: `options` as for Select; `direction` "column" | "row".
+ * @param {Record<string, any>} props
+ */
 export function RadioGroup({ value, onChange, options, name, direction = "column", className, ...rest }) {
     const autoName = useId()
     return h(
@@ -399,6 +454,7 @@ export function RadioGroup({ value, onChange, options, name, direction = "column
 
 /**
  * A range slider with its value shown. `format(value)` for the readout; `onCommit(value)` once the drag ends.
+ * @param {Record<string, any>} props
  */
 export function Slider(
     {
@@ -438,7 +494,10 @@ export function Slider(
     )
 }
 
-/** Two thumbs on one track: `value` = [low, high]. */
+/**
+ * Two thumbs on one track: `value` = [low, high].
+ * @param {Record<string, any>} props
+ */
 export function RangeSlider(
     { value = [0, 1], onChange, min = 0, max = 1, step = 0.01, format, showValue = true, className, disabled },
 ) {
@@ -479,7 +538,10 @@ export function RangeSlider(
     )
 }
 
-/** A small status label. `tone`: "default" | "info" | "ok" | "warn" | "danger"; `solid` fills it; `dot` adds a dot. */
+/**
+ * A small status label. `tone`: "default" | "info" | "ok" | "warn" | "danger"; `solid` fills it; `dot` adds a dot.
+ * @param {Record<string, any>} props
+ */
 export function Badge({ tone = "default", solid = false, dot = false, className, children, ...rest }) {
     return h(
         "span",
@@ -492,7 +554,10 @@ export function Badge({ tone = "default", solid = false, dot = false, className,
     )
 }
 
-/** A toggleable chip (filters, multi-select). `selected` + `onChange(selected)`; `onRemove` adds an ✕. */
+/**
+ * A toggleable chip (filters, multi-select). `selected` + `onChange(selected)`; `onRemove` adds an ✕.
+ * @param {Record<string, any>} props
+ */
 export function Chip({ selected, onChange, onRemove, icon, tone, className, children, ...rest }) {
     return h(
         "span",
@@ -528,7 +593,10 @@ export function Chip({ selected, onChange, onRemove, icon, tone, className, chil
     )
 }
 
-/** A status dot: tone "ok" | "warn" | "danger" | "info" | "off"; `pulse` animates it. */
+/**
+ * A status dot: tone "ok" | "warn" | "danger" | "info" | "off"; `pulse` animates it.
+ * @param {Record<string, any>} props
+ */
 export function StatusDot({ tone = "ok", pulse = false, label, className, ...rest }) {
     return h("span", {
         className: cx("dr-dot", `dr-dot--${tone}`, pulse && "dr-dot--pulse", className),
@@ -544,6 +612,7 @@ const CONNECTION_TONES = { connected: "ok", connecting: "warn", degraded: "warn"
 /**
  * A link indicator: dot + state (+ an optional detail like "12 ms"). `state` is a data source state ("connecting" |
  * "connected" | "degraded" | "lost"); see useConnectionState().
+ * @param {Record<string, any>} props
  */
 export function ConnectionStatus({ state = "connecting", label, detail, className, ...rest }) {
     const tone = CONNECTION_TONES[state] ?? "off"
@@ -556,7 +625,10 @@ export function ConnectionStatus({ state = "connecting", label, detail, classNam
     )
 }
 
-/** A keyboard key: <Kbd>W</Kbd>, or `keys={["mod", "K"]}`. */
+/**
+ * A keyboard key: <Kbd>W</Kbd>, or `keys={["mod", "K"]}`.
+ * @param {Record<string, any>} props
+ */
 export function Kbd({ keys, className, children, ...rest }) {
     const mac = /mac|iphone|ipad/i.test(globalThis.navigator?.platform ?? "")
     const label = (

@@ -120,4 +120,27 @@ export const LAYOUT_CSS = /* css */ `
 .dr-shell--inset { padding-bottom: var(--dim-inset-bottom, 0px); box-sizing: border-box; }
 .dr-embed { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .dr-shell-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; position: relative; }
+.dr-resize-handle {
+    position: absolute;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    z-index: 3;
+    touch-action: none;
+}
+.dr-resize-handle--bottom-right { right: 0; cursor: nwse-resize; }
+.dr-resize-handle--bottom-left { left: 0; cursor: nesw-resize; }
+.dr-resize-handle::before {
+    content: "";
+    position: absolute;
+    bottom: 4px;
+    width: 11px;
+    height: 11px;
+    border-bottom: 2px solid color-mix(in srgb, var(--fg) 55%, transparent);
+    opacity: 0.7;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+.dr-resize-handle--bottom-right::before { right: 4px; border-right: 2px solid color-mix(in srgb, var(--fg) 55%, transparent); }
+.dr-resize-handle--bottom-left::before { left: 4px; border-left: 2px solid color-mix(in srgb, var(--fg) 55%, transparent); }
+.dr-resize-handle:hover::before, .dr-resize-handle:active::before { opacity: 1; border-color: var(--fg); }
 `

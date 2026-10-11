@@ -47,6 +47,7 @@ export class Viewer {
     resolution = new THREE.Vector2(1, 1)
     fixedFrame = "world"
     /** where the camera follows (a point in the fixed frame); the React layer sets it each frame from followFrame */
+    /** @type {THREE.Vector3 | null} */
     followTarget = null
     /** a hidden view (display: none, a collapsed pane) draws nothing; what changed meanwhile is drawn once unpaused */
     paused = false
@@ -261,7 +262,10 @@ export class Viewer {
         this.requestRender()
     }
 
-    /** `listener(frame)` every animation frame, before rendering. Returns unsubscribe. */
+    /**
+     * `listener(frame)` every animation frame, before rendering. Returns unsubscribe.
+     * @param {(frame: FrameInfo) => void} listener
+     */
     onFrame(listener) {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)

@@ -1,5 +1,12 @@
 // Joystick, D-pad, file drop, color swatch, key hints. Tokens only.
 export const INPUT_DEVICES_CSS = /* css */ `
+/* stick readout */
+.dr-stick-indicator { flex: none; }
+.dr-stick-indicator__ring { fill: none; stroke: var(--border-strong, var(--border)); stroke-width: 0.12; }
+.dr-stick-indicator__arm { stroke: var(--muted-fg); stroke-width: 0.1; }
+.dr-stick-indicator__dot { fill: var(--muted-fg); }
+.dr-stick-indicator--live .dr-stick-indicator__dot { fill: var(--primary); }
+
 /* joystick */
 .dr-joystick {
     position: relative;

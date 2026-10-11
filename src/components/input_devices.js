@@ -1,4 +1,5 @@
-// Touch and pointer input: a virtual joystick, a D-pad, a file drop zone, a color swatch and HUD key hints.
+// Touch and pointer input: a virtual joystick, a stick readout, a D-pad, a file drop zone, a color swatch and HUD key
+// hints.
 import { useEffect, useRef, useState } from "react"
 import { cx, h } from "../h.js"
 import { Icon } from "./icon.js"
@@ -81,6 +82,31 @@ export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label
             },
         }),
         label ? h("span", { className: "dr-joystick__label" }, label) : null,
+    )
+}
+
+/**
+ * A small read-only stick: a ring with a dot where a stick is (x, y in -1..1, y up), e.g. a gamepad's or a policy's
+ * sticks. `value` null shows it idle.
+ * @param {{ value: { x: number, y: number } | null, size?: number, label?: string, className?: string } & Record<string, any>} props
+ */
+export function StickIndicator({ value, size = 22, label = "stick", className, ...rest }) {
+    const x = value?.x ?? 0
+    const y = value?.y ?? 0
+    return h(
+        "svg",
+        {
+            className: cx("dr-stick-indicator", value && (x || y) && "dr-stick-indicator--live", className),
+            width: size,
+            height: size,
+            viewBox: "-1.2 -1.2 2.4 2.4",
+            role: "img",
+            "aria-label": `${label} ${x.toFixed(2)}, ${y.toFixed(2)}`,
+            ...rest,
+        },
+        h("circle", { r: 1, className: "dr-stick-indicator__ring" }),
+        h("line", { x1: 0, y1: 0, x2: x, y2: -y, className: "dr-stick-indicator__arm" }),
+        h("circle", { cx: x, cy: -y, r: 0.28, className: "dr-stick-indicator__dot" }),
     )
 }
 

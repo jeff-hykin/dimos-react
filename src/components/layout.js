@@ -4,7 +4,10 @@ import { cx, h } from "../h.js"
 import { useDrag, usePersistentState } from "../hooks.js"
 import { Icon } from "./icon.js"
 
-/** A bordered surface. `title`, `description`, `actions` (right side of the header); `padded` (default true). */
+/**
+ * A bordered surface. `title`, `description`, `actions` (right side of the header); `padded` (default true).
+ * @param {Record<string, any>} props
+ */
 export function Card({ title, description, actions, padded = true, glass = false, className, children, ...rest }) {
     return h(
         "section",
@@ -29,6 +32,7 @@ export function Card({ title, description, actions, padded = true, glass = false
 /**
  * A panel with a header that can collapse its body. `collapsible`, `open`/`onOpenChange` (controlled) or
  * `defaultOpen`; `persistKey` remembers it; `glass` for panels floating over a 3D/video view; `icon`, `actions`.
+ * @param {Record<string, any>} props
  */
 export function Panel({
     title,
@@ -97,6 +101,7 @@ export function Panel({
 /**
  * A panel that floats over the page and can be dragged by its header (position remembered with `persistKey`).
  * `defaultPosition` { x, y } (px from the top-left; negative = from the right/bottom); `onClose` adds an ✕.
+ * @param {Record<string, any>} props
  */
 export function FloatingPanel(
     {
@@ -179,6 +184,7 @@ export function FloatingPanel(
 /**
  * Two panes with a draggable divider. `direction` "row" (side by side) | "column"; `size` of the first pane (px or
  * %, controlled with onSizeChange) or `defaultSize`; `min` / `max` px; `persistKey`.
+ * @param {Record<string, any>} props
  */
 export function SplitPane(
     {
@@ -249,7 +255,45 @@ export function SplitPane(
     )
 }
 
-/** The app's top bar: `title` (and `icon`), `left` / center `children` / `right` slots. */
+/**
+ * A corner grip for resizing a panel: `onResize({ dx, dy, done })` while dragging (px from where it started) and once
+ * more with `done: true` on release. `corner` "bottom-right" | "bottom-left" (the one facing into the screen).
+ * @param {{ onResize: (drag: { dx: number, dy: number, done: boolean }) => void, onStart?: () => void,
+ *   corner?: "bottom-right" | "bottom-left", label?: string, className?: string } & Record<string, any>} props
+ */
+export function ResizeHandle({ onResize, onStart, corner = "bottom-right", label = "Resize", className, ...rest }) {
+    const start = useRef(null)
+    const report = (event, done) =>
+        start.current && onResize({ dx: event.clientX - start.current.x, dy: event.clientY - start.current.y, done })
+    return h("div", {
+        className: cx("dr-resize-handle", `dr-resize-handle--${corner}`, className),
+        role: "separator",
+        "aria-label": label,
+        title: label,
+        onPointerDown: (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            event.currentTarget.setPointerCapture?.(event.pointerId)
+            start.current = { x: event.clientX, y: event.clientY }
+            onStart?.()
+        },
+        onPointerMove: (event) => report(event, false),
+        onPointerUp: (event) => {
+            report(event, true)
+            start.current = null
+        },
+        onPointerCancel: (event) => {
+            report(event, true)
+            start.current = null
+        },
+        ...rest,
+    })
+}
+
+/**
+ * The app's top bar: `title` (and `icon`), `left` / center `children` / `right` slots.
+ * @param {Record<string, any>} props
+ */
 export function TopBar({ title, icon, left, right, className, children, ...rest }) {
     return h(
         "header",
@@ -266,7 +310,10 @@ export function TopBar({ title, icon, left, right, className, children, ...rest 
     )
 }
 
-/** A row of controls (buttons, selects, separators). `floating` gives it a glass background (over a view). */
+/**
+ * A row of controls (buttons, selects, separators). `floating` gives it a glass background (over a view).
+ * @param {Record<string, any>} props
+ */
 export function Toolbar({ floating = false, vertical = false, className, children, ...rest }) {
     return h("div", {
         className: cx(
@@ -280,17 +327,26 @@ export function Toolbar({ floating = false, vertical = false, className, childre
     }, children)
 }
 
-/** A bar pinned to the bottom of its container, above Desktop's dock (status lines, playback controls). */
+/**
+ * A bar pinned to the bottom of its container, above Desktop's dock (status lines, playback controls).
+ * @param {Record<string, any>} props
+ */
 export function BottomBar({ className, children, ...rest }) {
     return h("footer", { className: cx("dr-bottombar", className), ...rest }, children)
 }
 
-/** A thin divider; `vertical` inside rows/toolbars. */
+/**
+ * A thin divider; `vertical` inside rows/toolbars.
+ * @param {Record<string, any>} props
+ */
 export function Separator({ vertical = false, className, ...rest }) {
     return h("span", { className: cx("dr-sep", vertical && "dr-sep--vertical", className), role: "separator", ...rest })
 }
 
-/** Flex helpers: `gap` (px), `align`, `justify`, `wrap`, `grow`. */
+/**
+ * Flex helpers: `gap` (px), `align`, `justify`, `wrap`, `grow`.
+ * @param {Record<string, any>} props
+ */
 export function Row(
     { gap = 8, align = "center", justify, wrap = false, grow = false, className, style, children, ...rest },
 ) {
@@ -307,6 +363,7 @@ export function Row(
         ...rest,
     }, children)
 }
+/** @param {Record<string, any>} props */
 export function Column({ gap = 8, align, justify, grow = false, className, style, children, ...rest }) {
     return h("div", {
         className: cx("dr-col", className),
@@ -322,19 +379,27 @@ export function Spacer() {
 /**
  * A HUD overlay pinned to a corner of a positioned parent (a 3D view, a video): `position` "top-left" | "top-right" |
  * "bottom-left" | "bottom-right" | "top" | "bottom" | "center".
+ * @param {Record<string, any>} props
  */
 export function Hud({ position = "top-left", className, children, ...rest }) {
     return h("div", { className: cx("dr-hud", `dr-hud--${position}`, className), ...rest }, children)
 }
 
-/** Headings and text in the theme's type: level 1 (page title), 2 (section head), 3 (micro-label). */
+/**
+ * Headings and text in the theme's type: level 1 (page title), 2 (section head), 3 (micro-label).
+ * @param {Record<string, any>} props
+ */
 export function Heading({ level = 2, className, children, ...rest }) {
     return h(`h${level}`, { className: cx(`dr-h${level}`, className), ...rest }, children)
 }
+/** @param {Record<string, any>} props */
 export function Label({ className, children, ...rest }) {
     return h("span", { className: cx("dr-label", className), ...rest }, children)
 }
-/** Text: `muted`, `mono`, `small`, `tone` ("ok" | "warn" | "danger"). */
+/**
+ * Text: `muted`, `mono`, `small`, `tone` ("ok" | "warn" | "danger").
+ * @param {Record<string, any>} props
+ */
 export function Text({ as = "span", muted, mono, small, tone, className, children, ...rest }) {
     return h(as, {
         className: cx(
@@ -348,6 +413,7 @@ export function Text({ as = "span", muted, mono, small, tone, className, childre
         ...rest,
     }, children)
 }
+/** @param {Record<string, any>} props */
 export function Link({ className, children, ...rest }) {
     return h("a", { className: cx("dr-link", className), ...rest }, children)
 }
@@ -355,6 +421,7 @@ export function Link({ className, children, ...rest }) {
 /**
  * Full-page app frame: top bar, optional side, main area (fills the viewport). `insetBottom` ends the main area above
  * Desktop's dock (without a bottomBar; a BottomBar already does).
+ * @param {Record<string, any>} props
  */
 export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, className, children, ...rest }) {
     return h(

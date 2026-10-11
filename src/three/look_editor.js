@@ -3,7 +3,7 @@
 // CubeShadePicker for the page-wide defaults (the `rendering` store).
 import { cx, h } from "../h.js"
 import { useStore } from "./store.js"
-import { gradientCss, GRADIENTS } from "./gradients.js"
+import { GradientPicker } from "./gradient_picker.js"
 import { CUBE_SHADES, POINT_STYLES } from "./point_material.js"
 import { rendering, splatFallback } from "./rendering.js"
 import { ColorSwatch } from "../components/input_devices.js"
@@ -131,22 +131,11 @@ export function PointLookEditor({ look, onChange }) {
         look.colorMode === "solid"
             ? h(Field, { label: "Solid" }, h(ColorSwatch, { value: look.solid, onChange: (solid) => set({ solid }) }))
             : [
-                h(
-                    "div",
-                    { className: "dr-gradients", key: "gradients", role: "radiogroup", "aria-label": "Gradient" },
-                    GRADIENTS.map((name) =>
-                        h("button", {
-                            type: "button",
-                            key: name,
-                            title: name,
-                            role: "radio",
-                            "aria-checked": look.gradient === name,
-                            className: cx("dr-gradient-swatch", look.gradient === name && "dr-gradient-swatch--on"),
-                            style: { background: gradientCss(name) },
-                            onClick: () => set({ gradient: name }),
-                        })
-                    ),
-                ),
+                h(GradientPicker, {
+                    key: "gradients",
+                    value: look.gradient,
+                    onChange: (gradient) => set({ gradient }),
+                }),
                 look.colorMode === "height"
                     ? h(
                         Field,
@@ -191,7 +180,7 @@ export function RangeInput({ value, onChange, placeholder = "auto", ...rest }) {
         step: 0.1,
         placeholder,
         size: "sm",
-        allowEmpty: true,
+        nullable: true,
         onChange,
         ...rest,
     })

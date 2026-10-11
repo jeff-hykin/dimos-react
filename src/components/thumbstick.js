@@ -71,14 +71,20 @@ export function releaseAllThumbSticks() {
 /**
  * A thumb stick zone (size it with CSS: it fills its box; the ring's size is `--dr-stick`).
  * @param {{ onMove: (x: number, y: number) => void, axes?: "xy" | "x" | "y", label?: string, className?: string,
- *   style?: object } & Record<string, any>} props
- *   `onMove(x, y)`: shaped -1..1 values (y up), eased while held, zero at once on release
+ *   style?: object, shape?: (dx: number, dy: number, radius: number, axes: "xy" | "x" | "y") => { x: number, y: number },
+ *   smooth?: (current: number, target: number, dtMs: number) => number } & Record<string, any>} props
+ *   `onMove(x, y)`: shaped -1..1 values (y up), eased while held, zero at once on release; `shape(dx, dy, radius, axes)`
+ *   and `smooth(current, target, dtMs)` replace the built-in dead zone + expo and easing
  */
-export function ThumbStick({ onMove, axes = "xy", label, className, style, ...rest }) {
+export function ThumbStick(
+    { onMove, axes = "xy", label, shape = shapeStick, smooth = smoothToward, className, style, ...rest },
+) {
     const zone = useRef(null)
     const base = useRef(null)
     const onMoveRef = useRef(onMove)
     onMoveRef.current = onMove
+    const latest = useRef({ shape, smooth })
+    latest.current = { shape, smooth }
     const [view, setView] = useState({ active: false, origin: null, knob: { x: 0, y: 0 } })
     const live = useRef({
         pointer: null,
@@ -118,7 +124,10 @@ export function ThumbStick({ onMove, axes = "xy", label, className, style, ...re
         }
         const dt = state.last ? now - state.last : 16
         state.last = now
-        emit(smoothToward(state.current.x, state.target.x, dt), smoothToward(state.current.y, state.target.y, dt))
+        emit(
+            latest.current.smooth(state.current.x, state.target.x, dt),
+            latest.current.smooth(state.current.y, state.target.y, dt),
+        )
         state.frame = requestAnimationFrame(step)
     }
     const track = (clientX, clientY) => {
@@ -135,7 +144,7 @@ export function ThumbStick({ onMove, axes = "xy", label, className, style, ...re
         } else if (axes === "y") {
             dx = 0
         }
-        state.target = shapeStick(dx, dy, state.radius, axes)
+        state.target = latest.current.shape(dx, dy, state.radius, axes)
         if (state.target.x === 0 && state.target.y === 0) {
             emit(0, 0)
         }

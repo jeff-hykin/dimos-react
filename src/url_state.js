@@ -202,6 +202,7 @@ const getDefaultStore = () => (defaultStore ??= createUrlStore())
  * Provides the URL store below it and (unless `events={false}`) lets the app's backend change the URL with url events
  * on its `events` frontend topic (`events` may name another topic). `window` (tests: createMemoryWindow()) and
  * `mode` ("search" | "hash") pick where the params live; `store` passes a ready-made one.
+ * @param {Record<string, any>} props
  */
 export function UrlStateProvider(
     { mode = "search", window: win, store: givenStore, events = "events", eventType = "url", children },

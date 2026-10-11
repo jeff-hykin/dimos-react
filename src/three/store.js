@@ -24,13 +24,19 @@ export class Store {
     update(patch) {
         this.set({ ...this.#value, ...patch })
     }
+    /** @param {() => void} listener @returns {() => boolean} */
     subscribe = (listener) => {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }
 }
 
-/** The store's current value, re-rendered on every change. */
+/**
+ * The store's current value, re-rendered on every change.
+ * @template {object} T
+ * @param {Store<T>} store
+ * @returns {T}
+ */
 export function useStore(store) {
     return useSyncExternalStore(store.subscribe, () => store.get(), () => store.get())
 }

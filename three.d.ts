@@ -33,6 +33,7 @@ export declare const FrameHighlighter: any
 export type FrameHighlighter = any
 export declare function FramePicker(props: Record<string, any>): ReactNode
 export declare const GRADIENTS: any
+export declare function GradientPicker(props: Record<string, any>): ReactNode
 export declare const GraphLayer: any
 export type GraphLayer = any
 export declare const GridLayer: any

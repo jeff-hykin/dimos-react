@@ -47,6 +47,13 @@ export const SCENE_CSS = /* css */ `
     border-left-color: var(--fg);
     z-index: 2;
 }
+.dr-scene-label.dr-note {
+    white-space: pre;
+    text-align: center;
+    font-size: 12px;
+    color: var(--label-color, var(--warn));
+    border-left-color: var(--label-color, var(--warn));
+}
 .dr-scene-label.dr-covered {
     opacity: 0;
 }
@@ -174,24 +181,6 @@ export const SCENE_CSS = /* css */ `
     font-size: 11px;
     color: var(--muted-fg);
     line-height: 1.3;
-}
-.dr-gradients {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-.dr-gradient-swatch {
-    appearance: none;
-    width: 46px;
-    height: 14px;
-    padding: 0;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-}
-.dr-gradient-swatch--on {
-    outline: 2px solid var(--primary);
-    outline-offset: 1px;
 }
 .dr-range-inputs {
     display: flex;
@@ -348,5 +337,25 @@ export const SCENE_CSS = /* css */ `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+.dr-gradient-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 5px;
+    width: 100%;
+}
+.dr-gradient-picker__swatch {
+    appearance: none;
+    height: 14px;
+    padding: 0;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+}
+.dr-gradient-picker__swatch[aria-checked="true"] {
+    border-color: var(--fg);
+}
+.dr-gradient-picker__swatch:focus-visible {
+    outline: none;
+    box-shadow: var(--dr-focus);
 }
 `

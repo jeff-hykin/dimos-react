@@ -20,6 +20,7 @@ import {
 import {
     FrameHighlight,
     FramePicker,
+    GradientPicker,
     KeyboardFly,
     LayersPanel,
     Path,
@@ -178,6 +179,7 @@ function LiveDemo() {
     const [followFrame, setFollowFrame] = useState("base_link")
     const [style, setStyle] = useState("voxel")
     const [names, setNames] = useState(true)
+    const [gradient, setGradient] = useState("memworld")
     return h(
         DataSourceProvider,
         { source },
@@ -198,7 +200,7 @@ function LiveDemo() {
                 },
                 h(TfFeed),
                 h(TfFrames, { names, axesSize: 0.3 }),
-                h(PointCloud, { points: room, frame: "world", style, size: 0.06, colorMode: "height" }),
+                h(PointCloud, { points: room, frame: "world", style, size: 0.06, colorMode: "height", gradient }),
                 h(PointCloud, {
                     topic: LIDAR_KEY,
                     style: "disc",
@@ -243,6 +245,11 @@ function LiveDemo() {
                     }),
                 ),
                 h(Field, { label: "Frame names" }, h(Toggle, { value: names, onChange: setNames })),
+                h(
+                    Field,
+                    { label: "Gradient", style: { minWidth: 260 } },
+                    h(GradientPicker, { value: gradient, onChange: setGradient }),
+                ),
             ),
         ),
     )

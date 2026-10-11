@@ -205,8 +205,9 @@ export class TfTree {
         return [...roots].sort()
     }
 
-    /** Every frame name, sorted. */
+    /** Every frame name, sorted. @returns {string[]} */
     frames() {
+        /** @type {Set<string>} */
         const frames = new Set()
         for (const [child, edge] of this.#edges) {
             frames.add(child)

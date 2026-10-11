@@ -31,8 +31,12 @@ export class LabeledPoints {
     root = new THREE.Group()
     #labels = new LabelPool()
     #spheres
-    #stop
+    #stop = () => {}
     #frame = null
+    #show
+    /** props data: `[{ label, position: [x, y, z], frame, color }]`, each placed through TF every frame */
+    #data = null
+    #placed = ""
 
     constructor(context, topic) {
         this.context = context
@@ -40,7 +44,7 @@ export class LabeledPoints {
         this.#spheres.count = 0
         this.#spheres.frustumCulled = false
         this.root.add(this.#spheres, this.#labels.group)
-        const show = (entities, frame, timestamp) => {
+        const show = this.#show = (entities, frame, timestamp) => {
             this.#frame = frame
             this.#labels.begin()
             const matrix = new THREE.Matrix4()
@@ -58,7 +62,13 @@ export class LabeledPoints {
             }
             this.#labels.end()
             context.setStatus({ info: `${entities.length} points` })
-            context.viewer.noteData(timestamp)
+            if (timestamp !== undefined) {
+                context.viewer.noteData(timestamp)
+            }
+            context.viewer.requestRender()
+        }
+        if (!topic) {
+            return
         }
         if (topic.type === "visualization_msgs.EntityMarkers") {
             // world coordinates by definition (dimos draws them in rerun's world)
@@ -95,7 +105,38 @@ export class LabeledPoints {
         }
     }
 
+    /** Points from props (no topic): `[{ label, position: [x, y, z], frame, color }]`. */
+    setData(data) {
+        this.#data = Array.isArray(data) ? data : []
+        this.#placed = ""
+    }
+
     update(frame) {
+        if (this.#data) {
+            // each point through its own frame; redrawn only when where they land changed
+            const entities = []
+            for (const item of this.#data) {
+                const position = new THREE.Vector3(...(item.position ?? [0, 0, 0]))
+                const matrix = !item.frame || item.frame === frame.fixedFrame
+                    ? null
+                    : this.context.tf.lookup(item.frame, frame.fixedFrame)
+                if (item.frame && item.frame !== frame.fixedFrame && !matrix) {
+                    continue
+                }
+                if (matrix) {
+                    position.applyMatrix4(matrix)
+                }
+                entities.push({ label: item.label ?? "", color: item.color ?? "var(--warn)", position })
+            }
+            const signature = entities.map((entity) =>
+                `${entity.label}|${entity.color}|${entity.position.toArray().map((v) => v.toFixed(3))}`
+            ).join("\n")
+            if (signature !== this.#placed) {
+                this.#placed = signature
+                this.#show(entities, "", undefined)
+            }
+            return
+        }
         if (this.#frame !== null) {
             placeLayer(this.context, this.root, this.#frame, frame.fixedFrame)
         }

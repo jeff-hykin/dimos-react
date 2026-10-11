@@ -544,7 +544,8 @@ function applyTransforms(tf, transforms, isStatic) {
 
 /**
  * One layer of a registered type (layers/registry.js) in the scene: from a topic, or from `data` (types that take
- * props data: pointcloud, pose, path, posearray). `settings` override the type's defaults (live: a change restyles,
+ * props data: pointcloud, pose, path, posearray, labeled-points `[{ label, position, frame, color }]`, boxes3d
+ * `[{ center, size, yaw, frame, label, color, fill }]`). `settings` override the type's defaults (live: a change restyles,
  * it doesn't re-create).
  * @param {{ type: string | object, topic?: string | { key: string, name: string, type: string } | null,
  *   settings?: object, data?: any, onStatus?: (status: object) => void, onPose?: (matrix: THREE.Matrix4) => void }} props

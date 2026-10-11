@@ -64,6 +64,7 @@ import { NavSection } from "./sections/nav.js"
 import { InputDevicesSection } from "./sections/input_devices.js"
 import { SceneSection } from "./sections/scene.js"
 import { MediaSection } from "./sections/media.js"
+import { ViewsSection } from "./sections/views.js"
 
 const source = memorySource({
     topics: ["dimos/odom/nav_msgs.Odometry", "dimos/lidar/sensor_msgs.PointCloud2", "dimos/tf/tf2_msgs.TFMessage"],
@@ -505,6 +506,7 @@ const SECTIONS = [
     ["nav", "Navigation", NavSection],
     ["devices", "Input devices", InputDevicesSection],
     ["media", "Media", MediaSection],
+    ["views", "View panels & driving", ViewsSection],
     ["scene", "3D view", SceneSection],
 ]
 

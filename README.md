@@ -152,6 +152,22 @@ active, ticks: { times } | { counts } }]`). `onScrubStart` /
 `onSeek(t)` / `onScrubEnd` while dragging; `keyboard` adds space / ← → / Home / End. The colormaps (`RAMPS`,
 `sampleGradient`) come without three.js from `mod.js`.
 
+## View panels, driving input, cameras
+
+- `ViewPanel` — a view's chrome: `placement` "float" (header drag via `onMove(x, y)`, corner `resize` with optional
+  `aspect`), "dock" (`dock: { region, rect, maximized, onMaximize, tiles? }`: a layout places it, a maximize button,
+  dragging a tile's header onto another swaps them) or "main" (fills its parent). Helpers: `clampPanelBox`, `swapTiles`,
+  `startPanelDrag`, `startPanelResize`, `PanelInfo` (a header readout), class `dr-view-panel-title`.
+- `ThumbStick` — a phone thumb stick: the stick centers where the thumb lands, `axes` "xy" | "x" | "y", dead zone + expo
+  (`shapeStick`) and easing (`smoothToward`), zeroed at once on any release; `releaseAllThumbSticks()` for STOP.
+  `KeyPad` / `KeyCap` show keyboard keys lit while held.
+- Cameras: `CameraView({ topic, overlay, fill, depthLook, onInfo })` draws a camera topic: on Desktop's gateway a color
+  topic is its H.264 video track at this viewer's latency ↔ quality preset (`useVideoQuality(topic)`, `VIDEO_PRESETS`,
+  changed in place), depth and replayed frames go through `ImageView`; optional 2D detection overlay. `CameraTabs`,
+  `CameraStreams` / `CameraStreamsProvider` (shared, counted subscriptions; `element()` gives a `<video>` for textures),
+  `cameraTabs`, `pickCamera`, `retargetCameras`, `cameraInfoFor`. The `three.js` entry adds `DepthMaterial` (the depth
+  colormap as a three.js material, for a camera's 3D projection).
+
 ## 3D view (three.js)
 
 The 3D view is its own entry, `three.js`, so apps without one never load three. It is the Controller's view made

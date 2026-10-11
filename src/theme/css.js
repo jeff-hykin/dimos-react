@@ -10,6 +10,7 @@ import { INPUT_DEVICES_CSS } from "../styles/input_devices.js"
 import { SCENE_CSS } from "../styles/scene.js"
 import { TEXT_CSS } from "../styles/text.js"
 import { MEDIA_CSS } from "../styles/media.js"
+import { VIEW_PANEL_CSS } from "../styles/view_panel.js"
 
 export const COMPONENT_CSS = [
     BASE_CSS,
@@ -22,4 +23,5 @@ export const COMPONENT_CSS = [
     SCENE_CSS,
     TEXT_CSS,
     MEDIA_CSS,
+    VIEW_PANEL_CSS,
 ].join("\n")

@@ -7,6 +7,10 @@ export declare const CATCH_UP_SECONDS: any
 export declare const CUBE_SHADES: any
 export declare const DEFAULT_GRADIENT: any
 export declare const DEFAULT_LOOK: any
+export declare const DepthMaterial: any
+export type DepthMaterial = any
+export declare const DepthRange: any
+export type DepthRange = any
 export declare const FatLines: any
 export type FatLines = any
 export declare function FramePicker(props: Record<string, any>): ReactNode

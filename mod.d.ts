@@ -14,6 +14,11 @@ export declare function Button(props: Record<string, any>): ReactNode
 export declare function ButtonGroup(props: Record<string, any>): ReactNode
 export declare const COMPONENT_CSS: any
 export declare const CORNERS_KEY: any
+export declare const CameraStreams: any
+export type CameraStreams = any
+export declare function CameraStreamsProvider(props: Record<string, any>): ReactNode
+export declare function CameraTabs(props: Record<string, any>): ReactNode
+export declare function CameraView(props: Record<string, any>): ReactNode
 export declare function Card(props: Record<string, any>): ReactNode
 export declare function Checkbox(props: Record<string, any>): ReactNode
 export declare function Chip(props: Record<string, any>): ReactNode
@@ -48,7 +53,9 @@ export declare function IconButton(props: Record<string, any>): ReactNode
 export declare function ImageView(props: Record<string, any>): ReactNode
 export declare function Joystick(props: Record<string, any>): ReactNode
 export declare function Kbd(props: Record<string, any>): ReactNode
+export declare function KeyCap(props: Record<string, any>): ReactNode
 export declare function KeyHints(props: Record<string, any>): ReactNode
+export declare function KeyPad(props: Record<string, any>): ReactNode
 export declare function KeyValue(props: Record<string, any>): ReactNode
 export declare function KeyValueRow(props: Record<string, any>): ReactNode
 export declare function Label(props: Record<string, any>): ReactNode
@@ -64,6 +71,7 @@ export declare function Modal(props: Record<string, any>): ReactNode
 export declare function NavRail(props: Record<string, any>): ReactNode
 export declare function NumberInput(props: Record<string, any>): ReactNode
 export declare function Panel(props: Record<string, any>): ReactNode
+export declare function PanelInfo(props: Record<string, any>): ReactNode
 export declare function PlaybackBar(props: Record<string, any>): ReactNode
 export declare function Popover(props: Record<string, any>): ReactNode
 export declare function Progress(props: Record<string, any>): ReactNode
@@ -75,6 +83,9 @@ export declare function RangeSlider(props: Record<string, any>): ReactNode
 export declare function Row(props: Record<string, any>): ReactNode
 export declare const SKINS: any
 export declare const SKIN_KEY: any
+export declare const STICK_DEAD_ZONE: any
+export declare const STICK_EXPO: any
+export declare const STICK_SMOOTH_MS: any
 export declare function SearchInput(props: Record<string, any>): ReactNode
 export declare function Segmented(props: Record<string, any>): ReactNode
 export declare function Select(props: Record<string, any>): ReactNode
@@ -89,6 +100,8 @@ export declare function SplitPane(props: Record<string, any>): ReactNode
 export declare function Stat(props: Record<string, any>): ReactNode
 export declare function StatusDot(props: Record<string, any>): ReactNode
 export declare function Stepper(props: Record<string, any>): ReactNode
+export declare const Store: any
+export type Store = any
 export declare function Switch(props: Record<string, any>): ReactNode
 export declare const TOKENS_CSS: any
 export declare function Table(props: Record<string, any>): ReactNode
@@ -96,6 +109,7 @@ export declare function Tabs(props: Record<string, any>): ReactNode
 export declare function Text(props: Record<string, any>): ReactNode
 export declare function TextArea(props: Record<string, any>): ReactNode
 export declare function TextInput(props: Record<string, any>): ReactNode
+export declare function ThumbStick(props: Record<string, any>): ReactNode
 export declare function Timeline(props: Record<string, any>): ReactNode
 export declare function ToastProvider(props: Record<string, any>): ReactNode
 export declare function ToastViewport(props: Record<string, any>): ReactNode
@@ -105,11 +119,17 @@ export declare function Tooltip(props: Record<string, any>): ReactNode
 export declare function TopBar(props: Record<string, any>): ReactNode
 export declare function Tree(props: Record<string, any>): ReactNode
 export declare function UrlStateProvider(props: Record<string, any>): ReactNode
+export declare const VIDEO_PRESETS: any
+export declare const VIEW_PANEL_HEAD_PX: any
+export declare function ViewPanel(props: Record<string, any>): ReactNode
 export declare function ZenohProvider(props: Record<string, any>): ReactNode
 export declare const applyTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const applyUrlEvent: ((...args: any[]) => any) & Record<string, any>
 export declare const bindUrlEvents: ((...args: any[]) => any) & Record<string, any>
+export declare const cameraInfoFor: ((...args: any[]) => any) & Record<string, any>
+export declare const cameraTabs: ((...args: any[]) => any) & Record<string, any>
 export declare const captureFrame: ((...args: any[]) => any) & Record<string, any>
+export declare const clampPanelBox: ((...args: any[]) => any) & Record<string, any>
 export declare const colorizeDepth: ((...args: any[]) => any) & Record<string, any>
 export declare const copyText: ((...args: any[]) => any) & Record<string, any>
 export declare const createMemoryWindow: ((...args: any[]) => any) & Record<string, any>
@@ -130,29 +150,43 @@ export declare const h: ((...args: any[]) => any) & Record<string, any>
 export declare const headerFrameId: ((...args: any[]) => any) & Record<string, any>
 export declare const installInsets: ((...args: any[]) => any) & Record<string, any>
 export declare const installThemeCss: ((...args: any[]) => any) & Record<string, any>
+export declare const isDepthTopic: ((...args: any[]) => any) & Record<string, any>
+export declare const isImageTopic: ((...args: any[]) => any) & Record<string, any>
 export declare const keyMatches: ((...args: any[]) => any) & Record<string, any>
 export declare const lcmFingerprint: ((...args: any[]) => any) & Record<string, any>
 export declare const lcmSchemas: any
+export declare const lowLatencyRendering: ((...args: any[]) => any) & Record<string, any>
 export declare const markdownInline: ((...args: any[]) => any) & Record<string, any>
 export declare const matchesHotkey: ((...args: any[]) => any) & Record<string, any>
 export declare const memorySource: ((...args: any[]) => any) & Record<string, any>
+export declare const needsNewReceiver: ((...args: any[]) => any) & Record<string, any>
 export declare const normalizeFrame: ((...args: any[]) => any) & Record<string, any>
 export declare const normalizeOptions: ((...args: any[]) => any) & Record<string, any>
 export declare const onDesktop: ((...args: any[]) => any) & Record<string, any>
 export declare const parseKey: ((...args: any[]) => any) & Record<string, any>
 export declare const parseUrlState: ((...args: any[]) => any) & Record<string, any>
+export declare const pickCamera: ((...args: any[]) => any) & Record<string, any>
 export declare const placeFloating: ((...args: any[]) => any) & Record<string, any>
 export declare const playbackClock: ((...args: any[]) => any) & Record<string, any>
 export declare const rawToImageData: ((...args: any[]) => any) & Record<string, any>
+export declare const releaseAllThumbSticks: ((...args: any[]) => any) & Record<string, any>
+export declare const retargetCameras: ((...args: any[]) => any) & Record<string, any>
 export declare const sampleGradient: ((...args: any[]) => any) & Record<string, any>
+export declare const shapeStick: ((...args: any[]) => any) & Record<string, any>
 export declare const signalReady: ((...args: any[]) => any) & Record<string, any>
+export declare const smoothToward: ((...args: any[]) => any) & Record<string, any>
+export declare const startPanelDrag: ((...args: any[]) => any) & Record<string, any>
+export declare const startPanelResize: ((...args: any[]) => any) & Record<string, any>
 export declare const stickValue: ((...args: any[]) => any) & Record<string, any>
+export declare const swapTiles: ((...args: any[]) => any) & Record<string, any>
 export declare const themeColors: ((...args: any[]) => any) & Record<string, any>
 export declare const toast: ((...args: any[]) => any) & Record<string, any>
 export declare const tokenizeLine: ((...args: any[]) => any) & Record<string, any>
 export declare const urlWith: ((...args: any[]) => any) & Record<string, any>
 export declare const useBackendEvents: ((...args: any[]) => any) & Record<string, any>
 export declare const useBackendState: ((...args: any[]) => any) & Record<string, any>
+export declare const useCameraStream: ((...args: any[]) => any) & Record<string, any>
+export declare const useCameraStreams: ((...args: any[]) => any) & Record<string, any>
 export declare const useCommandPalette: ((...args: any[]) => any) & Record<string, any>
 export declare const useConfirm: ((...args: any[]) => any) & Record<string, any>
 export declare const useConnectionState: ((...args: any[]) => any) & Record<string, any>
@@ -169,6 +203,7 @@ export declare const useNow: ((...args: any[]) => any) & Record<string, any>
 export declare const usePersistentState: ((...args: any[]) => any) & Record<string, any>
 export declare const usePrompt: ((...args: any[]) => any) & Record<string, any>
 export declare const useRepeatWhileHeld: ((...args: any[]) => any) & Record<string, any>
+export declare const useStore: ((...args: any[]) => any) & Record<string, any>
 export declare const useSubscription: ((...args: any[]) => any) & Record<string, any>
 export declare const useTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const useThemeColors: ((...args: any[]) => any) & Record<string, any>
@@ -178,6 +213,9 @@ export declare const useTopicList: ((...args: any[]) => any) & Record<string, an
 export declare const useUrlParams: ((...args: any[]) => any) & Record<string, any>
 export declare const useUrlState: ((...args: any[]) => any) & Record<string, any>
 export declare const useUrlStore: ((...args: any[]) => any) & Record<string, any>
+export declare const useVideoQuality: ((...args: any[]) => any) & Record<string, any>
 export declare const useZenoh: ((...args: any[]) => any) & Record<string, any>
+export declare const videoPreset: ((...args: any[]) => any) & Record<string, any>
+export declare const videoPresetChanges: ((...args: any[]) => any) & Record<string, any>
 export declare const watchDesktopTheme: ((...args: any[]) => any) & Record<string, any>
 export declare const zenohSource: ((...args: any[]) => any) & Record<string, any>

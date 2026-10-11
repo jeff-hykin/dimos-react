@@ -307,11 +307,17 @@ export interface KeyCapProps extends HTMLAttributes<HTMLSpanElement> {
     className?: string
 }
 
-/** One key: `label`, `down` lights it; `empty` keeps its place invisible. */
-export function KeyCap({ label, down = false, empty = false, title, className, ...rest }: KeyCapProps) {
+/** One key: `label`, `down` lights it; `empty` keeps its place invisible; `wide` for Space / Shift. */
+export function KeyCap({ label, down = false, empty = false, wide = false, title, className, ...rest }: KeyCapProps) {
     return (
         <span
-            className={cx("dr-keycap", down && "dr-keycap--down", empty && "dr-keycap--empty", className)}
+            className={cx(
+                "dr-keycap",
+                down && "dr-keycap--down",
+                empty && "dr-keycap--empty",
+                wide && "dr-keycap--wide",
+                className,
+            )}
             title={title}
             aria-pressed={empty ? undefined : down}
             {...rest}

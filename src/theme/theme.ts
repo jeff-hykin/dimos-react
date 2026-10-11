@@ -34,6 +34,10 @@ export interface ThemeColors {
     sceneBg: string
     sceneGrid: string
     sceneGridMajor: string
+    /** a floor plan's floor, wall and wall-edge colors (optional tokens: "" when a skin leaves them out) */
+    sceneFloor: string
+    sceneWall: string
+    sceneWallRim: string
     axisX: string
     axisY: string
     axisZ: string
@@ -112,6 +116,10 @@ export function installThemeCss({
         ensureStyle("tokens", TOKENS_CSS, { first: true })
         return Promise.resolve()
     }
+    if (!url) {
+        // bundled: false off Desktop with no themeUrl: no tokens wanted and no sheet to link
+        return Promise.resolve()
+    }
     const existing = document.querySelector("link[data-dimos-react-theme]")
     if (existing && existing.getAttribute("href") === url) {
         return Promise.resolve()
@@ -119,7 +127,7 @@ export function installThemeCss({
     existing?.remove()
     const link = document.createElement("link")
     link.rel = "stylesheet"
-    link.href = String(url) // url is null only with bundled: false off Desktop and no themeUrl
+    link.href = url
     link.dataset.dimosReactTheme = ""
     const loaded = new Promise<void>((resolve) => {
         link.addEventListener("load", () => resolve(), { once: true })
@@ -195,6 +203,9 @@ export function themeColors(): Partial<ThemeColors> {
         sceneBg: read("--scene-bg"),
         sceneGrid: read("--scene-grid"),
         sceneGridMajor: read("--scene-grid-major"),
+        sceneFloor: read("--scene-floor"),
+        sceneWall: read("--scene-wall"),
+        sceneWallRim: read("--scene-wall-rim"),
         axisX: read("--axis-x"),
         axisY: read("--axis-y"),
         axisZ: read("--axis-z"),

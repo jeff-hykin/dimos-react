@@ -148,6 +148,7 @@ body.dr-tile-dragging, body.dr-tile-dragging * { cursor: grabbing !important; us
     border: 1px solid var(--border);
 }
 .dr-keycap--empty { visibility: hidden; }
+.dr-keycap--wide { min-width: 56px; }
 .dr-keycap--down { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
 
 /* Map2D */

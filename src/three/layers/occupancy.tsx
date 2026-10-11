@@ -45,9 +45,7 @@ const rgb255 = (value: string | undefined, fallback: string): Rgb => {
 
 /** The floor-plan colors from the theme. */
 function planColors(): { floor: Rgb; body: Rgb; rim: Rgb; fg: Rgb } {
-    // the --scene-floor / --scene-wall / --scene-wall-rim tokens (themeColors doesn't read them yet: always undefined)
-    const theme: ReturnType<typeof themeColors> & { sceneFloor?: string; sceneWall?: string; sceneWallRim?: string } =
-        themeColors()
+    const theme = themeColors()
     const floor = rgb255(theme.sceneFloor || theme.surface, "#152132")
     const rim = rgb255(theme.sceneWallRim || theme.primary, "#82d4ff")
     const body = theme.sceneWall ? rgb255(theme.sceneWall, "#264e7a") : mix(floor, rim, 0.35)

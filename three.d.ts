@@ -48,6 +48,9 @@ export declare const LayerManager: any
 export type LayerManager = any
 export declare function LayersPanel(props: Record<string, any>): ReactNode
 export declare const MARKER_TYPE: any
+export declare function Map2D(props: Record<string, any>): ReactNode
+export declare const Map2DRenderer: any
+export type Map2DRenderer = any
 export declare const MarkerLayer: any
 export type MarkerLayer = any
 export declare const POINT_STYLES: any
@@ -99,6 +102,8 @@ export declare const allOverlayTypes: ((...args: any[]) => any) & Record<string,
 export declare const applyLook: ((...args: any[]) => any) & Record<string, any>
 export declare const boxesOf: ((...args: any[]) => any) & Record<string, any>
 export declare const checkTf: ((...args: any[]) => any) & Record<string, any>
+export declare const chooseMapTopic: ((...args: any[]) => any) & Record<string, any>
+export declare const chooseOverlay: ((...args: any[]) => any) & Record<string, any>
 export declare const cloudChanges: ((...args: any[]) => any) & Record<string, any>
 export declare const cloudOptions: ((...args: any[]) => any) & Record<string, any>
 export declare const cloudPreset: ((...args: any[]) => any) & Record<string, any>
@@ -111,16 +116,24 @@ export declare const cssColor: ((...args: any[]) => any) & Record<string, any>
 export declare const defaultSettings: ((...args: any[]) => any) & Record<string, any>
 export declare const disposeTree: ((...args: any[]) => any) & Record<string, any>
 export declare const entitiesOf: ((...args: any[]) => any) & Record<string, any>
+export declare const fitMapView: ((...args: any[]) => any) & Record<string, any>
 export declare const focusDistance: any
+export declare const followFrameOptions: ((...args: any[]) => any) & Record<string, any>
 export declare const formatBytes: ((...args: any[]) => any) & Record<string, any>
 export declare const formatCount: ((...args: any[]) => any) & Record<string, any>
 export declare const gradientCss: ((...args: any[]) => any) & Record<string, any>
 export declare const gradientTexture: ((...args: any[]) => any) & Record<string, any>
+export declare const isGridTopic: ((...args: any[]) => any) & Record<string, any>
 export declare const isMapTopic: ((...args: any[]) => any) & Record<string, any>
 export declare const layerTypeById: ((...args: any[]) => any) & Record<string, any>
 export declare const layerTypeFor: ((...args: any[]) => any) & Record<string, any>
 export declare const localStore: ((...args: any[]) => any) & Record<string, any>
 export declare const makePointMaterial: ((...args: any[]) => any) & Record<string, any>
+export declare const mapCandidates: ((...args: any[]) => any) & Record<string, any>
+export declare const mapScreenToWorld: ((...args: any[]) => any) & Record<string, any>
+export declare const mapWorldToScreen: ((...args: any[]) => any) & Record<string, any>
+export declare const mapZoomAt: ((...args: any[]) => any) & Record<string, any>
+export declare const overlayCandidates: ((...args: any[]) => any) & Record<string, any>
 export declare const overlayTypeFor: ((...args: any[]) => any) & Record<string, any>
 export declare const pathPoints: ((...args: any[]) => any) & Record<string, any>
 export declare const placeInFixedFrame: ((...args: any[]) => any) & Record<string, any>

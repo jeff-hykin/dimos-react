@@ -1,5 +1,5 @@
 // Demo: view panels (float / dock with maximize and tile swap), thumb sticks and a key pad, a camera view.
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { h } from "../../src/h.js"
 import {
     Badge,
@@ -12,6 +12,8 @@ import {
     ThumbStick,
     ViewPanel,
 } from "../../mod.js"
+import { DataSourceProvider, memorySource } from "../../mod.js"
+import { Map2D, TfTree } from "../../three.js"
 
 export function ViewsSection() {
     const [order, setOrder] = useState(["camera", "scene", "map"])
@@ -55,6 +57,7 @@ export function ViewsSection() {
                 tile("map", "Map"),
             ),
         ),
+        h(DemoMap),
         h(
             Card,
             { title: "ViewPanel · float" },
@@ -112,5 +115,73 @@ export function ViewsSection() {
                 h(Button, { variant: "danger", onClick: releaseAllThumbSticks }, "STOP"),
             ),
         ),
+    )
+}
+
+/** A synthetic room (an OccupancyGrid with walls and a cost ring) and a robot driving a circle in it. */
+function DemoMap() {
+    const source = useMemo(() => memorySource(), [])
+    const tf = useMemo(() => new TfTree(), [])
+    const [pick, setPick] = useState(null)
+    useEffect(() => {
+        const width = 160, height = 120
+        const data = new Int8Array(width * height)
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const wall = x < 2 || y < 2 || x >= width - 2 || y >= height - 2 || (x === 80 && y < 70)
+                const ring = Math.hypot(x - 40, y - 80) < 9
+                data[y * width + x] = wall ? 100 : ring ? 60 : 0
+            }
+        }
+        const grid = {
+            header: { frame_id: "world" },
+            info: {
+                width,
+                height,
+                resolution: 0.05,
+                origin: { position: { x: -4, y: -3, z: 0 }, orientation: { x: 0, y: 0, z: 0, w: 1 } },
+            },
+            data,
+        }
+        const path = {
+            header: { frame_id: "world" },
+            poses: Array.from(
+                { length: 40 },
+                (_, i) => ({ pose: { position: { x: -2 + i * 0.1, y: Math.sin(i / 6) } } }),
+            ),
+        }
+        let angle = 0
+        const timer = setInterval(() => {
+            source.publish("dimos/map/nav_msgs.OccupancyGrid", grid)
+            source.publish("dimos/path/nav_msgs.Path", path)
+            angle += 0.05
+            tf.set("world", "base_link", [Math.cos(angle) * 1.5, Math.sin(angle) * 1.5, 0], [
+                0,
+                0,
+                Math.sin((angle + Math.PI / 2) / 2),
+                Math.cos((angle + Math.PI / 2) / 2),
+            ])
+        }, 100)
+        return () => clearInterval(timer)
+    }, [source, tf])
+    return h(
+        Card,
+        { title: "Map2D", style: { gridColumn: "1 / -1" } },
+        h(
+            DataSourceProvider,
+            { source },
+            h(
+                "div",
+                { style: { position: "relative", height: 280 } },
+                h(Map2D, {
+                    tf,
+                    fixedFrame: "world",
+                    topic: { key: "dimos/map/nav_msgs.OccupancyGrid", name: "/map", type: "nav_msgs.OccupancyGrid" },
+                    path: "dimos/path/nav_msgs.Path",
+                    onPick: ({ x, y }) => setPick(`${x.toFixed(2)}, ${y.toFixed(2)}`),
+                }),
+            ),
+        ),
+        h(Badge, null, pick ? `clicked ${pick} (world)` : "click the map: onPick gets the spot in the fixed frame"),
     )
 }

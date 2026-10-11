@@ -147,6 +147,11 @@ body.dr-tile-dragging, body.dr-tile-dragging * { cursor: grabbing !important; us
 .dr-keycap--empty { visibility: hidden; }
 .dr-keycap--down { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
 
+/* Map2D */
+.dr-map2d { position: absolute; inset: 0; overflow: hidden; background: var(--scene-bg, var(--bg)); }
+.dr-map2d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.dr-map2d-canvas:active { cursor: grabbing; }
+
 /* camera views */
 .dr-camera { position: absolute; inset: 0; background: var(--scene-bg, var(--bg)); overflow: hidden; }
 .dr-camera-media, .dr-camera-overlay, .dr-camera > canvas {

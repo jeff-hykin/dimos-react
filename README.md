@@ -158,6 +158,11 @@ active, ticks: { times } | { counts } }]`). `onScrubStart` /
   `aspect`), "dock" (`dock: { region, rect, maximized, onMaximize, tiles? }`: a layout places it, a maximize button,
   dragging a tile's header onto another swaps them) or "main" (fills its parent). Helpers: `clampPanelBox`, `swapTiles`,
   `startPanelDrag`, `startPanelResize`, `PanelInfo` (a header readout), class `dr-view-panel-title`.
+- `Map2D` (from `three.js`) — a top-down 2D map filling its parent: `topic` (OccupancyGrid, or a PointCloud2 as a height
+  heatmap), `overlay` (a costmap over it), `path` (a nav_msgs.Path key), the robot arrow + trail at `robotFrame`, axes,
+  grid, scale bar; wheel/pinch zoom, drag pan, follows `followFrame` until a pan; `onPick({ x, y, frame })` on a click
+  (e.g. a goal); `onView` / `view` to remember the view; `onMap(renderer)` for `recenter()` / `fit()`. Placed through
+  `tf`. Helpers: `mapCandidates`, `chooseMapTopic`, `chooseOverlay`, `overlayCandidates`, `followFrameOptions`.
 - `ThumbStick` — a phone thumb stick: the stick centers where the thumb lands, `axes` "xy" | "x" | "y", dead zone + expo
   (`shapeStick`) and easing (`smoothToward`), zeroed at once on any release; `releaseAllThumbSticks()` for STOP.
   `KeyPad` / `KeyCap` show keyboard keys lit while held.

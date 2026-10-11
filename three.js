@@ -110,3 +110,17 @@ export { cssColor, disposeTree, ROBOT_KINDS, robotModel } from "./src/three/robo
 export { localStore, readLocal, Store, useStore, writeLocal } from "./src/three/store.js"
 export * from "./src/camera/depth.js"
 export { DEFAULT_DEPTH_LOOK } from "./src/three/layers/camera3d.js"
+export { Map2D } from "./src/map2d/react.js"
+export { Map2DRenderer } from "./src/map2d/renderer.js"
+export {
+    chooseMapTopic,
+    chooseOverlay,
+    fitView as fitMapView,
+    followFrameOptions,
+    isGridTopic,
+    mapCandidates,
+    overlayCandidates,
+    screenToWorld as mapScreenToWorld,
+    worldToScreen as mapWorldToScreen,
+    zoomAt as mapZoomAt,
+} from "./src/map2d/math.js"

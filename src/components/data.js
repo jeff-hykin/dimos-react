@@ -347,7 +347,8 @@ export function ListRow(
             onClick: disabled ? undefined : onClick,
             onKeyDown: onClick && !disabled
                 ? (event) => {
-                    if (event.key === "Enter" || event.key === " ") {
+                    // keys typed into a control inside the row (a rename box) are that control's
+                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
                         event.preventDefault()
                         onClick(event)
                     }

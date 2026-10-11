@@ -132,6 +132,7 @@ export function TextInput(
         mono = false,
         icon,
         className,
+        style,
         invalid,
         ...rest
     },
@@ -171,11 +172,11 @@ export function TextInput(
         ...rest,
     })
     if (!icon) {
-        return h("span", { className: cx("dr-input-wrap", className) }, input)
+        return h("span", { className: cx("dr-input-wrap", className), style }, input)
     }
     return h(
         "span",
-        { className: cx("dr-input-wrap", className) },
+        { className: cx("dr-input-wrap", className), style },
         h("span", { className: "dr-input-icon" }, h(Icon, { name: icon, size: 15 })),
         input,
     )
@@ -185,10 +186,10 @@ export function TextInput(
  * A search box: a magnifier, and a clear button once there is text.
  * @param {Record<string, any>} props
  */
-export function SearchInput({ value, onChange, placeholder = "Search…", className, ...rest }) {
+export function SearchInput({ value, onChange, placeholder = "Search…", className, style, ...rest }) {
     return h(
         "span",
-        { className: cx("dr-input-wrap dr-search", className) },
+        { className: cx("dr-input-wrap dr-search", className), style },
         h("span", { className: "dr-input-icon" }, h(Icon, { name: "search", size: 15 })),
         h("input", {
             type: "search",
@@ -237,7 +238,7 @@ const clamp = (value, min, max) => Math.min(max ?? Infinity, Math.max(min ?? -In
  * @param {Record<string, any>} props
  */
 export function NumberInput(
-    { value, onChange, min, max, step = 1, unit, size = "md", precision, nullable = false, className, ...rest },
+    { value, onChange, min, max, step = 1, unit, size = "md", precision, nullable = false, className, style, ...rest },
 ) {
     const shown = (number) =>
         number === null || number === undefined || !Number.isFinite(number)
@@ -273,7 +274,7 @@ export function NumberInput(
     }
     return h(
         "span",
-        { className: cx("dr-input-wrap dr-number", className) },
+        { className: cx("dr-input-wrap dr-number", className), style },
         h("input", {
             type: "text",
             inputMode: "decimal",

@@ -1002,11 +1002,14 @@ export function SceneStats({ className, detailed = false, rttMs }) {
 /**
  * Camera buttons over the scene: follow (reframes the followed frame, or follows again after a pan), top-down (on the
  * area around the robot), frame everything. `children`: extra buttons.
- * `onFrameAll` / `onTopDown` replace what those buttons do (an app's own idea of "everything").
+ * `onFrameAll` / `onTopDown` replace what those buttons do (an app's own idea of "everything"); `position`:
+ * "bottom-right" (default) | "top-right" | "top-left" | "bottom-left".
  * @param {{ className?: string, children?: any, frameAll?: boolean, onFrameAll?: () => void,
- *   onTopDown?: () => void }} props
+ *   onTopDown?: () => void, position?: string }} props
  */
-export function SceneControls({ className, children, frameAll = true, onFrameAll, onTopDown }) {
+export function SceneControls(
+    { className, children, frameAll = true, onFrameAll, onTopDown, position = "bottom-right" },
+) {
     const { viewer, frameInfo, actions } = useScene()
     const info = useStore(frameInfo ?? emptyFrameInfo)
     const button = (icon, label, onClick, pressed) =>
@@ -1025,7 +1028,14 @@ export function SceneControls({ className, children, frameAll = true, onFrameAll
         : "Follow again"
     return h(
         "div",
-        { className: cx("dr-scene-controls", className), "data-testid": "view-controls" },
+        {
+            className: cx(
+                "dr-scene-controls",
+                position !== "bottom-right" && `dr-scene-controls--${position}`,
+                className,
+            ),
+            "data-testid": "view-controls",
+        },
         button("target", followTitle, () => actions?.recenter(), info.following),
         button("top", "Top-down", () => (onTopDown ? onTopDown() : actions?.topDown())),
         frameAll ? button("fit", "Frame everything", () => (onFrameAll ? onFrameAll() : viewer?.frameAll())) : null,

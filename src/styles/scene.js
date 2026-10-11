@@ -71,6 +71,9 @@ export const SCENE_CSS = /* css */ `
     flex-direction: column;
     gap: 6px;
 }
+.dr-scene-controls--top-right { bottom: auto; top: 10px; }
+.dr-scene-controls--top-left { bottom: auto; top: 10px; right: auto; left: 10px; }
+.dr-scene-controls--bottom-left { right: auto; left: 10px; }
 .dr-scene-btn {
     appearance: none;
     display: inline-flex;

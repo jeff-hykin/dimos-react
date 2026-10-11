@@ -8,6 +8,7 @@ import { DATA_CSS } from "../styles/data.js"
 import { NAV_CSS } from "../styles/nav.js"
 import { INPUT_DEVICES_CSS } from "../styles/input_devices.js"
 import { SCENE_CSS } from "../styles/scene.js"
+import { TEXT_CSS } from "../styles/text.js"
 
 export const COMPONENT_CSS = [
     BASE_CSS,
@@ -18,4 +19,5 @@ export const COMPONENT_CSS = [
     NAV_CSS,
     INPUT_DEVICES_CSS,
     SCENE_CSS,
+    TEXT_CSS,
 ].join("\n")

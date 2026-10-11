@@ -10,7 +10,9 @@ import {
     KeyValue,
     List,
     ListRow,
+    LiveValue,
     LogView,
+    Markdown,
     Sparkline,
     Stat,
     Table,
@@ -32,6 +34,22 @@ const TOPICS = [
     { key: "dimos/path/nav_msgs.Path", name: "/path", type: "nav_msgs.Path", hz: 2, kb: 4.2 },
     { key: "dimos/color_image/sensor_msgs.Image", name: "/color_image", type: "sensor_msgs.Image", hz: 15, kb: 260 },
 ]
+
+const MARKDOWN = `## Markdown
+Docs from a manifest or an OpenAPI document: **bold**, *italic*, \`code\` and [links](https://github.com/jeff-hykin/dimos-react).
+
+- one
+- two, with \`code\`
+  - a sub item
+
+| key | meaning |
+| --- | --- |
+| \`hz\` | messages per second |
+| \`bps\` | bytes per second |
+
+\`\`\`
+GET /api/endpoints?family=desktop
+\`\`\``
 
 const FRAMES = [{
     id: "world",
@@ -199,6 +217,12 @@ export function DataSection() {
                         }]),
                 }, "Append line"),
             ),
+        ),
+        h(Card, { title: "Markdown" }, h(Markdown, { text: MARKDOWN })),
+        h(
+            Card,
+            { title: "LiveValue (flashes on change)" },
+            h(LiveValue, { value: Math.round(rates.at(-1) * 10) / 10, format: (value) => `${value.toFixed(1)} Hz` }),
         ),
         h(Card, { title: "CodeBlock (json)" }, h(CodeBlock, { code: CODE, language: "json", lineNumbers: true })),
         h(Card, { title: "CodeBlock (python)" }, h(CodeBlock, { code: PY, language: "py" })),

@@ -1,0 +1,157 @@
+// Text display: a safe Markdown renderer (docs from manifests / OpenAPI) and a live number that flashes on change.
+import { Fragment, useEffect, useRef, useState } from "react"
+import { cx, h } from "../h.js"
+import { Table } from "./data.js"
+
+const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*\s][^*]*\*)|(\[[^\]]+\]\([^)\s]+\))/g
+const LIST_ITEM = /^\s*([-*]|\d+\.)\s/
+
+/** `code`, **bold**, *italic*, [links](url) → React nodes (no HTML passes through; only http(s), /, #, . links). */
+export function markdownInline(text, key = 0) {
+    const out = []
+    const pattern = new RegExp(INLINE.source, "g")
+    let last = 0
+    let match
+    while ((match = pattern.exec(text))) {
+        if (match.index > last) {
+            out.push(text.slice(last, match.index))
+        }
+        const token = match[0]
+        const k = `${key}-${match.index}`
+        if (match[1]) {
+            out.push(h("code", { key: k, className: "dr-code-inline" }, token.slice(1, -1)))
+        } else if (match[2]) {
+            out.push(h("strong", { key: k }, markdownInline(token.slice(2, -2), key + 1)))
+        } else if (match[3]) {
+            out.push(h("em", { key: k }, markdownInline(token.slice(1, -1), key + 1)))
+        } else {
+            const [, label, href] = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)
+            const safe = /^(https?:|\/|#|\.)/.test(href) ? href : "#"
+            const external = safe.startsWith("http")
+            out.push(
+                h("a", {
+                    key: k,
+                    className: "dr-link",
+                    href: safe,
+                    target: external ? "_blank" : undefined,
+                    rel: "noreferrer",
+                }, label),
+            )
+        }
+        last = match.index + token.length
+    }
+    if (last < text.length) {
+        out.push(text.slice(last))
+    }
+    return out
+}
+
+/**
+ * Markdown → themed React: headings, paragraphs, lists, fenced code, tables, `code`, **bold**, *italic*, [links](url).
+ * No HTML passes through. `inline` renders a single paragraph without block margins.
+ * @param {{ text?: string, inline?: boolean, className?: string }} props
+ */
+export function Markdown({ text, inline = false, className, ...rest }) {
+    if (!text) {
+        return null
+    }
+    const lines = String(text).replace(/\r/g, "").split("\n")
+    const blocks = []
+    let i = 0
+    while (i < lines.length) {
+        const line = lines[i]
+        if (/^```/.test(line)) {
+            const body = []
+            i++
+            while (i < lines.length && !/^```/.test(lines[i])) {
+                body.push(lines[i++])
+            }
+            i++
+            blocks.push(h("pre", { key: i, className: "dr-md__pre dr-scroll" }, body.join("\n")))
+        } else if (/^#{1,6}\s/.test(line)) {
+            const level = line.match(/^#+/)[0].length
+            blocks.push(
+                h(
+                    level <= 2 ? "h4" : "h5",
+                    { key: i, className: "dr-md__h" },
+                    markdownInline(line.replace(/^#+\s*/, ""), i),
+                ),
+            )
+            i++
+        } else if (LIST_ITEM.test(line)) {
+            const ordered = /^\s*\d+\./.test(line)
+            const items = []
+            while (i < lines.length && LIST_ITEM.test(lines[i])) {
+                const indent = lines[i].match(/^\s*/)[0].length
+                let item = lines[i].replace(/^\s*([-*]|\d+\.)\s+/, "")
+                i++
+                while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !LIST_ITEM.test(lines[i])) {
+                    item += " " + lines[i++].trim()
+                }
+                items.push(
+                    h("li", { key: i, className: indent >= 2 ? "dr-md__sub" : undefined }, markdownInline(item, i)),
+                )
+            }
+            blocks.push(h(ordered ? "ol" : "ul", { key: i }, items))
+        } else if (/^\s*\|/.test(line)) {
+            const rows = []
+            while (i < lines.length && /^\s*\|/.test(lines[i])) {
+                const cells = lines[i].trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim())
+                if (!cells.every((cell) => /^:?-{2,}:?$/.test(cell))) {
+                    rows.push(cells)
+                }
+                i++
+            }
+            const [head = [], ...body] = rows
+            blocks.push(
+                h(Table, {
+                    key: i,
+                    compact: true,
+                    className: "dr-md__table",
+                    columns: head.map((cell, column) => ({
+                        key: String(column),
+                        label: markdownInline(cell, column),
+                        render: (row) => markdownInline(row[column] ?? "", column),
+                    })),
+                    rows: body,
+                    rowKey: (_row, index) => index,
+                }),
+            )
+        } else if (line.trim() === "") {
+            i++
+        } else {
+            const paragraph = []
+            while (
+                i < lines.length && lines[i].trim() !== "" && !/^(```|#{1,6}\s|\s*([-*]|\d+\.)\s|\s*\|)/.test(lines[i])
+            ) {
+                paragraph.push(lines[i++].trim())
+            }
+            blocks.push(h("p", { key: i }, markdownInline(paragraph.join(" "), i)))
+        }
+    }
+    return h(
+        "div",
+        { className: cx("dr-md", inline && "dr-md--inline", className), ...rest },
+        blocks.map((block, index) => h(Fragment, { key: index }, block)),
+    )
+}
+
+/**
+ * A number that briefly lights up when it changes (live counts, rates). `format(value)` → text.
+ * @param {{ value: number, format?: (value: number) => string, className?: string }} props
+ */
+export function LiveValue({ value, format = String, className, ...rest }) {
+    const last = useRef(value)
+    const [flash, setFlash] = useState(0)
+    useEffect(() => {
+        if (value !== last.current) {
+            last.current = value
+            setFlash((count) => count + 1)
+        }
+    }, [value])
+    return h("span", {
+        key: flash,
+        className: cx("dr-live-value", flash && "dr-live-value--flash", className),
+        ...rest,
+    }, format(value))
+}

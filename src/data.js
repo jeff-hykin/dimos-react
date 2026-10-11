@@ -350,7 +350,7 @@ export function useBackendEvents(onEvent, { topic = "events", onReconnect } = {}
 export function useBackendState(key, { url, topic, initial, debounceMs = 100, fetch: fetchImpl } = {}) {
     const source = useDataSource()
     const [snapshot, setSnapshot] = useState({ data: initial, loading: true, error: null })
-    const href = url ?? `api/state/${key}`
+    const href = url ?? `api/state/${key}` // dimos-yaml-check: ignore (an app that calls useBackendState lists it)
     const generation = useRef(0)
     const refresh = useCallback(async () => {
         const mine = ++generation.current

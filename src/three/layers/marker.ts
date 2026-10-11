@@ -84,6 +84,7 @@ export class MarkerLayer {
     #labels = new LabelPool()
     #stop
     #unsupported = 0
+    context: any
 
     constructor(context, topic) {
         this.context = context

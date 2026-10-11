@@ -140,7 +140,7 @@ const MAKERS = {
  * @param {{ body?: string, dark?: string, nose?: string }} [colors] CSS colors or tokens
  * @returns {THREE.Group | null}
  */
-export function robotModel(kind, colors) {
+export function robotModel(kind: string, colors: { body?: string; dark?: string; nose?: string }): THREE.Group | null {
     const make = MAKERS[kind]
     if (!make) {
         return null

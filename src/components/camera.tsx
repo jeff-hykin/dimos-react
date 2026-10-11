@@ -205,6 +205,8 @@ const writeLocal = (key, value) => {
  */
 export class CameraStreams {
     #sources = new Map()
+    storageKey: string
+    source: any
     constructor(source, { storageKey = "dr.video.quality" } = {}) {
         this.source = source
         this.storageKey = storageKey
@@ -459,7 +461,23 @@ export function useVideoQuality(topic) {
  * @param {{ topic: { key: string, name: string, type: string } | null, overlay?: { key: string, type: string } | null,
  *   fill?: boolean, depthLook?: object, onInfo?: (info: object) => void, className?: string, children?: any }} props
  */
-export function CameraView({ topic, overlay, fill = false, depthLook = {}, onInfo, className, children }) {
+export function CameraView({
+    topic,
+    overlay,
+    fill = false,
+    depthLook = {},
+    onInfo,
+    className,
+    children,
+}: {
+    topic: { key: string; name: string; type: string } | null
+    overlay?: { key: string; type: string } | null
+    fill?: boolean
+    depthLook?: object
+    onInfo?: (info: object) => void
+    className?: string
+    children?: any
+}) {
     const source = useDataSource()
     const depth = topic ? isDepthTopic(topic) : false
     const video = source.kind === "zenoh" && topic && !depth
@@ -578,7 +596,19 @@ function VideoView({ topic, overlay, fill, onInfo, className, children }) {
  * label for a picked topic that isn't on the bus.
  * @param {{ topics: any[], value: string, onChange: (topic: any) => void, gone?: string | null, className?: string }} props
  */
-export function CameraTabs({ topics, value, onChange, gone, className }) {
+export function CameraTabs({
+    topics,
+    value,
+    onChange,
+    gone,
+    className,
+}: {
+    topics: any[]
+    value: string
+    onChange: (topic: any) => void
+    gone?: string | null
+    className?: string
+}) {
     const tabs = cameraTabs(topics)
     const row = useRef(null)
     useEffect(() => {

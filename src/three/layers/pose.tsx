@@ -103,13 +103,20 @@ export class PoseLayer {
     #route = null
     #ghostFrame = ""
     #unsubscribe
+    settings: any
+    topic: any
+    context: any
 
     /**
      * @param {import("./registry").LayerContext} context
      * @param {import("./registry").Topic | null} topic null: poses come through setData
      * @param {import("../store").Store<PoseSettings>} settings
      */
-    constructor(context, topic, settings) {
+    constructor(
+        context: import("./registry").LayerContext,
+        topic: import("./registry").Topic | null,
+        settings: import("../store").Store<PoseSettings>,
+    ) {
         this.context = context
         this.topic = topic
         this.settings = settings

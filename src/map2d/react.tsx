@@ -45,6 +45,23 @@ export function Map2D({
     className,
     style,
     children,
+}: {
+    tf: import("../three/tf").TfTree
+    topic?: { key: string; name: string; type: string } | null
+    overlay?: { key: string; name: string; type: string } | null
+    path?: string | null
+    followFrame?: string
+    robotFrame?: string
+    fixedFrame?: string
+    view?: { centerX: number; centerY: number; metersPerPixel: number } | null
+    onView?: (view: object) => void
+    onFollow?: (follow: { following: boolean; waiting: boolean }) => void
+    onStatus?: (status: { info: string; problem: string }) => void
+    onPick?: (pick: { x: number; y: number; frame: string; event: PointerEvent }) => void
+    onMap?: (renderer: Map2DRenderer | null) => void
+    className?: string
+    style?: object
+    children?: any
 }) {
     const source = useDataSource()
     const canvas = useRef(null)

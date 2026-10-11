@@ -24,15 +24,15 @@ const pixelRatio = () => Math.min(2, globalThis.devicePixelRatio || 1)
 
 export class Viewer {
     /** @type {THREE.WebGLRenderer} */
-    renderer
+    renderer: THREE.WebGLRenderer
     /** @type {CSS2DRenderer} */
-    labels
+    labels: CSS2DRenderer
     scene = new THREE.Scene()
     camera = new THREE.PerspectiveCamera(60, 1, 0.05, 10000)
     /** @type {OrbitControls} */
-    controls
+    controls: OrbitControls
     /** @type {Store<RenderStats>} */
-    stats = new Store({
+    stats: Store<RenderStats> = new Store({
         fps: 0,
         frameMs: 0,
         latencyP50: null,
@@ -48,7 +48,7 @@ export class Viewer {
     fixedFrame = "world"
     /** where the camera follows (a point in the fixed frame); the React layer sets it each frame from followFrame */
     /** @type {THREE.Vector3 | null} */
-    followTarget = null
+    followTarget: THREE.Vector3 | null = null
     /** a hidden view (display: none, a collapsed pane) draws nothing; what changed meanwhile is drawn once unpaused */
     paused = false
     /** following stopped because the user panned away; `resumeFollow()` ends it */
@@ -99,7 +99,7 @@ export class Viewer {
      *   (default 200 m in 1 m cells). `freeOrbit`: the camera may orbit below the ground (default: it stays above).
      */
     constructor(
-        host,
+        host: HTMLElement,
         {
             clock = () => Date.now(),
             grid = true,
@@ -110,6 +110,16 @@ export class Viewer {
             gridSize = 200,
             gridDivisions = 200,
             freeOrbit = false,
+        }: {
+            clock?: () => number
+            grid?: boolean
+            antialias?: boolean
+            near?: number
+            far?: number
+            fov?: number
+            gridSize?: number
+            gridDivisions?: number
+            freeOrbit?: boolean
         } = {},
     ) {
         this.#host = host
@@ -271,7 +281,7 @@ export class Viewer {
      * `listener(frame)` every animation frame, before rendering. Returns unsubscribe.
      * @param {(frame: FrameInfo) => void} listener
      */
-    onFrame(listener) {
+    onFrame(listener: (frame: FrameInfo) => void) {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }
@@ -281,7 +291,7 @@ export class Viewer {
      * a few pixels of the ray or the nearest mesh hit, else where the ray meets the ground (z = 0). Null on a miss.
      * @returns {{ point: THREE.Vector3, on: "points" | "mesh" | "ground", object?: THREE.Object3D } | null}
      */
-    pick(clientX, clientY) {
+    pick(clientX, clientY): { point: THREE.Vector3; on: "points" | "mesh" | "ground"; object?: THREE.Object3D } | null {
         const rect = this.renderer.domElement.getBoundingClientRect()
         const ndc = new THREE.Vector2(
             ((clientX - rect.left) / rect.width) * 2 - 1,
@@ -436,7 +446,7 @@ export class Viewer {
      * sample of their points. Null when nothing is drawn.
      * @returns {THREE.Box3 | null}
      */
-    dataBounds() {
+    dataBounds(): THREE.Box3 | null {
         const xs = [],
             ys = [],
             zs = []

@@ -7,9 +7,10 @@ export class LabelPool {
     group = new THREE.Group()
     #labels = []
     #used = 0
+    className: string
 
     /** @param {string} [className] */
-    constructor(className = "dr-scene-label") {
+    constructor(className: string = "dr-scene-label") {
         this.className = className
     }
 
@@ -23,7 +24,7 @@ export class LabelPool {
      * @param {THREE.Vector3} position
      * @param {string} [color] any CSS color (a token like "var(--warn)" works)
      */
-    place(text, position, color) {
+    place(text: string, position: THREE.Vector3, color: string) {
         let label = this.#labels[this.#used]
         if (!label) {
             const element = document.createElement("div")

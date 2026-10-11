@@ -6,7 +6,20 @@ import { gradientCss, GRADIENTS } from "./gradients"
  * @param {{ value: string, onChange?: (name: string) => void, gradients?: string[], disabled?: boolean,
  *   className?: string } & Record<string, any>} props
  */
-export function GradientPicker({ value, onChange, gradients = GRADIENTS, disabled, className, ...rest }) {
+export function GradientPicker({
+    value,
+    onChange,
+    gradients = GRADIENTS,
+    disabled,
+    className,
+    ...rest
+}: {
+    value: string
+    onChange?: (name: string) => void
+    gradients?: string[]
+    disabled?: boolean
+    className?: string
+} & Record<string, any>) {
     return (
         <div className={cx("dr-gradient-picker", className)} role="radiogroup" aria-label="Gradient" {...rest}>
             {gradients.map((name) => (

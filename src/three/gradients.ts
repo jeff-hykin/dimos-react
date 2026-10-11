@@ -8,7 +8,7 @@ import { DEFAULT_GRADIENT, DEFAULT_PALETTE, isPalette, PALETTES, RAMPS, sampleGr
 const textures = new Map()
 
 /** @returns {THREE.DataTexture} */
-export function gradientTexture(name) {
+export function gradientTexture(name): THREE.DataTexture {
     let texture = textures.get(name)
     if (!texture) {
         const data = new Uint8Array(256 * 4)

@@ -20,15 +20,16 @@ const clock = () => globalThis.performance?.now() ?? Date.now()
 
 export class TfTree {
     /** @type {Map<string, { parent: string, matrix: Matrix4, isStatic: boolean, receivedAt: number }>} */
-    #edges = new Map()
+    #edges: Map<string, { parent: string; matrix: Matrix4; isStatic: boolean; receivedAt: number }> = new Map()
     #parentsSeen = new Map()
     #cache = new Map()
     #cacheFixed = ""
     #listeners = new Set()
     /** bumped on every change, so layers know when to re-place what they drew */
     version = 0
+    now: () => any
     /** @param {{ now?: () => number }} [options] `now`: the clock (ms) for staleness; tests pass a fake one */
-    constructor({ now = clock } = {}) {
+    constructor({ now = clock }: { now?: () => number } = {}) {
         this.now = now
     }
 
@@ -40,7 +41,13 @@ export class TfTree {
      * @param {[number, number, number, number]} rotation quaternion x, y, z, w
      * @param {boolean} [isStatic]
      */
-    set(parent, child, translation, rotation, isStatic = false) {
+    set(
+        parent: string,
+        child: string,
+        translation: [number, number, number],
+        rotation: [number, number, number, number],
+        isStatic: boolean = false,
+    ) {
         if (!parent || !child || parent === child) {
             return
         }
@@ -71,7 +78,7 @@ export class TfTree {
      * @param {any} message
      * @param {boolean} [isStatic]
      */
-    setMessage(message, isStatic = false) {
+    setMessage(message: any, isStatic: boolean = false) {
         const transforms = Array.isArray(message) ? message : (message?.transforms ?? [])
         for (const stamped of transforms) {
             const { translation, rotation } = stamped?.transform ?? {}
@@ -141,7 +148,7 @@ export class TfTree {
      * @param {string} fixed
      * @returns {Matrix4 | null}
      */
-    lookup(frame, fixed) {
+    lookup(frame: string, fixed: string): Matrix4 | null {
         if (fixed !== this.#cacheFixed) {
             this.#cache.clear()
             this.#cacheFixed = fixed
@@ -209,9 +216,9 @@ export class TfTree {
     }
 
     /** Every frame name, sorted. @returns {string[]} */
-    frames() {
+    frames(): string[] {
         /** @type {Set<string>} */
-        const frames = new Set()
+        const frames: Set<string> = new Set()
         for (const [child, edge] of this.#edges) {
             frames.add(child)
             frames.add(edge.parent)
@@ -220,7 +227,7 @@ export class TfTree {
     }
 
     /** @returns {TfSnapshot} */
-    snapshot() {
+    snapshot(): TfSnapshot {
         const now = this.now()
         const edges = []
         for (const [child, edge] of this.#edges) {

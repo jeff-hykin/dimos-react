@@ -318,6 +318,7 @@ export class Map2DRenderer {
     /** a nav_msgs.Path drawn over the map: its poses (x, y) in `frame` */
     #path = null
     #stopPath = null
+    map: any
     constructor(map, canvas, view, followFrame, events) {
         this.map = map
         this.canvas = canvas

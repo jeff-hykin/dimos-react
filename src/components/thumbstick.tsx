@@ -28,7 +28,7 @@ function shapeAxis(value) {
  * radial dead zone (no snapping to an axis); "x" / "y" look at that axis alone.
  * @param {number} dx @param {number} dy @param {number} radius @param {"xy" | "x" | "y"} [axes]
  */
-export function shapeStick(dx, dy, radius, axes = "xy") {
+export function shapeStick(dx: number, dy: number, radius: number, axes: "xy" | "x" | "y" = "xy") {
     if (!(radius > 0)) {
         return { x: 0, y: 0 }
     }
@@ -85,7 +85,15 @@ export function ThumbStick({
     className,
     style,
     ...rest
-}) {
+}: {
+    onMove: (x: number, y: number) => void
+    axes?: "xy" | "x" | "y"
+    label?: string
+    className?: string
+    style?: object
+    shape?: (dx: number, dy: number, radius: number, axes: "xy" | "x" | "y") => { x: number; y: number }
+    smooth?: (current: number, target: number, dtMs: number) => number
+} & Record<string, any>) {
     const zone = useRef(null)
     const base = useRef(null)
     const onMoveRef = useRef(onMove)
@@ -250,7 +258,14 @@ export function ThumbStick({
  * Keyboard keys in rows, lit while held: `rows` = [[{ label: "Q", down: false }, null (a gap), …], …].
  * @param {{ rows: ({ label: any, down?: boolean, wide?: boolean, title?: string } | null)[][], className?: string }} props
  */
-export function KeyPad({ rows = [], className, ...rest }) {
+export function KeyPad({
+    rows = [],
+    className,
+    ...rest
+}: {
+    rows: ({ label: any; down?: boolean; wide?: boolean; title?: string } | null)[][]
+    className?: string
+}) {
     return (
         <div className={cx("dr-keypad", className)} {...rest}>
             {rows.map((row, index) => (

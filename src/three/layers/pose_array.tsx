@@ -17,6 +17,8 @@ export class PoseArrayLayer {
     #unsubscribe
     #frame = null
     #poses = null
+    settings: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

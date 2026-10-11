@@ -21,6 +21,8 @@ export class GraphLayer {
     #stop
     #unsubscribe
     #frame = null
+    settings: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

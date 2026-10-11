@@ -6,26 +6,26 @@ export class Store {
     #value
     #listeners = new Set()
     /** @param {T} value */
-    constructor(value) {
+    constructor(value: T) {
         this.#value = value
     }
     /** @returns {T} */
-    get() {
+    get(): T {
         return this.#value
     }
     /** @param {T} value */
-    set(value) {
+    set(value: T) {
         this.#value = value
         for (const listener of [...this.#listeners]) {
             listener()
         }
     }
     /** @param {Partial<T>} patch */
-    update(patch) {
+    update(patch: Partial<T>) {
         this.set({ ...this.#value, ...patch })
     }
     /** @param {() => void} listener @returns {() => boolean} */
-    subscribe = (listener) => {
+    subscribe = (listener: () => void): (() => boolean) => {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }
@@ -37,7 +37,7 @@ export class Store {
  * @param {Store<T>} store
  * @returns {T}
  */
-export function useStore(store) {
+export function useStore<T>(store: Store<T>): T {
     return useSyncExternalStore(
         store.subscribe,
         () => store.get(),
@@ -72,7 +72,7 @@ export function writeLocal(key, value) {
  * @param {T} defaults
  * @returns {Store<T>}
  */
-export function localStore(key, defaults) {
+export function localStore<T>(key: string, defaults: T): Store<T> {
     const saved = readLocal(key, null)
     const store = new Store(
         saved && typeof saved === "object" && !Array.isArray(saved) ? { ...defaults, ...saved } : defaults,

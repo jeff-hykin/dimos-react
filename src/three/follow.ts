@@ -18,7 +18,7 @@ export class SmoothFollow {
      * @param {number} dtSeconds
      * @returns {[number, number, number]}
      */
-    step(target, dtSeconds) {
+    step(target: [number, number, number], dtSeconds: number): [number, number, number] {
         const at = this.#at
         if (
             !at ||
@@ -68,7 +68,10 @@ export class PanGate {
      * @param {number} distance camera to target
      * @returns {{ action: "undo" } | { action: "pause", restore: [number, number, number] }}
      */
-    step(pan, distance) {
+    step(
+        pan: [number, number, number],
+        distance: number,
+    ): { action: "undo" } | { action: "pause"; restore: [number, number, number] } {
         const before = this.#total
         this.#total = [before[0] + pan[0], before[1] + pan[1], before[2] + pan[2]]
         if (Math.hypot(...this.#total) > Math.max(PAN_PAUSE_METERS, PAN_PAUSE_SHARE * distance)) {

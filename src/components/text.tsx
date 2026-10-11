@@ -51,7 +51,16 @@ export function markdownInline(text, key = 0) {
  * No HTML passes through. `inline` renders a single paragraph without block margins.
  * @param {{ text?: string, inline?: boolean, className?: string }} props
  */
-export function Markdown({ text, inline = false, className, ...rest }) {
+export function Markdown({
+    text,
+    inline = false,
+    className,
+    ...rest
+}: {
+    text?: string
+    inline?: boolean
+    className?: string
+}) {
     if (!text) {
         return null
     }
@@ -154,7 +163,16 @@ export function Markdown({ text, inline = false, className, ...rest }) {
  * A number that briefly lights up when it changes (live counts, rates). `format(value)` → text.
  * @param {{ value: number, format?: (value: number) => string, className?: string }} props
  */
-export function LiveValue({ value, format = String, className, ...rest }) {
+export function LiveValue({
+    value,
+    format = String,
+    className,
+    ...rest
+}: {
+    value: number
+    format?: (value: number) => string
+    className?: string
+}) {
     const last = useRef(value)
     const [flash, setFlash] = useState(0)
     useEffect(() => {
@@ -217,7 +235,7 @@ export function sanitizeHtml(html) {
  * as Markdown's).
  * @param {{ html?: string, className?: string }} props
  */
-export function SafeHtml({ html, className, ...rest }) {
+export function SafeHtml({ html, className, ...rest }: { html?: string; className?: string }) {
     const clean = useMemo(() => (html ? sanitizeHtml(html) : ""), [html])
     return <div className={cx("dr-md", "dr-prose", className)} dangerouslySetInnerHTML={{ __html: clean }} {...rest} />
 }

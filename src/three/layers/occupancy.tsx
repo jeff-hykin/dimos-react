@@ -42,6 +42,8 @@ export class GridLayer {
     #lut = new Uint8Array(256 * 4)
     #colors = planColors()
     #last = null
+    settings: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

@@ -215,7 +215,7 @@ export const focusDistance = { value: 10 }
  * @param {{ value: number }} pixelsPerMeter the viewer's (Viewer.pixelsPerMeter), shared so sprites size in meters
  * @returns {THREE.ShaderMaterial}
  */
-export function makePointMaterial(pixelsPerMeter) {
+export function makePointMaterial(pixelsPerMeter: { value: number }): THREE.ShaderMaterial {
     const material = new THREE.ShaderMaterial({
         vertexShader,
         fragmentShader,
@@ -259,7 +259,7 @@ export function makePointMaterial(pixelsPerMeter) {
  * @param {PointLook} partial
  * @param {[number, number]} range
  */
-export function applyLook(material, partial, range) {
+export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, range: [number, number]) {
     const look = { ...DEFAULT_LOOK, ...partial }
     const uniforms = material.uniforms
     uniforms.uCubeShade.value = CUBE_SHADES[look.cubeShade]?.id ?? 0
@@ -310,7 +310,11 @@ export function applyLook(material, partial, range) {
  * @param {(number | null)[] | null} [min]
  * @param {(number | null)[] | null} [max]
  */
-export function setClipBox(material, min = null, max = null) {
+export function setClipBox(
+    material: THREE.ShaderMaterial,
+    min: (number | null)[] | null = null,
+    max: (number | null)[] | null = null,
+) {
     const big = 1e9
     const at = (bounds, index, fallback) => bounds?.[index] ?? fallback
     material.uniforms.uClipMin.value.set(at(min, 0, -big), at(min, 1, -big), at(min, 2, -big))

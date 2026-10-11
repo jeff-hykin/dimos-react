@@ -18,7 +18,10 @@ export class DepthRange {
      * @param {{ near: number | null, far: number | null }} look fixed range (meters), null = automatic
      * @returns {[number, number]}
      */
-    update(image, look) {
+    update(
+        image: { width: number; height: number; encoding: string; data: ArrayLike<number> },
+        look: { near: number | null; far: number | null },
+    ): [number, number] {
         if (look.near !== null && look.near !== undefined && look.far !== null && look.far !== undefined) {
             return [look.near, look.far]
         }

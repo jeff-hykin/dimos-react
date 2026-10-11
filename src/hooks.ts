@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
  * @param {T | (() => T)} initial
  * @returns {[T, (next: T | ((old: T) => T)) => void]}
  */
-export function usePersistentState(key, initial) {
+export function usePersistentState<T>(key: string, initial: T | (() => T)): [T, (next: T | ((old: T) => T)) => void] {
     const [value, setValue] = useState(() => {
         try {
             const saved = globalThis.localStorage?.getItem(key)
@@ -80,7 +80,10 @@ export function matchesHotkey(event, combo) {
  * @param {Record<string, (event: KeyboardEvent) => void>} bindings
  * @param {{ enabled?: boolean, target?: EventTarget }} [options]
  */
-export function useHotkeys(bindings, { enabled = true, target } = {}) {
+export function useHotkeys(
+    bindings: Record<string, (event: KeyboardEvent) => void>,
+    { enabled = true, target }: { enabled?: boolean; target?: EventTarget } = {},
+) {
     const ref = useRef(bindings)
     ref.current = bindings
     useEffect(() => {
@@ -112,7 +115,7 @@ export function useHotkeys(bindings, { enabled = true, target } = {}) {
  * @param {{ codes?: string[], enabled?: boolean }} [options]
  * @returns {Set<string>}
  */
-export function useHeldKeys({ codes, enabled = true } = {}) {
+export function useHeldKeys({ codes, enabled = true }: { codes?: string[]; enabled?: boolean } = {}): Set<string> {
     const [held, setHeld] = useState(() => new Set())
     const wanted = codes ? codes.join(",") : ""
     useEffect(() => {
@@ -209,7 +212,12 @@ export function useMobile(maxWidth = 700) {
  * since the start, `onEnd(...)`. Returns props to spread on the handle element.
  * @param {{ onStart?: (p: any) => void, onMove?: (p: any) => void, onEnd?: (p: any) => void, disabled?: boolean }} handlers
  */
-export function useDrag(handlers) {
+export function useDrag(handlers: {
+    onStart?: (p: any) => void
+    onMove?: (p: any) => void
+    onEnd?: (p: any) => void
+    disabled?: boolean
+}) {
     const ref = useRef(handlers)
     ref.current = handlers
     const onPointerDown = useCallback((event) => {

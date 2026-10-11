@@ -23,7 +23,17 @@ import { Alert, EmptyState } from "../components/feedback"
  *   intervalMs?: number }} [options]
  * @returns {LayerManager}
  */
-export function useLayerManager({ persist, storagePrefix, filter, intervalMs } = {}) {
+export function useLayerManager({
+    persist,
+    storagePrefix,
+    filter,
+    intervalMs,
+}: {
+    persist?: (key: string, defaults: object) => any
+    storagePrefix?: string
+    filter?: string
+    intervalMs?: number
+} = {}): LayerManager {
     const source = useDataSource()
     const manager = useMemo(() => new LayerManager({ source, persist, storagePrefix }), [source, storagePrefix])
     useEffect(() => manager.watch({ filter, intervalMs }), [manager, filter, intervalMs])
@@ -86,7 +96,15 @@ function LayerRow({ manager, entry }) {
  * settings behind a disclosure; then the topics nothing draws.
  * @param {{ manager: LayerManager, emptyText?: string, className?: string }} props
  */
-export function LayersPanel({ manager, emptyText, className }) {
+export function LayersPanel({
+    manager,
+    emptyText,
+    className,
+}: {
+    manager: LayerManager
+    emptyText?: string
+    className?: string
+}) {
     const { list } = useStore(manager.entries)
     const { list: topics } = useStore(manager.topics)
     const groups = new Map()
@@ -184,6 +202,18 @@ export function TfPanel({
     hoveredPlaced = true,
     onHover,
     className,
+}: {
+    tf: import("./tf").TfTree
+    fixedFrame?: string
+    activeFixedFrame?: string
+    onFixedFrame?: (frame: string) => void
+    issues?: import("./tf_check").TfIssue[]
+    robotFrame?: string
+    robotFound?: boolean
+    hovered?: string | null
+    hoveredPlaced?: boolean
+    onHover?: (frame: string | null) => void
+    className?: string
 }) {
     const [snapshot, setSnapshot] = useState(() => tf.snapshot())
     useEffect(() => {
@@ -250,7 +280,15 @@ export function TfPanel({
  * open the TF panel, where the frames involved are marked.
  * @param {{ issues: import("./tf_check").TfIssue[], onOpen?: () => void, className?: string }} props
  */
-export function TfFootnote({ issues, onOpen, className }) {
+export function TfFootnote({
+    issues,
+    onOpen,
+    className,
+}: {
+    issues: import("./tf_check").TfIssue[]
+    onOpen?: () => void
+    className?: string
+}) {
     if (!issues?.length) {
         return null
     }

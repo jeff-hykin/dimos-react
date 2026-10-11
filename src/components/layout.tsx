@@ -8,7 +8,16 @@ import { Icon } from "./icon"
  * A bordered surface. `title`, `description`, `actions` (right side of the header); `padded` (default true).
  * @param {Record<string, any>} props
  */
-export function Card({ title, description, actions, padded = true, glass = false, className, children, ...rest }) {
+export function Card({
+    title,
+    description,
+    actions,
+    padded = true,
+    glass = false,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <section className={cx("dr-card", padded && "dr-card--padded", glass && "dr-glass", className)} {...rest}>
             {title || actions ? (
@@ -44,7 +53,7 @@ export function Panel({
     bodyClassName,
     children,
     ...rest
-}) {
+}: Record<string, any>) {
     const [savedOpen, setSavedOpen] = usePersistentState(
         persistKey ? `dr.panel.${persistKey}` : "dr.panel.__unsaved",
         defaultOpen,
@@ -107,7 +116,7 @@ export function FloatingPanel({
     style,
     children,
     ...rest
-}) {
+}: Record<string, any>) {
     const [saved, setSaved] = usePersistentState(
         persistKey ? `dr.float.${persistKey}` : "dr.float.__unsaved",
         defaultPosition,
@@ -178,7 +187,7 @@ export function SplitPane({
     className,
     children,
     ...rest
-}) {
+}: Record<string, any>) {
     const [saved, setSaved] = usePersistentState(
         persistKey ? `dr.split.${persistKey}` : "dr.split.__unsaved",
         defaultSize,
@@ -242,7 +251,20 @@ export function SplitPane({
  * @param {{ onResize: (drag: { dx: number, dy: number, done: boolean }) => void, onStart?: () => void,
  *   corner?: "bottom-right" | "bottom-left", label?: string, className?: string } & Record<string, any>} props
  */
-export function ResizeHandle({ onResize, onStart, corner = "bottom-right", label = "Resize", className, ...rest }) {
+export function ResizeHandle({
+    onResize,
+    onStart,
+    corner = "bottom-right",
+    label = "Resize",
+    className,
+    ...rest
+}: {
+    onResize: (drag: { dx: number; dy: number; done: boolean }) => void
+    onStart?: () => void
+    corner?: "bottom-right" | "bottom-left"
+    label?: string
+    className?: string
+} & Record<string, any>) {
     const start = useRef(null)
     const report = (event, done) =>
         start.current && onResize({ dx: event.clientX - start.current.x, dy: event.clientY - start.current.y, done })
@@ -277,7 +299,7 @@ export function ResizeHandle({ onResize, onStart, corner = "bottom-right", label
  * The app's top bar: `title` (and `icon`), `left` / center `children` / `right` slots.
  * @param {Record<string, any>} props
  */
-export function TopBar({ title, icon, left, right, className, children, ...rest }) {
+export function TopBar({ title, icon, left, right, className, children, ...rest }: Record<string, any>) {
     return (
         <header className={cx("dr-topbar", className)} {...rest}>
             <div className="dr-topbar-left">
@@ -295,7 +317,7 @@ export function TopBar({ title, icon, left, right, className, children, ...rest 
  * A row of controls (buttons, selects, separators). `floating` gives it a glass background (over a view).
  * @param {Record<string, any>} props
  */
-export function Toolbar({ floating = false, vertical = false, className, children, ...rest }) {
+export function Toolbar({ floating = false, vertical = false, className, children, ...rest }: Record<string, any>) {
     return (
         <div
             className={cx(
@@ -316,7 +338,7 @@ export function Toolbar({ floating = false, vertical = false, className, childre
  * A bar pinned to the bottom of its container, above Desktop's dock (status lines, playback controls).
  * @param {Record<string, any>} props
  */
-export function BottomBar({ className, children, ...rest }) {
+export function BottomBar({ className, children, ...rest }: Record<string, any>) {
     return (
         <footer className={cx("dr-bottombar", className)} {...rest}>
             {children}
@@ -328,7 +350,7 @@ export function BottomBar({ className, children, ...rest }) {
  * A thin divider; `vertical` inside rows/toolbars.
  * @param {Record<string, any>} props
  */
-export function Separator({ vertical = false, className, ...rest }) {
+export function Separator({ vertical = false, className, ...rest }: Record<string, any>) {
     return <span className={cx("dr-sep", vertical && "dr-sep--vertical", className)} role="separator" {...rest} />
 }
 
@@ -346,7 +368,7 @@ export function Row({
     style,
     children,
     ...rest
-}) {
+}: Record<string, any>) {
     return (
         <div
             className={cx("dr-row", className)}
@@ -365,7 +387,16 @@ export function Row({
     )
 }
 /** @param {Record<string, any>} props */
-export function Column({ gap = 8, align, justify, grow = false, className, style, children, ...rest }) {
+export function Column({
+    gap = 8,
+    align,
+    justify,
+    grow = false,
+    className,
+    style,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <div
             className={cx("dr-col", className)}
@@ -386,7 +417,7 @@ export function Spacer() {
  * "bottom-left" | "bottom-right" | "top" | "bottom" | "center".
  * @param {Record<string, any>} props
  */
-export function Hud({ position = "top-left", className, children, ...rest }) {
+export function Hud({ position = "top-left", className, children, ...rest }: Record<string, any>) {
     return (
         <div className={cx("dr-hud", `dr-hud--${position}`, className)} {...rest}>
             {children}
@@ -398,7 +429,7 @@ export function Hud({ position = "top-left", className, children, ...rest }) {
  * Headings and text in the theme's type: level 1 (page title), 2 (section head), 3 (micro-label).
  * @param {Record<string, any>} props
  */
-export function Heading({ level = 2, className, children, ...rest }) {
+export function Heading({ level = 2, className, children, ...rest }: Record<string, any>) {
     const Tag = `h${level}`
     return (
         <Tag className={cx(`dr-h${level}`, className)} {...rest}>
@@ -407,7 +438,7 @@ export function Heading({ level = 2, className, children, ...rest }) {
     )
 }
 /** @param {Record<string, any>} props */
-export function Label({ className, children, ...rest }) {
+export function Label({ className, children, ...rest }: Record<string, any>) {
     return (
         <span className={cx("dr-label", className)} {...rest}>
             {children}
@@ -418,7 +449,7 @@ export function Label({ className, children, ...rest }) {
  * Text: `muted`, `mono`, `small`, `tone` ("ok" | "warn" | "danger").
  * @param {Record<string, any>} props
  */
-export function Text({ as = "span", muted, mono, small, tone, className, children, ...rest }) {
+export function Text({ as = "span", muted, mono, small, tone, className, children, ...rest }: Record<string, any>) {
     const Tag = as
     return (
         <Tag
@@ -437,7 +468,7 @@ export function Text({ as = "span", muted, mono, small, tone, className, childre
     )
 }
 /** @param {Record<string, any>} props */
-export function Link({ className, children, ...rest }) {
+export function Link({ className, children, ...rest }: Record<string, any>) {
     return (
         <a className={cx("dr-link", className)} {...rest}>
             {children}
@@ -450,7 +481,15 @@ export function Link({ className, children, ...rest }) {
  * Desktop's dock (without a bottomBar; a BottomBar already does).
  * @param {Record<string, any>} props
  */
-export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, className, children, ...rest }) {
+export function AppShell({
+    topBar,
+    sidebar,
+    bottomBar,
+    insetBottom = false,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <div className={cx("dr-shell", insetBottom && "dr-shell--inset", className)} {...rest}>
             {topBar}
@@ -490,6 +529,17 @@ export function Tile({
     className,
     children,
     ...rest
+}: {
+    title?: any
+    subtitle?: any
+    media?: any
+    icon?: string
+    selected?: boolean
+    loading?: boolean
+    align?: "center" | "start"
+    onClick?: (event: any) => void
+    disabled?: boolean
+    className?: string
 }) {
     if (loading) {
         return (

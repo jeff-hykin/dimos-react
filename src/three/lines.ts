@@ -7,9 +7,9 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 
 export class FatLines {
     /** @type {LineSegments2} */
-    object
+    object: LineSegments2
     /** @type {LineMaterial} */
-    material
+    material: LineMaterial
     #geometry = new LineSegmentsGeometry()
     #positions = null
     #colors = null
@@ -24,7 +24,18 @@ export class FatLines {
      * @param {{ width: number, color?: THREE.ColorRepresentation, vertexColors?: boolean, capacity?: number,
      *   opacity?: number, dashed?: boolean, worldUnits?: boolean }} options
      */
-    constructor(resolution, options) {
+    constructor(
+        resolution: THREE.Vector2,
+        options: {
+            width: number
+            color?: THREE.ColorRepresentation
+            vertexColors?: boolean
+            capacity?: number
+            opacity?: number
+            dashed?: boolean
+            worldUnits?: boolean
+        },
+    ) {
         this.material = new LineMaterial({
             linewidth: options.width,
             color: options.vertexColors ? 0xffffff : (options.color ?? 0xffffff),

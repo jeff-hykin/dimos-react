@@ -145,13 +145,20 @@ export class CloudLayer {
     #mode
     /** data-clock origin (ms): point times are seconds since it, small enough for float32 */
     #epoch
+    settings: any
+    topic: any
+    context: any
 
     /**
      * @param {import("./registry").LayerContext} context
      * @param {import("./registry").Topic | null} topic null: data comes through setData
      * @param {import("../store").Store<CloudSettings>} settings
      */
-    constructor(context, topic, settings) {
+    constructor(
+        context: import("./registry").LayerContext,
+        topic: import("./registry").Topic | null,
+        settings: import("../store").Store<CloudSettings>,
+    ) {
         this.context = context
         this.topic = topic
         this.settings = settings

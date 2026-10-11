@@ -23,7 +23,17 @@ export function Button({
     disabled,
     href,
     ...rest
-}) {
+}: {
+    variant?: "default" | "primary" | "ghost" | "danger" | "ok" | "warn"
+    size?: "sm" | "md" | "lg"
+    icon?: string
+    iconRight?: string
+    pressed?: boolean
+    loading?: boolean
+    block?: boolean
+    type?: string
+    href?: string
+} & Record<string, any>) {
     const link = href !== undefined
     const Tag = link ? "a" : "button"
     return (
@@ -54,7 +64,7 @@ export function Button({
  * capture, so a missed pointerup still stops. Takes Button's props.
  * @param {Record<string, any>} props
  */
-export function HoldButton({ onHold, onRelease, disabled, className, ...rest }) {
+export function HoldButton({ onHold, onRelease, disabled, className, ...rest }: Record<string, any>) {
     return (
         <Button
             className={cx("dr-btn--hold", className)}
@@ -80,7 +90,15 @@ export function HoldButton({ onHold, onRelease, disabled, className, ...rest }) 
  * A square icon-only button; `label` is its accessible name and tooltip.
  * @param {Record<string, any>} props
  */
-export function IconButton({ icon, label, size = "md", variant = "ghost", round = false, className, ...rest }) {
+export function IconButton({
+    icon,
+    label,
+    size = "md",
+    variant = "ghost",
+    round = false,
+    className,
+    ...rest
+}: Record<string, any>) {
     return (
         <Button
             variant={variant}
@@ -99,7 +117,7 @@ export function IconButton({ icon, label, size = "md", variant = "ghost", round 
  * Buttons side by side, joined into one control.
  * @param {Record<string, any>} props
  */
-export function ButtonGroup({ className, children, ...rest }) {
+export function ButtonGroup({ className, children, ...rest }: Record<string, any>) {
     return (
         <div className={cx("dr-btn-group", className)} role="group" {...rest}>
             {children}
@@ -111,7 +129,16 @@ export function ButtonGroup({ className, children, ...rest }) {
  * A label + control + hint/error, stacked (or `inline`: label left, control right).
  * @param {Record<string, any>} props
  */
-export function Field({ label, hint, error, inline = false, htmlFor, className, children, ...rest }) {
+export function Field({
+    label,
+    hint,
+    error,
+    inline = false,
+    htmlFor,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <div className={cx("dr-field", inline && "dr-field--inline", error && "dr-field--error", className)} {...rest}>
             {label ? (
@@ -151,7 +178,7 @@ export function TextInput({
     style,
     invalid,
     ...rest
-}) {
+}: Record<string, any>) {
     const [draft, setDraft] = useState(null)
     const committing = !!onCommit && !onChange
     const commit = (text) => {
@@ -214,7 +241,14 @@ export function TextInput({
  * A search box: a magnifier, and a clear button once there is text.
  * @param {Record<string, any>} props
  */
-export function SearchInput({ value, onChange, placeholder = "Search…", className, style, ...rest }) {
+export function SearchInput({
+    value,
+    onChange,
+    placeholder = "Search…",
+    className,
+    style,
+    ...rest
+}: Record<string, any>) {
     return (
         <span className={cx("dr-input-wrap dr-search", className)} style={style}>
             <span className="dr-input-icon">
@@ -247,7 +281,7 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
  * Multi-line text.
  * @param {Record<string, any>} props
  */
-export function TextArea({ value, onChange, mono = false, rows = 4, className, ...rest }) {
+export function TextArea({ value, onChange, mono = false, rows = 4, className, ...rest }: Record<string, any>) {
     return (
         <textarea
             className={cx("dr-input dr-textarea", mono && "dr-mono", className)}
@@ -279,7 +313,7 @@ export function NumberInput({
     className,
     style,
     ...rest
-}) {
+}: Record<string, any>) {
     const shown = (number) =>
         number === null || number === undefined || !Number.isFinite(number)
             ? ""
@@ -361,7 +395,15 @@ export function normalizeOptions(options = []) {
  * [value, label] pairs or { value, label, disabled, group }. `onChange` gets the option's value (its original type).
  * @param {Record<string, any>} props
  */
-export function Select({ value, onChange, options, placeholder, size = "md", className, ...rest }) {
+export function Select({
+    value,
+    onChange,
+    options,
+    placeholder,
+    size = "md",
+    className,
+    ...rest
+}: Record<string, any>) {
     const items = normalizeOptions(options)
     const index = items.findIndex((item) => item.value === value)
     const groups = []
@@ -415,7 +457,16 @@ export function Select({ value, onChange, options, placeholder, size = "md", cla
  * A checkbox with its label. `indeterminate` shows a dash.
  * @param {Record<string, any>} props
  */
-export function Checkbox({ value, onChange, label, indeterminate = false, disabled, className, children, ...rest }) {
+export function Checkbox({
+    value,
+    onChange,
+    label,
+    indeterminate = false,
+    disabled,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     const ref = useRef(null)
     useEffect(() => {
         if (ref.current) {
@@ -442,7 +493,7 @@ export function Checkbox({ value, onChange, label, indeterminate = false, disabl
  * An on/off switch (role="switch").
  * @param {Record<string, any>} props
  */
-export function Toggle({ value, onChange, label, size = "md", disabled, className, ...rest }) {
+export function Toggle({ value, onChange, label, size = "md", disabled, className, ...rest }: Record<string, any>) {
     return (
         <label
             className={cx("dr-toggle", size === "sm" && "dr-toggle--sm", disabled && "dr-check--disabled", className)}
@@ -469,7 +520,7 @@ export const Switch = Toggle
  * One radio button (use RadioGroup for a set).
  * @param {Record<string, any>} props
  */
-export function Radio({ checked, onChange, label, name, value, disabled, className, ...rest }) {
+export function Radio({ checked, onChange, label, name, value, disabled, className, ...rest }: Record<string, any>) {
     return (
         <label className={cx("dr-check dr-radio", disabled && "dr-check--disabled", className)}>
             <input
@@ -491,7 +542,15 @@ export function Radio({ checked, onChange, label, name, value, disabled, classNa
  * A set of radios: `options` as for Select; `direction` "column" | "row".
  * @param {Record<string, any>} props
  */
-export function RadioGroup({ value, onChange, options, name, direction = "column", className, ...rest }) {
+export function RadioGroup({
+    value,
+    onChange,
+    options,
+    name,
+    direction = "column",
+    className,
+    ...rest
+}: Record<string, any>) {
     const autoName = useId()
     return (
         <div role="radiogroup" className={cx("dr-radio-group", `dr-radio-group--${direction}`, className)} {...rest}>
@@ -526,7 +585,7 @@ export function Slider({
     className,
     disabled,
     ...rest
-}) {
+}: Record<string, any>) {
     const fraction = (clamp(value ?? min, min, max) - min) / (max - min || 1)
     return (
         <div
@@ -564,7 +623,7 @@ export function RangeSlider({
     showValue = true,
     className,
     disabled,
-}) {
+}: Record<string, any>) {
     const [low, high] = value
     const at = (number) => `${((clamp(number, min, max) - min) / (max - min || 1)) * 100}%`
     const show = (number) => (format ? format(number) : String(number))
@@ -604,7 +663,14 @@ export function RangeSlider({
  * A small status label. `tone`: "default" | "info" | "ok" | "warn" | "danger"; `solid` fills it; `dot` adds a dot.
  * @param {Record<string, any>} props
  */
-export function Badge({ tone = "default", solid = false, dot = false, className, children, ...rest }) {
+export function Badge({
+    tone = "default",
+    solid = false,
+    dot = false,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <span
             className={cx("dr-badge", tone !== "default" && `dr-badge--${tone}`, solid && "dr-badge--solid", className)}
@@ -620,7 +686,7 @@ export function Badge({ tone = "default", solid = false, dot = false, className,
  * A toggleable chip (filters, multi-select). `selected` + `onChange(selected)`; `onRemove` adds an ✕.
  * @param {Record<string, any>} props
  */
-export function Chip({ selected, onChange, onRemove, icon, tone, className, children, ...rest }) {
+export function Chip({ selected, onChange, onRemove, icon, tone, className, children, ...rest }: Record<string, any>) {
     return (
         <span
             className={cx("dr-chip", tone && `dr-badge--${tone}`, className)}
@@ -666,7 +732,18 @@ export function Chip({ selected, onChange, onRemove, icon, tone, className, chil
  * @param {{ items: (string | { label: any, tone?: string, title?: string, key?: any })[], oneLine?: boolean,
  *   extra?: any, className?: string }} props
  */
-export function TagList({ items = [], oneLine = false, extra, className, ...rest }) {
+export function TagList({
+    items = [],
+    oneLine = false,
+    extra,
+    className,
+    ...rest
+}: {
+    items: (string | { label: any; tone?: string; title?: string; key?: any })[]
+    oneLine?: boolean
+    extra?: any
+    className?: string
+}) {
     const tags = items.map((item) => (typeof item === "object" && item !== null ? item : { label: item }))
     const box = useRef(null)
     const [fits, setFits] = useState(tags.length)
@@ -726,7 +803,7 @@ export function TagList({ items = [], oneLine = false, extra, className, ...rest
  * A status dot: tone "ok" | "warn" | "danger" | "info" | "off"; `pulse` animates it.
  * @param {Record<string, any>} props
  */
-export function StatusDot({ tone = "ok", pulse = false, label, className, ...rest }) {
+export function StatusDot({ tone = "ok", pulse = false, label, className, ...rest }: Record<string, any>) {
     return (
         <span
             className={cx("dr-dot", `dr-dot--${tone}`, pulse && "dr-dot--pulse", className)}
@@ -745,7 +822,7 @@ const CONNECTION_TONES = { connected: "ok", connecting: "warn", degraded: "warn"
  * "connected" | "degraded" | "lost"); see useConnectionState().
  * @param {Record<string, any>} props
  */
-export function ConnectionStatus({ state = "connecting", label, detail, className, ...rest }) {
+export function ConnectionStatus({ state = "connecting", label, detail, className, ...rest }: Record<string, any>) {
     const tone = CONNECTION_TONES[state] ?? "off"
     return (
         <span className={cx("dr-conn", `dr-conn--${tone}`, className)} role="status" {...rest}>
@@ -760,7 +837,7 @@ export function ConnectionStatus({ state = "connecting", label, detail, classNam
  * A keyboard key: <Kbd>W</Kbd>, or `keys={["mod", "K"]}`.
  * @param {Record<string, any>} props
  */
-export function Kbd({ keys, className, children, ...rest }) {
+export function Kbd({ keys, className, children, ...rest }: Record<string, any>) {
     const mac = /mac|iphone|ipad/i.test(globalThis.navigator?.platform ?? "")
     const label = (key) =>
         key === "mod" ? (mac ? "⌘" : "Ctrl") : key === "shift" ? "⇧" : key === "alt" ? (mac ? "⌥" : "Alt") : key

@@ -228,6 +228,31 @@ export function Scene3D({
     gridDivisions,
     freeOrbit,
     ...rest
+}: {
+    fixedFrame?: string
+    followFrame?: string | null
+    follow?: boolean
+    onFollowChange?: (follow: boolean) => void
+    robotFrame?: string | null
+    viewDistance?: number
+    grid?: boolean
+    tf?: TfTree
+    clock?: () => number
+    onPick?: (pick: { point: THREE.Vector3; on: string; event: MouseEvent }) => void
+    onViewer?: (viewer: Viewer) => void
+    layerOptions?: { baseFrame?: string; cameraInfo?: Record<string, string> }
+    topics?: () => object[]
+    className?: string
+    style?: object
+    children?: any
+    cameraPosition?: [number, number, number]
+    cameraTarget?: [number, number, number]
+    near?: number
+    far?: number
+    fov?: number
+    gridSize?: number
+    gridDivisions?: number
+    freeOrbit?: boolean
 }) {
     const hostRef = useRef(null)
     const source = useDataSource()
@@ -489,7 +514,17 @@ export function Scene3D({
  * @param {{ topics?: string[], transforms?: any, staticTransforms?: any, tf?: TfTree }} props `transforms`: a
  *   decoded TFMessage, an array of TransformStamped, or `[{ parent, child, translation, rotation }]`
  */
-export function TfFeed({ topics, transforms, staticTransforms, tf: given }) {
+export function TfFeed({
+    topics,
+    transforms,
+    staticTransforms,
+    tf: given,
+}: {
+    topics?: string[]
+    transforms?: any
+    staticTransforms?: any
+    tf?: TfTree
+}) {
     const context = useScene()
     const tf = given ?? context.tf
     const viewer = context.viewer
@@ -558,7 +593,21 @@ function applyTransforms(tf, transforms, isStatic) {
  * @param {{ type: string | object, topic?: string | { key: string, name: string, type: string } | null,
  *   settings?: object, data?: any, onStatus?: (status: object) => void, onPose?: (matrix: THREE.Matrix4) => void }} props
  */
-export function Layer({ type, topic, settings, data, onStatus, onPose }) {
+export function Layer({
+    type,
+    topic,
+    settings,
+    data,
+    onStatus,
+    onPose,
+}: {
+    type: string | object
+    topic?: string | { key: string; name: string; type: string } | null
+    settings?: object
+    data?: any
+    onStatus?: (status: object) => void
+    onPose?: (matrix: THREE.Matrix4) => void
+}) {
     const scene = useScene()
     const layerType = typeof type === "string" ? layerTypeById(type) : type
     if (!layerType) {
@@ -603,7 +652,7 @@ export function Layer({ type, topic, settings, data, onStatus, onPose }) {
  * The manager (panels.js useLayerManager) is shared with a LayersPanel outside the scene.
  * @param {{ manager: import("./layers/manager").LayerManager }} props
  */
-export function TopicLayers({ manager }) {
+export function TopicLayers({ manager }: { manager: import("./layers/manager").LayerManager }) {
     const scene = useScene()
     const { list } = useStore(manager.entries)
     const { paused } = useStore(manager.paused)
@@ -682,7 +731,7 @@ export function TfFrames({
     named = [],
     maxFrames = 512,
     onStatus,
-}) {
+}: Record<string, any>) {
     const settings = { axesSize, names, links, maxNames, named, maxFrames }
     return <Layer type={tfType} settings={settings} onStatus={onStatus} />
 }
@@ -734,6 +783,28 @@ export function PointCloud({
     opacity,
     cubeShade,
     onStatus,
+}: {
+    topic?: string
+    points?: Float32Array | number[]
+    intensity?: Uint8Array
+    frame?: string
+    mode?: "latest" | "accumulate"
+    windowSeconds?: number
+    maxPoints?: number
+    maxHz?: number
+    quality?: number
+    style?: "default" | "voxel" | "splat" | "disc" | "square"
+    size?: number
+    colorMode?: "height" | "intensity" | "range" | "solid"
+    gradient?: string
+    axis?: 0 | 1 | 2
+    period?: number
+    rangeMin?: number | null
+    rangeMax?: number | null
+    color?: string
+    opacity?: number
+    cubeShade?: string
+    onStatus?: (status: object) => void
 }) {
     const look = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
     for (const [name, value] of Object.entries({
@@ -779,6 +850,15 @@ export function Path({
     lift = 0.03,
     onTop = false,
     onStatus,
+}: {
+    topic?: string
+    poses?: any[]
+    frame?: string
+    color?: string
+    width?: number
+    lift?: number
+    onTop?: boolean
+    onStatus?: Function
 }) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
     return (
@@ -814,6 +894,20 @@ export function Pose({
     route = true,
     onPose,
     onStatus,
+}: {
+    topic?: string
+    pose?: any
+    frame?: string
+    axesSize?: number
+    trail?: boolean
+    trailLength?: number
+    jumpMeters?: number
+    color?: string
+    width?: number
+    onTop?: boolean
+    route?: boolean
+    onPose?: (matrix: THREE.Matrix4) => void
+    onStatus?: Function
 }) {
     const data = useMemo(() => (pose ? { pose, frame } : undefined), [pose, frame])
     return (
@@ -845,6 +939,13 @@ export function PoseArray({
     length = 0.4,
     width = 2,
     onStatus,
+}: {
+    topic?: string
+    poses?: any[]
+    frame?: string
+    color?: string
+    length?: number
+    width?: number
 }) {
     const data = useMemo(() => (poses ? { poses, frame } : undefined), [poses, frame])
     return (
@@ -859,7 +960,23 @@ export function PoseArray({
  * @param {{ kind?: string, frame?: string, pose?: any, poseFrame?: string, scale?: number, visible?: boolean,
  *   colors?: { body?: string, dark?: string, nose?: string } }} props
  */
-export function RobotModel({ kind = "wheeled", frame, pose, poseFrame = "", scale = 1, visible = true, colors }) {
+export function RobotModel({
+    kind = "wheeled",
+    frame,
+    pose,
+    poseFrame = "",
+    scale = 1,
+    visible = true,
+    colors,
+}: {
+    kind?: string
+    frame?: string
+    pose?: any
+    poseFrame?: string
+    scale?: number
+    visible?: boolean
+    colors?: { body?: string; dark?: string; nose?: string }
+}) {
     const scene = useScene()
     const settings = useRef({})
     settings.current = { frame: frame ?? scene.options?.baseFrame ?? "base_link", pose, poseFrame, scale, visible }
@@ -920,7 +1037,7 @@ export function RobotModel({ kind = "wheeled", frame, pose, poseFrame = "", scal
  * following the frame as it moves. `onPlaced(placed)` says whether it could be placed in the fixed frame.
  * @param {{ frame: string | null, onPlaced?: (placed: boolean) => void }} props
  */
-export function FrameHighlight({ frame, onPlaced }) {
+export function FrameHighlight({ frame, onPlaced }: { frame: string | null; onPlaced?: (placed: boolean) => void }) {
     const placedRef = useRef(onPlaced)
     placedRef.current = onPlaced
     const layer = useLayer(
@@ -938,7 +1055,12 @@ export function FrameHighlight({ frame, onPlaced }) {
  * row see it. `layers`: the drawn layers' frames (a LayerManager's layerFrames()).
  * @returns {import("./tf_check").TfIssue[]}
  */
-export function useTfIssues({ layers, tf: given, fixedFrame: givenFixed, intervalMs = 2000 } = {}) {
+export function useTfIssues({
+    layers,
+    tf: given,
+    fixedFrame: givenFixed,
+    intervalMs = 2000,
+} = {}): import("./tf_check").TfIssue[] {
     const scene = useScene()
     const tf = given ?? scene.tf
     const fixedRef = useRef(givenFixed ?? scene.fixedFrame)
@@ -979,7 +1101,22 @@ export function useTfIssues({ layers, tf: given, fixedFrame: givenFixed, interva
  * @param {{ value?: string | null, onChange: (frame: string | null) => void, tf?: TfTree, noneLabel?: string | null,
  *   placeholder?: string, size?: "sm" | "md", className?: string }} props `noneLabel`: an extra "none" option (null)
  */
-export function FramePicker({ value, onChange, tf, noneLabel = null, placeholder = "frame…", ...rest }) {
+export function FramePicker({
+    value,
+    onChange,
+    tf,
+    noneLabel = null,
+    placeholder = "frame…",
+    ...rest
+}: {
+    value?: string | null
+    onChange: (frame: string | null) => void
+    tf?: TfTree
+    noneLabel?: string | null
+    placeholder?: string
+    size?: "sm" | "md"
+    className?: string
+}) {
     const frames = useTfFrames({ tf })
     const options = [...(noneLabel !== null ? [[null, noneLabel]] : []), ...frames.map((name) => [name, name])]
     if (value && !frames.includes(value)) {
@@ -1003,7 +1140,15 @@ const emptyStats = new Store({
  * (CPU per frame, latency p50/p95, arrival→frame, `rttMs` if given, points, draw calls).
  * @param {{ className?: string, detailed?: boolean, rttMs?: number | null }} props
  */
-export function SceneStats({ className, detailed = false, rttMs }) {
+export function SceneStats({
+    className,
+    detailed = false,
+    rttMs,
+}: {
+    className?: string
+    detailed?: boolean
+    rttMs?: number | null
+}) {
     const viewer = useViewer()
     const stats = useStore(viewer?.stats ?? emptyStats)
     if (detailed) {
@@ -1046,6 +1191,13 @@ export function SceneControls({
     onFrameAll,
     onTopDown,
     position = "bottom-right",
+}: {
+    className?: string
+    children?: any
+    frameAll?: boolean
+    onFrameAll?: () => void
+    onTopDown?: () => void
+    position?: string
 }) {
     const { viewer, frameInfo, actions } = useScene()
     const info = useStore(frameInfo ?? emptyFrameInfo)

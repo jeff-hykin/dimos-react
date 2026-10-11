@@ -11,7 +11,7 @@ import { readLocal, Store, writeLocal } from "./store"
  */
 
 /** @type {CloudPreset[]} */
-export const CLOUD_PRESETS = [
+export const CLOUD_PRESETS: CloudPreset[] = [
     {
         id: "low",
         label: "Low bandwidth",
@@ -37,7 +37,7 @@ export const CLOUD_PRESETS = [
 ]
 
 /** @returns {CloudPreset} */
-export const cloudPreset = (id) => CLOUD_PRESETS.find((preset) => preset.id === id) ?? CLOUD_PRESETS[1]
+export const cloudPreset = (id): CloudPreset => CLOUD_PRESETS.find((preset) => preset.id === id) ?? CLOUD_PRESETS[1]
 
 /** The gateway subscription for a cloud at a preset. */
 export function cloudOptions(preset) {
@@ -66,7 +66,7 @@ export function setCloudQuality(key, quality) {
 }
 
 /** @returns {CloudQuality} */
-export const cloudQualityOf = (key) => cloudPreset(cloudQualities.get()[key]).id
+export const cloudQualityOf = (key): CloudQuality => cloudPreset(cloudQualities.get()[key]).id
 
 /** topic key → live rate of each cloud being drawn (gone when it stops) */
 export const cloudRates = new Store({})
@@ -90,6 +90,9 @@ export class CloudStream {
     #preset
     #closed = false
     #counted = { scans: 0, points: 0, bytes: 0, since: 0 }
+    onMessage: (message: any) => void
+    key: string
+    source: { subscribe: Function }
 
     /**
      * @param {{ subscribe: Function }} source a data source
@@ -97,7 +100,13 @@ export class CloudStream {
      * @param {CloudQuality} quality
      * @param {(message: any) => void} onMessage
      */
-    constructor(source, key, quality, onMessage, now = performance.now()) {
+    constructor(
+        source: { subscribe: Function },
+        key: string,
+        quality: CloudQuality,
+        onMessage: (message: any) => void,
+        now = performance.now(),
+    ) {
         this.source = source
         this.key = key
         this.onMessage = onMessage
@@ -143,7 +152,7 @@ export class CloudStream {
     }
 
     /** scans, points and bytes a second since the last call @returns {CloudRate} */
-    sample(now = performance.now()) {
+    sample(now = performance.now()): CloudRate {
         const seconds = Math.max(1e-3, (now - this.#counted.since) / 1000)
         const rate = {
             hz: this.#counted.scans / seconds,

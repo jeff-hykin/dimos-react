@@ -22,7 +22,16 @@ const TONE_ICONS = { info: "info", ok: "check-circle", warn: "warn", danger: "x-
  * An inline notice. `tone`: "info" | "ok" | "warn" | "danger"; `title`; `actions` (buttons); `onClose` adds an ✕.
  * @param {Record<string, any>} props
  */
-export function Alert({ tone = "info", title, icon, actions, onClose, className, children, ...rest }) {
+export function Alert({
+    tone = "info",
+    title,
+    icon,
+    actions,
+    onClose,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     return (
         <div
             className={cx("dr-alert", `dr-alert--${tone}`, className)}
@@ -121,7 +130,7 @@ function ToastItem({ entry }) {
  * Where toasts appear (bottom-right, above Desktop's dock). `position`: "bottom-right" | "bottom" | "top-right" | "top".
  * @param {Record<string, any>} props
  */
-export function ToastViewport({ position = "bottom-right" }) {
+export function ToastViewport({ position = "bottom-right" }: Record<string, any>) {
     const list = useToasts()
     const [mounted, setMounted] = useState(false)
     useEffect(() => setMounted(true), [])
@@ -143,7 +152,7 @@ const ToastContext = createContext(toast)
  * Adds a ToastViewport; `useToast()` below it returns toast().
  * @param {Record<string, any>} props
  */
-export function ToastProvider({ position, children }) {
+export function ToastProvider({ position, children }: Record<string, any>) {
     return (
         <ToastContext.Provider value={toast}>
             {children}
@@ -163,7 +172,17 @@ export function useToast() {
  * `dismissable` (default true): Escape and a scrim click close it.
  * @param {Record<string, any>} props
  */
-export function Modal({ open, onClose, title, footer, size = "md", dismissable = true, className, children, ...rest }) {
+export function Modal({
+    open,
+    onClose,
+    title,
+    footer,
+    size = "md",
+    dismissable = true,
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     const titleId = useId()
     const panel = useRef(null)
     useEscape(() => dismissable && onClose?.(), !!open)
@@ -229,7 +248,7 @@ const DialogContext = createContext(null)
  * Hosts useConfirm / usePrompt dialogs (AppProvider includes it).
  * @param {Record<string, any>} props
  */
-export function DialogProvider({ children }) {
+export function DialogProvider({ children }: Record<string, any>) {
     const [dialog, setDialog] = useState(null)
     const [text, setText] = useState("")
     const open = useCallback(
@@ -316,7 +335,7 @@ export function usePrompt() {
  * A spinning ring; `label` for screen readers.
  * @param {Record<string, any>} props
  */
-export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
+export function Spinner({ size = 18, label = "Loading", className, ...rest }: Record<string, any>) {
     return (
         <span
             className={cx("dr-spinner", className)}
@@ -332,7 +351,7 @@ export function Spinner({ size = 18, label = "Loading", className, ...rest }) {
  * A bar: `value` 0..1, or none for an indeterminate one. `tone` colors it.
  * @param {Record<string, any>} props
  */
-export function Progress({ value, tone = "primary", label, className, ...rest }) {
+export function Progress({ value, tone = "primary", label, className, ...rest }: Record<string, any>) {
     const known = typeof value === "number" && Number.isFinite(value)
     return (
         <div
@@ -361,7 +380,15 @@ export function Progress({ value, tone = "primary", label, className, ...rest })
  * A ring: `value` 0..1 (uploads, downloads); shows the percent inside unless `children` replace it.
  * @param {Record<string, any>} props
  */
-export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary", className, children, ...rest }) {
+export function ProgressRing({
+    value = 0,
+    size = 44,
+    stroke = 4,
+    tone = "primary",
+    className,
+    children,
+    ...rest
+}: Record<string, any>) {
     const radius = (size - stroke) / 2
     const length = 2 * Math.PI * radius
     const clamped = Math.min(1, Math.max(0, value))
@@ -403,7 +430,7 @@ export function ProgressRing({ value = 0, size = 44, stroke = 4, tone = "primary
  * A loading placeholder block.
  * @param {Record<string, any>} props
  */
-export function Skeleton({ width = "100%", height = 14, className, style, ...rest }) {
+export function Skeleton({ width = "100%", height = 14, className, style, ...rest }: Record<string, any>) {
     return <span className={cx("dr-skeleton", className)} style={{ width, height, ...style }} {...rest} />
 }
 
@@ -421,7 +448,7 @@ export function EmptyState({
     className,
     children,
     ...rest
-}) {
+}: Record<string, any>) {
     return (
         <div className={cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className)} {...rest}>
             <div className="dr-empty-inner">
@@ -444,6 +471,7 @@ export function EmptyState({
  * `onError(error, info)`.
  */
 export class ErrorBoundary extends Component {
+    reset: () => void
     constructor(props) {
         super(props)
         this.state = { error: null }

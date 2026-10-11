@@ -61,7 +61,10 @@ function ensureStyle(id, css, { first = false } = {}) {
  * @param {{ themeUrl?: string | null, bundled?: boolean }} [options]
  * @returns {Promise<void>} resolves when the tokens are in effect
  */
-export function installThemeCss({ themeUrl = null, bundled } = {}) {
+export function installThemeCss({
+    themeUrl = null,
+    bundled,
+}: { themeUrl?: string | null; bundled?: boolean } = {}): Promise<void> {
     if (typeof document === "undefined") {
         return Promise.resolve()
     }
@@ -103,7 +106,15 @@ export function installThemeCss({ themeUrl = null, bundled } = {}) {
  * @param {{ skin?: string, corners?: "sharp" | "rounded" | "theme" }} choice
  * @returns {{ skin: string, corners: string, dark: boolean, square: boolean }}
  */
-export function applyTheme({ skin = "portal", corners = "theme" } = {}) {
+export function applyTheme({
+    skin = "portal",
+    corners = "theme",
+}: { skin?: string; corners?: "sharp" | "rounded" | "theme" } = {}): {
+    skin: string
+    corners: string
+    dark: boolean
+    square: boolean
+} {
     const root = document.documentElement
     root.dataset.skin = skin
     if (corners === "theme") {
@@ -123,7 +134,7 @@ export function applyTheme({ skin = "portal", corners = "theme" } = {}) {
  * Calls `listener()` whenever Desktop saves a new skin or corners (in its own page or another tab). Returns unsubscribe.
  * @param {() => void} listener
  */
-export function watchDesktopTheme(listener) {
+export function watchDesktopTheme(listener: () => void) {
     const onStorage = (event) => {
         if (event.key === null || event.key === SKIN_KEY || event.key === CORNERS_KEY) {
             listener()

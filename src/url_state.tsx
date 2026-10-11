@@ -46,7 +46,7 @@ export function urlWith(href, changes, { mode = "search", clear = false } = {}) 
  * @param {string} href the current URL
  * @param {any} event
  */
-export function applyUrlEvent(href, event, { mode = "search", eventType = "url" } = {}) {
+export function applyUrlEvent(href: string, event: any, { mode = "search", eventType = "url" } = {}) {
     if (!event || typeof event !== "object" || event.type !== eventType) {
         return null
     }
@@ -210,7 +210,7 @@ export function UrlStateProvider({
     events = "events",
     eventType = "url",
     children,
-}) {
+}: Record<string, any>) {
     const store = useMemo(
         () => givenStore ?? createUrlStore({ window: win ?? globalThis.window, mode }),
         [givenStore, win, mode],

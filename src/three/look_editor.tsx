@@ -14,7 +14,17 @@ import { Button, Field, NumberInput, Select, Slider } from "../components/contro
  * the page-wide default (Settings → Rendering).
  * @param {{ value: string, onChange: (style: string) => void, withDefault?: string, className?: string }} props
  */
-export function StylePicker({ value, onChange, withDefault, className }) {
+export function StylePicker({
+    value,
+    onChange,
+    withDefault,
+    className,
+}: {
+    value: string
+    onChange: (style: string) => void
+    withDefault?: string
+    className?: string
+}) {
     const options = [
         ...(withDefault ? [["default", `default · ${withDefault}`, "follow the page's default style"]] : []),
         ...Object.entries(POINT_STYLES).map(([style, info]) => [style, info.label, info.about]),
@@ -88,7 +98,7 @@ export function RenderingSettings() {
  * Edits a point look (style, size, color mode, gradient, axis, range, opacity). Used by every layer that draws points.
  * @param {{ look: object, onChange: (look: object) => void }} props
  */
-export function PointLookEditor({ look, onChange }) {
+export function PointLookEditor({ look, onChange }: { look: object; onChange: (look: object) => void }) {
     const set = (patch) => onChange({ ...look, ...patch })
     const global = useStore(rendering)
     const shown = look.style === "default" ? global.pointStyle : look.style

@@ -8,7 +8,22 @@ export { ICONS }
  * @param {{ name: string, size?: number, strokeWidth?: number, className?: string, title?: string, path?: string }} props
  *   `path`: your own SVG path data instead of a named icon
  */
-export function Icon({ name, size = 18, strokeWidth = 1.8, className, title, path, ...rest }) {
+export function Icon({
+    name,
+    size = 18,
+    strokeWidth = 1.8,
+    className,
+    title,
+    path,
+    ...rest
+}: {
+    name: string
+    size?: number
+    strokeWidth?: number
+    className?: string
+    title?: string
+    path?: string
+}) {
     return (
         <svg
             className={cx("dr-icon", className)}

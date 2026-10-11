@@ -21,7 +21,26 @@ export function stickValue(dx, dy, radius) {
  * @param {{ onChange?: (value: { x: number, y: number }) => void, onStart?: () => void, onEnd?: () => void,
  *   size?: number, disabled?: boolean, label?: any, className?: string, style?: object }} props
  */
-export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label, className, style, ...rest }) {
+export function Joystick({
+    onChange,
+    onStart,
+    onEnd,
+    size = 132,
+    disabled,
+    label,
+    className,
+    style,
+    ...rest
+}: {
+    onChange?: (value: { x: number; y: number }) => void
+    onStart?: () => void
+    onEnd?: () => void
+    size?: number
+    disabled?: boolean
+    label?: any
+    className?: string
+    style?: object
+}) {
     const base = useRef(null)
     const [knob, setKnob] = useState({ x: 0, y: 0, active: false })
     const radius = size / 2 - size * 0.18
@@ -90,7 +109,16 @@ export function Joystick({ onChange, onStart, onEnd, size = 132, disabled, label
  * sticks. `value` null shows it idle.
  * @param {{ value: { x: number, y: number } | null, size?: number, label?: string, className?: string } & Record<string, any>} props
  */
-export function StickIndicator({ value, size = 22, label = "stick", className, ...rest }) {
+export function StickIndicator({
+    value,
+    size = 22,
+    label = "stick",
+    className,
+    ...rest
+}: { value: { x: number; y: number } | null; size?: number; label?: string; className?: string } & Record<
+    string,
+    any
+>) {
     const x = value?.x ?? 0
     const y = value?.y ?? 0
     return (
@@ -125,7 +153,26 @@ const DIRECTIONS = [
  *   disabled?: boolean, held?: string[], className?: string, style?: object }} props
  *   `center`: content of the middle button (omit for none); `held`: directions to show as pressed (e.g. from keys)
  */
-export function DPad({ onPress, onRelease, size = 132, center, disabled, held = [], className, style, ...rest }) {
+export function DPad({
+    onPress,
+    onRelease,
+    size = 132,
+    center,
+    disabled,
+    held = [],
+    className,
+    style,
+    ...rest
+}: {
+    onPress?: (dir: string) => void
+    onRelease?: (dir: string) => void
+    size?: number
+    center?: any
+    disabled?: boolean
+    held?: string[]
+    className?: string
+    style?: object
+}) {
     const [down, setDown] = useState(null)
     const press = (dir, event) => {
         if (disabled) {
@@ -191,6 +238,17 @@ export function FileDrop({
     className,
     style,
     ...rest
+}: {
+    onFiles: (files: File[]) => void
+    accept?: string
+    multiple?: boolean
+    disabled?: boolean
+    title?: any
+    hint?: any
+    icon?: string
+    children?: any
+    className?: string
+    style?: object
 }) {
     const input = useRef(null)
     const [over, setOver] = useState(false)
@@ -276,7 +334,22 @@ export function FileDrop({
  * @param {{ value: string, onChange?: (color: string) => void, presets?: string[], disabled?: boolean,
  *   label?: string, className?: string }} props
  */
-export function ColorSwatch({ value, onChange, presets, disabled, label = "Color", className, ...rest }) {
+export function ColorSwatch({
+    value,
+    onChange,
+    presets,
+    disabled,
+    label = "Color",
+    className,
+    ...rest
+}: {
+    value: string
+    onChange?: (color: string) => void
+    presets?: string[]
+    disabled?: boolean
+    label?: string
+    className?: string
+}) {
     return (
         <span className={cx("dr-swatch", className)} {...rest}>
             <label className={cx("dr-swatch__pick", disabled && "dr-swatch__pick--disabled")} title={value}>
@@ -311,7 +384,16 @@ export function ColorSwatch({ value, onChange, presets, disabled, label = "Color
  * Key hints for a HUD: `[[["W", "A", "S", "D"], "drive"], [["Space"], "stop"]]` (a string key list works too: "W A S D").
  * @param {{ hints: [string | string[], any][], vertical?: boolean, className?: string }} props
  */
-export function KeyHints({ hints = [], vertical = false, className, ...rest }) {
+export function KeyHints({
+    hints = [],
+    vertical = false,
+    className,
+    ...rest
+}: {
+    hints: [string | string[], any][]
+    vertical?: boolean
+    className?: string
+}) {
     return (
         <div className={cx("dr-keyhints", vertical && "dr-keyhints--vertical", className)} {...rest}>
             {hints.map(([keys, label], index) => (

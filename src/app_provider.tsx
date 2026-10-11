@@ -12,7 +12,19 @@ import { DialogProvider, ToastProvider } from "./components/feedback"
  *   `theme`: DimThemeProvider props (skin, corners, themeUrl…); `source`: a data source (memorySource(), …; default:
  *   the page's zenoh-gateway connection); `url`: UrlStateProvider props, or false for none
  */
-export function AppProvider({ theme = {}, source, url = {}, toastPosition, children }) {
+export function AppProvider({
+    theme = {},
+    source,
+    url = {},
+    toastPosition,
+    children,
+}: {
+    theme?: object
+    source?: any
+    url?: object | false
+    toastPosition?: string
+    children?: any
+}) {
     let tree = (
         <DialogProvider>
             <ToastProvider position={toastPosition}>{children}</ToastProvider>

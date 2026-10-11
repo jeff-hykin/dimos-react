@@ -114,7 +114,19 @@ function choiceGroup(
  * @param {{ items: any[], value: any, onChange?: (value: any) => void, variant?: "line" | "pill", size?: "sm" | "md",
  *   vertical?: boolean, className?: string, label?: string }} props
  */
-export function Tabs({ variant = "line", ...props }) {
+export function Tabs({
+    variant = "line",
+    ...props
+}: {
+    items: any[]
+    value: any
+    onChange?: (value: any) => void
+    variant?: "line" | "pill"
+    size?: "sm" | "md"
+    vertical?: boolean
+    className?: string
+    label?: string
+}) {
     return choiceGroup("dr-tabs", { variant, ...props })
 }
 
@@ -237,6 +249,15 @@ export function Popover({
     placement = "bottom-start",
     className,
     style,
+}: {
+    trigger: any
+    children: any
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    defaultOpen?: boolean
+    placement?: string
+    className?: string
+    style?: object
 }) {
     const [isOpen, setOpen] = useControllable(open, defaultOpen, onOpenChange)
     const [anchor, setAnchor] = useState(null)
@@ -286,7 +307,15 @@ function domProps(item) {
  * a pick (unless the item `keepOpen`s).
  * @param {{ items: any[], onClose?: () => void, autoFocus?: boolean }} props
  */
-export function MenuList({ items, onClose, autoFocus = true }) {
+export function MenuList({
+    items,
+    onClose,
+    autoFocus = true,
+}: {
+    items: any[]
+    onClose?: () => void
+    autoFocus?: boolean
+}) {
     const list = useRef(null)
     const focusable = () => [...(list.current?.querySelectorAll(".dr-menu__item:not([disabled])") ?? [])]
     useEffect(() => {
@@ -364,7 +393,36 @@ export function MenuList({ items, onClose, autoFocus = true }) {
  *   { heading: any })[],
  *   trigger: any, placement?: string, open?: boolean, onOpenChange?: (open: boolean) => void, className?: string }} props
  */
-export function Menu({ items, trigger, placement = "bottom-start", open, onOpenChange, className }) {
+export function Menu({
+    items,
+    trigger,
+    placement = "bottom-start",
+    open,
+    onOpenChange,
+    className,
+}: {
+    items: (
+        | {
+              label: any
+              icon?: string
+              onSelect?: () => void
+              danger?: boolean
+              disabled?: boolean
+              checked?: boolean
+              shortcut?: string
+              title?: string
+              keepOpen?: boolean
+              [dataOrAria: string]: any
+          }
+        | "-"
+        | { heading: any }
+    )[]
+    trigger: any
+    placement?: string
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
+    className?: string
+}) {
     const [isOpen, setOpen] = useControllable(open, false, onOpenChange)
     const [anchor, setAnchor] = useState(null)
     const triggerProps = {
@@ -415,7 +473,18 @@ export function Menu({ items, trigger, placement = "bottom-start", open, onOpenC
  * Right-click (or long-press on touch) opens a menu at the pointer.
  * @param {{ items: any[] | ((event: any) => any[]), children: any, disabled?: boolean, className?: string }} props
  */
-export function ContextMenu({ items, children, disabled, className, ...rest }) {
+export function ContextMenu({
+    items,
+    children,
+    disabled,
+    className,
+    ...rest
+}: {
+    items: any[] | ((event: any) => any[])
+    children: any
+    disabled?: boolean
+    className?: string
+}) {
     const [menu, setMenu] = useState(null)
     const press = useRef(null)
     const openAt = (event, x, y) => {
@@ -466,7 +535,18 @@ export function ContextMenu({ items, children, disabled, className, ...rest }) {
  * right-drag pan, say). `children` go above the items (a heading line, or an inline form instead of `items`).
  * @param {{ x: number, y: number, items?: any[], onClose: () => void, children?: any, className?: string } & Record<string, any>} props
  */
-export function MenuAt({ x, y, items = [], onClose, children, className, ...rest }) {
+export function MenuAt({
+    x,
+    y,
+    items = [],
+    onClose,
+    children,
+    className,
+    ...rest
+}: { x: number; y: number; items?: any[]; onClose: () => void; children?: any; className?: string } & Record<
+    string,
+    any
+>) {
     return (
         <Floating point={{ x, y }} onClose={onClose} role="presentation" className={className} {...rest}>
             {children}
@@ -481,7 +561,19 @@ export function MenuAt({ x, y, items = [], onClose, children, className, ...rest
  * A hover / focus tooltip.
  * @param {{ content: any, children: any, delay?: number, placement?: string, disabled?: boolean }} props
  */
-export function Tooltip({ content, children, delay = 350, placement = "top", disabled }) {
+export function Tooltip({
+    content,
+    children,
+    delay = 350,
+    placement = "top",
+    disabled,
+}: {
+    content: any
+    children: any
+    delay?: number
+    placement?: string
+    disabled?: boolean
+}) {
     const [anchor, setAnchor] = useState(null)
     const [open, setOpen] = useState(false)
     const timer = useRef(null)
@@ -558,6 +650,17 @@ export function Sidebar({
     className,
     style,
     ...rest
+}: {
+    title?: any
+    sections?: { title?: any; content: any; key?: string }[]
+    children?: any
+    collapsed?: boolean
+    onCollapsedChange?: (collapsed: boolean) => void
+    side?: "left" | "right"
+    width?: number | string
+    footer?: any
+    className?: string
+    style?: object
 }) {
     const [isCollapsed, setCollapsed] = useControllable(collapsed, false, onCollapsedChange)
     return (
@@ -601,7 +704,22 @@ export function Sidebar({
  * @param {{ items: { value: any, icon: string, label: string, badge?: any, disabled?: boolean }[], value: any,
  *   onChange?: (value: any) => void, showLabels?: boolean, footer?: any, className?: string }} props
  */
-export function NavRail({ items = [], value, onChange, showLabels = false, footer, className, ...rest }) {
+export function NavRail({
+    items = [],
+    value,
+    onChange,
+    showLabels = false,
+    footer,
+    className,
+    ...rest
+}: {
+    items: { value: any; icon: string; label: string; badge?: any; disabled?: boolean }[]
+    value: any
+    onChange?: (value: any) => void
+    showLabels?: boolean
+    footer?: any
+    className?: string
+}) {
     return (
         <nav className={cx("dr-navrail", showLabels && "dr-navrail--labels", className)} {...rest}>
             <div className="dr-navrail__items">
@@ -641,7 +759,20 @@ export function NavRail({ items = [], value, onChange, showLabels = false, foote
  *   `onStep`: lets the user go back to a finished step. A step's own `state` wins over `current` (a process that
  *   reports each step, one of which may have failed).
  */
-export function Stepper({ steps = [], current = 0, onStep, vertical = false, className, ...rest }) {
+export function Stepper({
+    steps = [],
+    current = 0,
+    onStep,
+    vertical = false,
+    className,
+    ...rest
+}: {
+    steps: { label: any; description?: any; state?: "done" | "current" | "todo" | "failed"; key?: any }[]
+    current?: number
+    onStep?: (index: number) => void
+    vertical?: boolean
+    className?: string
+}) {
     return (
         <ol className={cx("dr-stepper", vertical && "dr-stepper--vertical", className)} {...rest}>
             {steps.map((step, index) => {
@@ -686,7 +817,14 @@ export function Stepper({ steps = [], current = 0, onStep, vertical = false, cla
 /**
  * @param {{ items: { label: any, onClick?: () => void, href?: string }[], className?: string }} props
  */
-export function Breadcrumbs({ items = [], className, ...rest }) {
+export function Breadcrumbs({
+    items = [],
+    className,
+    ...rest
+}: {
+    items: { label: any; onClick?: () => void; href?: string }[]
+    className?: string
+}) {
     return (
         <nav className={cx("dr-breadcrumbs", className)} aria-label="Breadcrumb" {...rest}>
             {items.map((item, index) => {
@@ -757,7 +895,25 @@ export function fuzzyScore(query, text) {
  * @param {{ open: boolean, onClose: () => void, commands: { id: string, label: string, group?: string, shortcut?: string,
  *   icon?: string, keywords?: string, run: () => void }[], placeholder?: string }} props
  */
-export function CommandPalette({ open, onClose, commands = [], placeholder = "Type a command…" }) {
+export function CommandPalette({
+    open,
+    onClose,
+    commands = [],
+    placeholder = "Type a command…",
+}: {
+    open: boolean
+    onClose: () => void
+    commands: {
+        id: string
+        label: string
+        group?: string
+        shortcut?: string
+        icon?: string
+        keywords?: string
+        run: () => void
+    }[]
+    placeholder?: string
+}) {
     const [query, setQuery] = useState("")
     const [active, setActive] = useState(0)
     const input = useRef(null)

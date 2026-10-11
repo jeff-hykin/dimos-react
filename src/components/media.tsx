@@ -219,6 +219,28 @@ export function ImageView({
     style,
     children,
     ...rest
+}: {
+    topic?: string | null
+    frame?: any
+    encoding?: string
+    maxHz?: number
+    depth?: boolean
+    colormap?: string
+    near?: number | null
+    far?: number | null
+    fit?: "contain" | "cover"
+    overlayTopic?: string | null
+    onInfo?: (info: {
+        width: number
+        height: number
+        fps: number
+        quality: string
+        depth: boolean
+        range: [number, number] | null
+    }) => void
+    className?: string
+    style?: object
+    children?: any
 }) {
     const source = useDataSource()
     const canvas = useRef(null)
@@ -497,6 +519,43 @@ export function PlaybackBar({
     className,
     style,
     ...rest
+}: {
+    start: number
+    end: number
+    value: number
+    playing?: boolean
+    onPlayPause?: (playing: boolean) => void
+    onSeek?: (t: number) => void
+    onScrubStart?: () => void
+    onScrubEnd?: () => void
+    scrubbing?: boolean
+    speed?: number
+    speeds?: number[]
+    onSpeedChange?: (speed: number) => void
+    loop?: boolean
+    onLoopChange?: (loop: boolean) => void
+    format?: (t: number) => string
+    lanes?: {
+        id: string
+        label: any
+        title?: string
+        meta?: any
+        count?: any
+        leading?: any
+        menu?: any[]
+        active?: boolean
+        busy?: boolean
+        ticks?: { times?: number[]; counts?: number[] } | null
+    }[]
+    lanesLabel?: string
+    expanded?: boolean
+    onExpandedChange?: (expanded: boolean) => void
+    view?: { from: number; to: number }
+    onViewChange?: (view: { from: number; to: number }) => void
+    keyboard?: boolean
+    controls?: any
+    className?: string
+    style?: object
 }) {
     const [innerView, setInnerView] = useState({ from: start, to: end })
     const view = givenView ?? innerView

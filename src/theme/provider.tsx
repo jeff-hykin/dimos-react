@@ -37,7 +37,21 @@ const ThemeContext = createContext({
  *   `skin` / `corners`: pin them (default: Desktop's saved choice, followed live). `themeUrl`: Desktop's tokens
  *   stylesheet (default /theme.css on Desktop, the bundled copy elsewhere). `global`: style <body> too (default true).
  */
-export function DimThemeProvider({ skin, corners, themeUrl, bundled, global = true, children }) {
+export function DimThemeProvider({
+    skin,
+    corners,
+    themeUrl,
+    bundled,
+    global = true,
+    children,
+}: {
+    skin?: string
+    corners?: "sharp" | "rounded" | "theme"
+    themeUrl?: string
+    bundled?: boolean
+    global?: boolean
+    children?: any
+}) {
     const [desktop, setDesktop] = useState(() => ({
         skin: typeof window === "undefined" ? "portal" : desktopSkin(),
         corners: typeof window === "undefined" ? "theme" : desktopCorners(),

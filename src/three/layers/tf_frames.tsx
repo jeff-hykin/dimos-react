@@ -26,6 +26,8 @@ export class TfFramesLayer {
     #fixedFrame = ""
     #colors = null
     #unsubscribe
+    settings: any
+    context: any
 
     constructor(context, settings) {
         this.context = context

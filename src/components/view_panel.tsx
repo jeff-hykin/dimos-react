@@ -203,7 +203,42 @@ export function ViewPanel({
     title,
     wrapHead = false,
     ...rest
-}) {
+}: {
+    placement: "float" | "dock" | "main"
+    dock?: {
+        region: string
+        rect: {
+            x: number
+            y: number
+            width: number
+            height: number
+        } | null
+        maximized: boolean
+        onMaximize: () => void
+        tiles?: {
+            order: string[]
+            onOrder: (order: string[]) => void
+        }
+    } | null
+    head: any
+    children?: any
+    className?: string
+    style?: object
+    bodyClassName?: string
+    bodyOnClick?: () => void
+    onHeadDoubleClick?: () => void
+    onMove?: (x: number, y: number) => void
+    top?: number
+    resize?: {
+        corner: "left" | "right"
+        minimum: { width: number; height: number }
+        aspect?: number
+        onDone: (box: object) => void
+    } | null
+    panelRef?: any
+    title?: string
+    wrapHead?: boolean
+} & Record<string, any>) {
     const element = useRef(null)
     const setRef = (node) => {
         element.current = node

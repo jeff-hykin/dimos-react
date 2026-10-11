@@ -49,6 +49,8 @@ export class BoxLayer {
     #data = null
     #placed = ""
     #fills = new THREE.Group()
+    settings: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

@@ -210,7 +210,7 @@ let defaultSource = null
  * Makes `source` the data source of everything below.
  * @param {Record<string, any>} props
  */
-export function DataSourceProvider({ source, children }) {
+export function DataSourceProvider({ source, children }: Record<string, any>) {
     return createElement(DataSourceContext.Provider, { value: source }, children)
 }
 
@@ -218,7 +218,7 @@ export function DataSourceProvider({ source, children }) {
  * DataSourceProvider with the live zenoh-gateway source (props go to getZenoh on first use).
  * @param {Record<string, any>} props
  */
-export function ZenohProvider({ children, ...options }) {
+export function ZenohProvider({ children, ...options }: Record<string, any>) {
     const source = useMemo(() => zenohSource(options), [])
     return createElement(DataSourceContext.Provider, { value: source }, children)
 }
@@ -242,7 +242,19 @@ export function useZenoh() {
  * @param {{ decode?: string | Function, type?: string, delivery?: "latest" | "reliable", maxHz?: number,
  *   encoding?: string, encodeOptions?: object, minQuality?: number }} [options]
  */
-export function useSubscription(key, onMessage, options = {}) {
+export function useSubscription(
+    key: string | null,
+    onMessage: (value: any, message: any) => void,
+    options: {
+        decode?: string | Function
+        type?: string
+        delivery?: "latest" | "reliable"
+        maxHz?: number
+        encoding?: string
+        encodeOptions?: object
+        minQuality?: number
+    } = {},
+) {
     const source = useDataSource()
     const callback = useRef(onMessage)
     callback.current = onMessage
@@ -270,7 +282,7 @@ export function useSubscription(key, onMessage, options = {}) {
  * The latest message on a topic, re-rendered per message (throttle with `maxHz`).
  * @returns {{ value: any, message: any, timestamp: number | null, count: number }}
  */
-export function useTopic(key, options = {}) {
+export function useTopic(key, options = {}): { value: any; message: any; timestamp: number | null; count: number } {
     const [latest, setLatest] = useState({ value: options.initial, message: null, timestamp: null, count: 0 })
     useEffect(() => setLatest({ value: options.initial, message: null, timestamp: null, count: 0 }), [key])
     useSubscription(
@@ -377,7 +389,10 @@ export function useBackendEvents(onEvent, { topic = "events", onReconnect } = {}
  * backend's stateChanged(key) announces a change on the frontend topic `state/<key>`, and after a reconnect.
  * @returns {[any, { loading: boolean, error: Error | null, refresh: () => Promise<void> }]}
  */
-export function useBackendState(key, { url, topic, initial, debounceMs = 100, fetch: fetchImpl } = {}) {
+export function useBackendState(
+    key,
+    { url, topic, initial, debounceMs = 100, fetch: fetchImpl } = {},
+): [any, { loading: boolean; error: Error | null; refresh: () => Promise<void> }] {
     const source = useDataSource()
     const [snapshot, setSnapshot] = useState({ data: initial, loading: true, error: null })
     const href = url ?? `api/state/${key}` // dimos-yaml-check: ignore (an app that calls useBackendState lists it)

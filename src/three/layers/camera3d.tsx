@@ -54,6 +54,9 @@ export class Camera3dLayer {
     #videoCallback = 0
     #lastShape = ""
     #checkedInfoAt = 0
+    settings: any
+    topic: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

@@ -18,9 +18,12 @@ export class FrameHighlighter {
     #axes
     #halo
     #label = new LabelPool("dr-scene-label dr-highlight")
+    onPlaced: (placed: boolean) => void
+    tf: any
+    viewer: any
 
     /** @param {(placed: boolean) => void} [onPlaced] */
-    constructor(viewer, tf, onPlaced) {
+    constructor(viewer, tf, onPlaced: (placed: boolean) => void) {
         this.viewer = viewer
         this.tf = tf
         this.onPlaced = onPlaced

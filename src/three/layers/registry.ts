@@ -34,10 +34,10 @@ import { decodeMessage } from "../../data"
  */
 
 /** @type {LayerType[]} */
-const layerTypes = []
+const layerTypes: LayerType[] = []
 
 /** Registers a layer type (replacing one with the same id). @param {LayerType} type */
-export function registerLayer(type) {
+export function registerLayer(type: LayerType) {
     const existing = layerTypes.findIndex((other) => other.id === type.id)
     if (existing >= 0) {
         layerTypes.splice(existing, 1)
@@ -59,7 +59,7 @@ export function layerTypeFor(messageType) {
 export const layerTypeById = (id) => layerTypes.find((type) => type.id === id)
 
 /** @returns {readonly LayerType[]} */
-export function allLayerTypes() {
+export function allLayerTypes(): readonly LayerType[] {
     return layerTypes
 }
 
@@ -69,10 +69,10 @@ export function defaultSettings(type, topic) {
 }
 
 /** @type {OverlayType[]} */
-const overlayTypes = []
+const overlayTypes: OverlayType[] = []
 
 /** Registers a 2D overlay drawn over camera images (e.g. Detection2DArray boxes). @param {OverlayType} type */
-export function registerOverlay(type) {
+export function registerOverlay(type: OverlayType) {
     const existing = overlayTypes.findIndex((other) => other.id === type.id)
     if (existing >= 0) {
         overlayTypes.splice(existing, 1)
@@ -117,7 +117,12 @@ export function placeLayer(context, object, frame, fixedFrame) {
  * counted into the layer's status.
  * @param {{ maxHz?: number, reliable?: boolean, decodeAs?: string }} options
  */
-export function subscribeDecoded(context, topic, options, onMessage) {
+export function subscribeDecoded(
+    context,
+    topic,
+    options: { maxHz?: number; reliable?: boolean; decodeAs?: string },
+    onMessage,
+) {
     let failures = 0
     return context.source.subscribe(
         topic.key,
@@ -147,7 +152,7 @@ export function rgba(color) {
  */
 export class RobotPose {
     /** @type {THREE.Matrix4 | null} */
-    matrix = null
+    matrix: THREE.Matrix4 | null = null
     source = null
     report(source, matrix) {
         if (this.source === null || this.source === source) {

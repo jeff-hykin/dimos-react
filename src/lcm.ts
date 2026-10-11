@@ -3,12 +3,15 @@
 import schemaJson from "./vendor/lcm_schemas.js"
 
 /** @type {Record<string, { name: string, type: string, dims: (number | string)[] }[]>} */
-export const schemas = schemaJson
+export const schemas: Record<string, { name: string; type: string; dims: (number | string)[] }[]> = schemaJson
 
 const textDecoder = new TextDecoder()
 const textEncoder = new TextEncoder()
 
 class Reader {
+    offset: any
+    view: DataView<any>
+    bytes: any
     constructor(bytes, offset) {
         this.bytes = bytes
         this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)

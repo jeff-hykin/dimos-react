@@ -37,6 +37,7 @@ export class LabeledPoints {
     /** props data: `[{ label, position: [x, y, z], frame, color }]`, each placed through TF every frame */
     #data = null
     #placed = ""
+    context: any
 
     constructor(context, topic) {
         this.context = context

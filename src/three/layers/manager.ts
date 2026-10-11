@@ -13,7 +13,7 @@ import { defaultSettings, layerTypeFor } from "./registry"
 
 export class LayerManager {
     /** @type {Store<{ list: LayerEntry[] }>} */
-    entries = new Store({ list: [] })
+    entries: Store<{ list: LayerEntry[] }> = new Store({ list: [] })
     /** every topic seen (drawn or not), sorted by name */
     topics = new Store({ list: [] })
     /** the 3D view is off: no layer runs (nothing subscribed); the switches keep what to start again */
@@ -22,12 +22,24 @@ export class LayerManager {
     #persist
     #prefix
     #lastSeen = new Map()
+    forgetMs: number
+    source: any
 
     /**
      * @param {{ source: any, persist?: (key: string, defaults: object) => Store<any>, storagePrefix?: string,
      *   forgetMs?: number }} options
      */
-    constructor({ source, persist = localStore, storagePrefix = "dimos-react.layers", forgetMs = 20000 }) {
+    constructor({
+        source,
+        persist = localStore,
+        storagePrefix = "dimos-react.layers",
+        forgetMs = 20000,
+    }: {
+        source: any
+        persist?: (key: string, defaults: object) => Store<any>
+        storagePrefix?: string
+        forgetMs?: number
+    }) {
         this.source = source
         this.#persist = persist
         this.#prefix = storagePrefix

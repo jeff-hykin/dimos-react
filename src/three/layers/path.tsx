@@ -31,6 +31,8 @@ export class PathLayer {
     #frame = null
     #points = []
     #timestamp = 0
+    settings: any
+    context: any
 
     constructor(context, topic, settings) {
         this.context = context

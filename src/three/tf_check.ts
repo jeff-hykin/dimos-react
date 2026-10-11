@@ -20,7 +20,17 @@ const seconds = (ms) => `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} s`
  *   it can be placed in the fixed frame (tf.lookup(frame, fixedFrame) !== null)
  * @returns {TfIssue[]}
  */
-export function checkTf({ snapshot, fixedFrame, layers = [], placed }) {
+export function checkTf({
+    snapshot,
+    fixedFrame,
+    layers = [],
+    placed,
+}: {
+    snapshot: any
+    fixedFrame: string
+    layers?: { name: string; frame: string }[]
+    placed: (frame: string) => boolean
+}): TfIssue[] {
     const { edges, problems } = snapshot
     const issues = []
     const cycle = [...problems.cycle].sort()

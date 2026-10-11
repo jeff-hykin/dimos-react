@@ -68,6 +68,30 @@ export function Table({
     className,
     style,
     ...rest
+}: {
+    columns: {
+        key: string
+        label?: any
+        render?: (row: any, index: number) => any
+        sort?: boolean | ((a: any, b: any) => number)
+        align?: "left" | "right" | "center"
+        width?: string | number
+        value?: (row: any) => any
+    }[]
+    rows: any[]
+    rowKey?: string | ((row: any, index: number) => any)
+    sort?: { key: string; dir: "asc" | "desc" } | null
+    onSortChange?: (sort: any) => void
+    defaultSort?: any
+    onRowClick?: (row: any, index: number) => void
+    selected?: any
+    empty?: any
+    sticky?: boolean
+    compact?: boolean
+    maxHeight?: string | number
+    sortRows?: boolean
+    className?: string
+    style?: object
 }) {
     const [currentSort, setSort] = useControllable(sort, defaultSort, onSortChange)
     const sorted = useMemo(() => {
@@ -190,6 +214,16 @@ export function Tree({
     renderLabel,
     className,
     ...rest
+}: {
+    nodes: { id: string; label?: any; children?: any[]; icon?: string; badge?: any }[]
+    expanded?: string[]
+    defaultExpanded?: string[] | "all"
+    onExpandedChange?: (ids: string[]) => void
+    selected?: string | null
+    onSelect?: (id: string, node: any) => void
+    renderLabel?: (node: any) => any
+    className?: string
+    style?: object
 }) {
     const allIds = useMemo(() => {
         const ids = []
@@ -260,7 +294,7 @@ export function Tree({
  * One label / value row.
  * @param {Record<string, any>} props
  */
-export function KeyValueRow({ label, children, mono = true, className, ...rest }) {
+export function KeyValueRow({ label, children, mono = true, className, ...rest }: Record<string, any>) {
     return (
         <div className={cx("dr-kv__row", className)} {...rest}>
             <span className="dr-kv__key">{label}</span>
@@ -273,7 +307,18 @@ export function KeyValueRow({ label, children, mono = true, className, ...rest }
  * Label / value readout rows.
  * @param {{ items?: [any, any][], children?: any, mono?: boolean, className?: string }} props
  */
-export function KeyValue({ items, children, mono = true, className, ...rest }) {
+export function KeyValue({
+    items,
+    children,
+    mono = true,
+    className,
+    ...rest
+}: {
+    items?: [any, any][]
+    children?: any
+    mono?: boolean
+    className?: string
+}) {
     return (
         <div className={cx("dr-kv", className)} {...rest}>
             {items?.map(([label, value], index) => (
@@ -291,7 +336,24 @@ export function KeyValue({ items, children, mono = true, className, ...rest }) {
  * @param {{ label: any, value: any, unit?: any, delta?: number | string, tone?: "ok" | "warn" | "danger" | "info",
  *   hint?: any, className?: string }} props
  */
-export function Stat({ label, value, unit, delta, tone, hint, className, ...rest }) {
+export function Stat({
+    label,
+    value,
+    unit,
+    delta,
+    tone,
+    hint,
+    className,
+    ...rest
+}: {
+    label: any
+    value: any
+    unit?: any
+    delta?: number | string
+    tone?: "ok" | "warn" | "danger" | "info"
+    hint?: any
+    className?: string
+}) {
     const deltaTone = typeof delta === "number" ? (delta > 0 ? "up" : delta < 0 ? "down" : "flat") : "flat"
     return (
         <div className={cx("dr-stat", tone && `dr-stat--${tone}`, className)} {...rest}>
@@ -316,7 +378,7 @@ export function Stat({ label, value, unit, delta, tone, hint, className, ...rest
  * A vertical list of ListRows.
  * @param {Record<string, any>} props
  */
-export function List({ children, className, divided = true, ...rest }) {
+export function List({ children, className, divided = true, ...rest }: Record<string, any>) {
     return (
         <div className={cx("dr-list", divided && "dr-list--divided", className)} role="list" {...rest}>
             {children}
@@ -342,6 +404,17 @@ export function ListRow({
     disabled,
     className,
     ...rest
+}: {
+    icon?: string | any
+    title: any
+    subtitle?: any
+    meta?: any
+    actions?: any
+    selected?: boolean
+    onClick?: (event: any) => void
+    handle?: boolean | object
+    disabled?: boolean
+    className?: string
 }) {
     return (
         <div
@@ -420,6 +493,16 @@ export function LogView({
     className,
     style,
     ...rest
+}: {
+    lines: (string | { text: string; level?: "debug" | "info" | "warn" | "error"; ts?: any })[]
+    filter?: string
+    maxLines?: number
+    follow?: boolean
+    height?: string | number
+    showTime?: boolean
+    wrap?: boolean
+    className?: string
+    style?: object
 }) {
     const box = useRef(null)
     const [atEnd, setAtEnd] = useState(true)
@@ -542,6 +625,15 @@ export function CodeBlock({
     className,
     style,
     ...rest
+}: {
+    code: string
+    language?: string
+    lineNumbers?: boolean
+    copy?: boolean
+    title?: any
+    maxHeight?: string | number
+    className?: string
+    style?: object
 }) {
     const [copied, setCopied] = useState(false)
     const lines = String(code).replace(/\n$/, "").split("\n")
@@ -605,6 +697,13 @@ export function AttitudeIndicator({
     pitchScale = 1.4,
     className,
     ...rest
+}: {
+    roll?: number | null
+    pitch?: number | null
+    yaw?: number | null
+    height?: number
+    pitchScale?: number
+    className?: string
 }) {
     const deg = (radians) => (radians * 180) / Math.PI
     const known = roll !== null && pitch !== null
@@ -649,6 +748,17 @@ export function Sparkline({
     className,
     title,
     ...rest
+}: {
+    values: number[]
+    width?: number
+    height?: number
+    color?: string
+    fill?: boolean
+    min?: number
+    max?: number
+    strokeWidth?: number
+    className?: string
+    title?: string
 }) {
     const finite = values.filter(Number.isFinite)
     const low = min ?? Math.min(...finite, 0)
@@ -715,6 +825,19 @@ export function Timeline({
     className,
     style,
     ...rest
+}: {
+    start?: number
+    end: number
+    value: number
+    onChange?: (t: number) => void
+    playing?: boolean
+    onPlayPause?: (playing: boolean) => void
+    markers?: { t: number; label?: string; tone?: "ok" | "warn" | "danger" | "info" }[]
+    format?: (t: number) => string
+    step?: number
+    disabled?: boolean
+    className?: string
+    style?: object
 }) {
     const track = useRef(null)
     const show = format ?? ((t) => formatDuration(t - start))
@@ -820,6 +943,16 @@ export function MediaFrame({
     className,
     style,
     ...rest
+}: {
+    stream?: MediaStream | null
+    src?: string | null
+    alt?: string
+    fit?: "contain" | "cover"
+    height?: string | number
+    placeholder?: any
+    ref?: any
+    className?: string
+    style?: object
 }) {
     const element = useRef(null)
     const [playing, setPlaying] = useState(false)

@@ -16,6 +16,7 @@ import {
     LogView,
     Markdown,
     MediaFrame,
+    SafeHtml,
     Sparkline,
     Stat,
     Table,
@@ -269,6 +270,14 @@ export function DataSection() {
             ),
         ),
         h(Card, { title: "Markdown" }, h(Markdown, { text: MARKDOWN })),
+        h(
+            Card,
+            { title: "SafeHtml (a server's rendered doc, sanitized)" },
+            h(SafeHtml, {
+                html:
+                    `<h2>Custom robots</h2><p>Write a <code>Module</code> and a blueprint; see <a href="https://dimensionalos.com">the docs</a>.</p><pre>robot ──▶ blueprint</pre><script>alert(1)</script><p onclick="alert(2)">No handlers survive.</p>`,
+            }),
+        ),
         h(
             Card,
             { title: "LiveValue (flashes on change)" },

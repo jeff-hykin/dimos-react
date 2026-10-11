@@ -1,5 +1,5 @@
 // Text display: a safe Markdown renderer (docs from manifests / OpenAPI) and a live number that flashes on change.
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { cx, h } from "../h.js"
 import { Table } from "./data.js"
 
@@ -154,4 +154,60 @@ export function LiveValue({ value, format = String, className, ...rest }) {
         className: cx("dr-live-value", flash && "dr-live-value--flash", className),
         ...rest,
     }, format(value))
+}
+
+/** Box-drawing characters as ASCII: the themes' mono faces have no box-drawing glyphs (they'd fall back to a system
+ * font and misalign diagrams). */
+const BOX_ASCII = [
+    [/[─━═╌╍┄┅]/g, "-"],
+    [/[│┃║╎╏┆┇]/g, "|"],
+    [/[┌┐└┘├┤┬┴┼╔╗╚╝╠╣╦╩╬╭╮╯╰┏┓┗┛┣┫┳┻╋]/g, "+"],
+    [/[▶►→]/g, ">"],
+    [/[◀◄←]/g, "<"],
+    [/[▼↓]/g, "v"],
+    [/[▲↑]/g, "^"],
+]
+
+/**
+ * `html` without what runs or restyles: scripts, styles, frames, forms, `on*` handlers, `javascript:` URLs and inline
+ * styles go; links open in a new tab; box-drawing in <pre> becomes ASCII. Browser only (DOMParser).
+ */
+export function sanitizeHtml(html) {
+    const page = new DOMParser().parseFromString(String(html ?? ""), "text/html")
+    for (const block of page.querySelectorAll("pre")) {
+        const walker = page.createTreeWalker(block, NodeFilter.SHOW_TEXT)
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            node.textContent = BOX_ASCII.reduce((text, [from, to]) => text.replace(from, to), node.textContent ?? "")
+        }
+    }
+    for (const node of page.querySelectorAll("script, style, iframe, object, embed, form, link, meta, base")) {
+        node.remove()
+    }
+    for (const element of page.body.querySelectorAll("*")) {
+        for (const attribute of [...element.attributes]) {
+            const value = attribute.value.trim().toLowerCase()
+            if (attribute.name.startsWith("on") || attribute.name === "style" || value.startsWith("javascript:")) {
+                element.removeAttribute(attribute.name)
+            }
+        }
+        if (element.tagName === "A") {
+            element.setAttribute("target", "_blank")
+            element.setAttribute("rel", "noopener noreferrer")
+        }
+    }
+    return page.body.innerHTML
+}
+
+/**
+ * HTML a server rendered (a doc page, a README), sanitized (sanitizeHtml) and set in the theme's prose type (the same
+ * as Markdown's).
+ * @param {{ html?: string, className?: string }} props
+ */
+export function SafeHtml({ html, className, ...rest }) {
+    const clean = useMemo(() => (html ? sanitizeHtml(html) : ""), [html])
+    return h("div", {
+        className: cx("dr-md", "dr-prose", className),
+        dangerouslySetInnerHTML: { __html: clean },
+        ...rest,
+    })
 }

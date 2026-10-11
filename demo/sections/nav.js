@@ -7,6 +7,7 @@ import {
     Card,
     CommandPalette,
     ContextMenu,
+    Label,
     Menu,
     MenuAt,
     NavRail,
@@ -253,6 +254,17 @@ export function NavSection() {
                 vertical: true,
                 steps: [{ label: "Upload map", description: "office.pcd" }, { label: "Slice" }],
                 current: 1,
+            }),
+            h("div", { style: { height: 14 } }),
+            h(Label, null, "Each step's own state (a process: a launch, an install)"),
+            h(Stepper, {
+                vertical: true,
+                steps: [
+                    { label: "Read the blueprint", state: "done" },
+                    { label: "Download the recording", description: "412 MB of 1.2 GB", state: "done" },
+                    { label: "Start the modules", description: "No module named 'mujoco'", state: "failed" },
+                    { label: "Connect", state: "todo" },
+                ],
             }),
         ),
         h(

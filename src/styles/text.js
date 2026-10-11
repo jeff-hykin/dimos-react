@@ -25,6 +25,29 @@ export const TEXT_CSS = /* css */ `
 .dr-md__table { margin: 0 0 10px; }
 .dr-md--inline, .dr-md--inline p { display: inline; margin: 0; }
 
+/* server-rendered HTML (SafeHtml): the same prose, for plain tags */
+.dr-prose h1, .dr-prose h2, .dr-prose h3, .dr-prose h4 { margin: 16px 0 8px; color: var(--fg); font-weight: 600; line-height: 1.3; }
+.dr-prose h1 { font-size: 20px; }
+.dr-prose h2 { font-size: 16px; }
+.dr-prose h3, .dr-prose h4 { font-size: 14px; }
+.dr-prose a { color: var(--primary); }
+.dr-prose code { font: 12px var(--mono); padding: 1px 4px; background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius-sm); }
+.dr-prose pre {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font: 12px/1.5 var(--mono);
+    overflow: auto;
+}
+.dr-prose pre code { padding: 0; background: none; }
+.dr-prose table { border-collapse: collapse; margin: 0 0 10px; }
+.dr-prose th, .dr-prose td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
+.dr-prose img { max-width: 100%; }
+.dr-prose blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 2px solid var(--border-strong); color: var(--muted-fg); }
+
 /* live value */
 .dr-live-value { font-variant-numeric: tabular-nums; border-radius: 3px; }
 .dr-live-value--flash { animation: dr-live-flash 0.9s ease-out; }

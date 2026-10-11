@@ -1,6 +1,6 @@
 // Buttons, form controls, badges and status dots. Every control takes `value` + `onChange(value)` (the value, not the
 // event), plus `className`, `style` and any other DOM props for its root.
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"
 import { cx, h } from "../h.js"
 import { Icon } from "./icon.js"
 
@@ -590,6 +590,67 @@ export function Chip({ selected, onChange, onRemove, icon, tone, className, chil
                 },
             }, h(Icon, { name: "close", size: 11 }))
             : null,
+    )
+}
+
+/**
+ * A row of read-only tags (a blueprint's modules, a message's topics). `items`: strings or { label, tone, title, key }.
+ * `oneLine` keeps them on one line: as many as fit, then a "+N" tag whose title lists the rest. `extra` goes after them
+ * (always shown).
+ * @param {{ items: (string | { label: any, tone?: string, title?: string, key?: any })[], oneLine?: boolean,
+ *   extra?: any, className?: string }} props
+ */
+export function TagList({ items = [], oneLine = false, extra, className, ...rest }) {
+    const tags = items.map((item) => (typeof item === "object" && item !== null ? item : { label: item }))
+    const box = useRef(null)
+    const [fits, setFits] = useState(tags.length)
+    const signature = tags.map((tag) => String(tag.key ?? tag.label)).join("\u0000")
+    useLayoutEffect(() => {
+        const element = box.current
+        if (!oneLine || !element) {
+            return
+        }
+        // every tag laid out, then keep those that fit beside a "+N"
+        const measure = () => {
+            const shown = [...element.querySelectorAll(":scope > .dr-tag-item")]
+            const room = element.clientWidth - 44
+            const count = shown.findIndex((tag) => tag.offsetLeft - element.offsetLeft + tag.offsetWidth > room)
+            setFits(count < 0 ? tags.length : Math.max(1, count))
+        }
+        let frame = 0
+        const again = () => {
+            setFits(tags.length)
+            cancelAnimationFrame(frame)
+            frame = requestAnimationFrame(measure)
+        }
+        again()
+        const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(again)
+        observer?.observe(element)
+        return () => {
+            cancelAnimationFrame(frame)
+            observer?.disconnect()
+        }
+    }, [signature, oneLine])
+    const shown = oneLine ? tags.slice(0, fits) : tags
+    const hidden = oneLine ? tags.slice(fits) : []
+    return h(
+        "span",
+        { ref: box, className: cx("dr-tags", oneLine && "dr-tags--one-line", className), ...rest },
+        shown.map((tag, index) =>
+            h(Badge, {
+                key: tag.key ?? `${index}:${tag.label}`,
+                tone: tag.tone ?? "default",
+                title: tag.title,
+                className: "dr-tag-item",
+            }, tag.label)
+        ),
+        hidden.length
+            ? h(Badge, {
+                className: "dr-tag-more",
+                title: hidden.map((tag) => (typeof tag.label === "string" ? tag.label : "")).join(", "),
+            }, `+${hidden.length}`)
+            : null,
+        extra,
     )
 }
 

@@ -593,23 +593,25 @@ export function NavRail({ items = [], value, onChange, showLabels = false, foote
 // ── Stepper ──
 
 /**
- * Wizard steps.
- * @param {{ steps: { label: any, description?: any }[], current: number, onStep?: (index: number) => void,
- *   vertical?: boolean, className?: string }} props
- *   `onStep`: lets the user go back to a finished step
+ * Wizard steps, or a process's progress (a launch, an install).
+ * @param {{ steps: { label: any, description?: any, state?: "done" | "current" | "todo" | "failed", key?: any }[],
+ *   current?: number, onStep?: (index: number) => void, vertical?: boolean, className?: string }} props
+ *   `onStep`: lets the user go back to a finished step. A step's own `state` wins over `current` (a process that
+ *   reports each step, one of which may have failed).
  */
 export function Stepper({ steps = [], current = 0, onStep, vertical = false, className, ...rest }) {
     return h(
         "ol",
         { className: cx("dr-stepper", vertical && "dr-stepper--vertical", className), ...rest },
         steps.map((step, index) => {
-            const state = index < current ? "done" : index === current ? "current" : "todo"
+            const state = step.state ?? (index < current ? "done" : index === current ? "current" : "todo")
             const clickable = onStep && index < current
             return h(
                 "li",
                 {
-                    key: index,
+                    key: step.key ?? index,
                     className: cx("dr-stepper__step", `dr-stepper__step--${state}`),
+                    "data-state": state,
                     "aria-current": state === "current" ? "step" : undefined,
                 },
                 h(
@@ -619,7 +621,7 @@ export function Stepper({ steps = [], current = 0, onStep, vertical = false, cla
                         type: clickable ? "button" : undefined,
                         onClick: clickable ? () => onStep(index) : undefined,
                     },
-                    state === "done" ? h(Icon, { name: "check", size: 12 }) : index + 1,
+                    state === "done" ? h(Icon, { name: "check", size: 12 }) : state === "failed" ? "!" : index + 1,
                 ),
                 h(
                     "span",

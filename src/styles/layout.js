@@ -143,4 +143,38 @@ export const LAYOUT_CSS = /* css */ `
 .dr-resize-handle--bottom-right::before { right: 4px; border-right: 2px solid color-mix(in srgb, var(--fg) 55%, transparent); }
 .dr-resize-handle--bottom-left::before { left: 4px; border-left: 2px solid color-mix(in srgb, var(--fg) 55%, transparent); }
 .dr-resize-handle:hover::before, .dr-resize-handle:active::before { opacity: 1; border-color: var(--fg); }
+
+/* tiles */
+.dr-tile-grid { display: grid; gap: 10px; }
+.dr-tile {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 0;
+    padding: 16px 12px 14px;
+    font: inherit;
+    text-align: center;
+    color: var(--fg);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.dr-tile:hover:not(:disabled) { border-color: var(--border-strong); background: var(--hover); }
+.dr-tile:focus-visible { outline: none; box-shadow: var(--dr-focus); }
+.dr-tile:active:not(:disabled) { transform: translateY(1px); }
+.dr-tile:disabled { opacity: 0.5; cursor: default; }
+.dr-tile--selected { border-color: var(--primary); background: var(--sel); }
+.dr-tile--loading { cursor: default; }
+.dr-tile__media { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; color: var(--primary); }
+.dr-tile__media img { max-width: 100%; max-height: 100%; }
+.dr-tile__title { font-size: 13.5px; font-weight: 500; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dr-tile__subtitle { font-size: 12px; color: var(--muted-fg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dr-tile__bar { display: block; width: 70%; height: 12px; }
+.dr-tile__bar--short { width: 45%; }
 `

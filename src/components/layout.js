@@ -440,3 +440,52 @@ export function AppShell({ topBar, sidebar, bottomBar, insetBottom = false, clas
 export function Embed({ title, className, ...rest }) {
     return h("iframe", { title, className: cx("dr-embed", className), ...rest })
 }
+
+/**
+ * A big selectable card (a picker's choice: a robot, a template, a recording). A button: `onClick`, `selected`,
+ * `disabled`. `media` (an image, an icon element) or `icon` (an Icon name) on top, then `title` and `subtitle`. With
+ * `loading` it is a placeholder (no click).
+ * @param {{ title?: any, subtitle?: any, media?: any, icon?: string, selected?: boolean, loading?: boolean,
+ *   onClick?: (event: any) => void, disabled?: boolean, className?: string }} props
+ */
+export function Tile({ title, subtitle, media, icon, selected, loading = false, className, children, ...rest }) {
+    if (loading) {
+        return h(
+            "div",
+            { className: cx("dr-tile", "dr-tile--loading", className), "aria-hidden": true },
+            h("span", { className: "dr-tile__media dr-skeleton" }),
+            h("span", { className: "dr-tile__bar dr-skeleton" }),
+            h("span", { className: "dr-tile__bar dr-tile__bar--short dr-skeleton" }),
+        )
+    }
+    return h(
+        "button",
+        {
+            type: "button",
+            className: cx("dr-tile", selected && "dr-tile--selected", className),
+            "aria-pressed": selected === undefined ? undefined : !!selected,
+            ...rest,
+        },
+        media || icon ? h("span", { className: "dr-tile__media" }, media ?? h(Icon, { name: icon, size: 40 })) : null,
+        title ? h("span", { className: "dr-tile__title" }, title) : null,
+        subtitle ? h("span", { className: "dr-tile__subtitle" }, subtitle) : null,
+        children,
+    )
+}
+
+/** Tiles in a responsive grid: as many columns of at least `min` px as fit. */
+export function TileGrid({ min = 150, className, style, children, ...rest }) {
+    return h(
+        "div",
+        {
+            role: "list",
+            className: cx("dr-tile-grid", className),
+            style: {
+                gridTemplateColumns: `repeat(auto-fill, minmax(${typeof min === "number" ? `${min}px` : min}, 1fr))`,
+                ...style,
+            },
+            ...rest,
+        },
+        children,
+    )
+}

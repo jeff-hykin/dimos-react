@@ -303,6 +303,11 @@ export const CONTROLS_CSS = /* css */ `
 .dr-chip-remove { display: inline-flex; padding: 1px; margin-right: -3px; border: 0; background: none; color: inherit; cursor: pointer; opacity: 0.7; border-radius: var(--radius-sm); }
 .dr-chip-remove:hover { opacity: 1; background: var(--hover); }
 
+/* tag lists */
+.dr-tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; align-items: center; }
+.dr-tags--one-line { flex-wrap: nowrap; overflow: hidden; }
+.dr-tags--one-line > * { flex: none; }
+
 /* status dots */
 .dr-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: var(--radius-round); background: var(--ok); color: var(--ok); vertical-align: middle; }
 .dr-dot--ok { background: var(--ok); color: var(--ok); }

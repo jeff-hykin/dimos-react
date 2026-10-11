@@ -48,9 +48,12 @@ import {
     Spinner,
     SplitPane,
     StatusDot,
+    TagList,
     Text,
     TextArea,
     TextInput,
+    Tile,
+    TileGrid,
     Toggle,
     Toolbar,
     TopBar,
@@ -293,6 +296,21 @@ function ControlsSection() {
                 h(ConnectionStatus, { state: "connecting" }),
                 h(ConnectionStatus, { state: "lost", label: "robot offline" }),
             ),
+            h(Label, null, "TagList (oneLine: as many as fit, then +N)"),
+            h(TagList, {
+                oneLine: true,
+                items: [
+                    "GO2Connection",
+                    "VoxelGridMapper",
+                    "CostMapper",
+                    "ReplanningAStarPlanner",
+                    "WavefrontFrontierExplorer",
+                    "Rerun",
+                    "WebsocketVis",
+                ],
+                extra: h(Badge, { tone: "warn" }, "hidden"),
+            }),
+            h(TagList, { items: [{ label: "Doesn't load (yet)", tone: "danger", title: "No module named 'mujoco'" }] }),
         ),
     )
 }
@@ -409,6 +427,7 @@ function FeedbackSection() {
 }
 
 function LayoutSection() {
+    const [tile, setTile] = useState("Go2")
     const [floating, setFloating] = useState(false)
     return h(
         Column,
@@ -507,6 +526,26 @@ function LayoutSection() {
                     ),
                     h("div", { style: { padding: 12 } }, h(Label, null, "Right")),
                 ),
+            ),
+        ),
+        h(
+            Card,
+            { title: "Tile + TileGrid (a picker)", className: "demo-wide" },
+            h(
+                TileGrid,
+                { min: 140 },
+                h(Tile, { icon: "plus", title: "Custom / new robot", subtitle: "Bring your own hardware" }),
+                ["Go2", "G1", "xArm7"].map((name, index) =>
+                    h(Tile, {
+                        key: name,
+                        icon: "robot",
+                        title: name,
+                        subtitle: ["Unitree", "Unitree", "UFactory"][index],
+                        selected: tile === name,
+                        onClick: () => setTile(name),
+                    })
+                ),
+                h(Tile, { loading: true }),
             ),
         ),
         h(

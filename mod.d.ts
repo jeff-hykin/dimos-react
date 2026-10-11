@@ -96,6 +96,7 @@ export declare const SKIN_KEY: any
 export declare const STICK_DEAD_ZONE: any
 export declare const STICK_EXPO: any
 export declare const STICK_SMOOTH_MS: any
+export declare function SafeHtml(props: Record<string, any>): ReactNode
 export declare function SearchInput(props: Record<string, any>): ReactNode
 export declare function Segmented(props: Record<string, any>): ReactNode
 export declare function Select(props: Record<string, any>): ReactNode
@@ -117,10 +118,13 @@ export declare function Switch(props: Record<string, any>): ReactNode
 export declare const TOKENS_CSS: any
 export declare function Table(props: Record<string, any>): ReactNode
 export declare function Tabs(props: Record<string, any>): ReactNode
+export declare function TagList(props: Record<string, any>): ReactNode
 export declare function Text(props: Record<string, any>): ReactNode
 export declare function TextArea(props: Record<string, any>): ReactNode
 export declare function TextInput(props: Record<string, any>): ReactNode
 export declare function ThumbStick(props: Record<string, any>): ReactNode
+export declare function Tile(props: Record<string, any>): ReactNode
+export declare function TileGrid(props: Record<string, any>): ReactNode
 export declare function Timeline(props: Record<string, any>): ReactNode
 export declare function ToastProvider(props: Record<string, any>): ReactNode
 export declare function ToastViewport(props: Record<string, any>): ReactNode
@@ -189,6 +193,7 @@ export declare const rawToImageData: ((...args: any[]) => any) & Record<string, 
 export declare const releaseAllThumbSticks: ((...args: any[]) => any) & Record<string, any>
 export declare const retargetCameras: ((...args: any[]) => any) & Record<string, any>
 export declare const sampleGradient: ((...args: any[]) => any) & Record<string, any>
+export declare const sanitizeHtml: ((...args: any[]) => any) & Record<string, any>
 export declare const shapeStick: ((...args: any[]) => any) & Record<string, any>
 export declare const signalReady: ((...args: any[]) => any) & Record<string, any>
 export declare const smoothToward: ((...args: any[]) => any) & Record<string, any>

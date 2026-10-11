@@ -369,6 +369,12 @@ button.dr-stepper__mark:hover { box-shadow: var(--dr-focus); }
     background: var(--primary);
     border-color: var(--primary);
 }
+.dr-stepper__step--failed .dr-stepper__mark {
+    color: var(--danger-fg);
+    background: var(--danger);
+    border-color: var(--danger);
+}
+.dr-stepper__step--failed .dr-stepper__label { color: var(--danger); }
 .dr-stepper__text { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; overflow: hidden; padding-top: 2px; }
 .dr-stepper__label { font-size: 13px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dr-stepper__step--todo .dr-stepper__label { color: var(--muted-fg); }

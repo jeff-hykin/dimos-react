@@ -3,7 +3,7 @@ import fs from "node:fs"
 import { execFileSync } from "node:child_process"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
 const dimApp = process.env.DIM_APP ?? `${process.env.HOME}/repos/dim-app`
-const tag = process.argv[2] ?? "v0.21.0"
+const tag = process.argv[2] ?? "v0.21.1"
 const files = [
     "source/zenoh.js",
     "source/topic.js",

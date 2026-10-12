@@ -17,6 +17,8 @@ import { cx } from "../cx.ts"
 import { decodeMessage, parseKey, useDataSource, useTopicList } from "../data.ts"
 import { cameraStreamsFor } from "../components/camera.tsx"
 import { Viewer } from "./viewer.ts"
+import { ViewCube } from "./view_cube.ts"
+import type { ViewCubeCorner } from "./view_cube.ts"
 import { TfTree } from "./tf.ts"
 import { cssColor, disposeTree, robotModel } from "./robot_model.ts"
 import { Store, useStore } from "./store.ts"
@@ -285,6 +287,8 @@ export interface Scene3DProps extends HTMLAttributes<HTMLDivElement> {
     gridSize?: number
     gridDivisions?: number
     freeOrbit?: boolean
+    /** a CAD view cube in a corner (default off): true = top right, or the corner */
+    viewCube?: boolean | ViewCubeCorner
 }
 
 /**
@@ -295,7 +299,8 @@ export interface Scene3DProps extends HTMLAttributes<HTMLDivElement> {
  *   the robot's frame (default `followFrame`): the camera frames it once when it first shows up, and without it in
  *   TF the newest pose from a Pose layer stands in for it. A replay source (memorySource({ clock })) drives the data
  *   clock (fading, staleness, lifetimes) and its seek() resets the layers. `near`, `far`, `fov`, `gridSize`,
- *   `gridDivisions`, `freeOrbit`: the Viewer's options, read once when it mounts.
+ *   `gridDivisions`, `freeOrbit`: the Viewer's options, read once when it mounts. `viewCube`: a CAD view cube in a
+ *   corner (click a face / edge / corner to look from there, drag it to orbit); default off.
  */
 export function Scene3D({
     fixedFrame,
@@ -322,9 +327,11 @@ export function Scene3D({
     gridSize,
     gridDivisions,
     freeOrbit,
+    viewCube = false,
     ...rest
 }: Scene3DProps) {
     const hostRef = useRef<HTMLDivElement>(null)
+    const rootRef = useRef<HTMLDivElement>(null)
     const source = useDataSource()
     const [viewer, setViewer] = useState<Viewer | null>(null)
     const tf = useMemo(() => givenTf ?? new TfTree(), [givenTf])
@@ -385,6 +392,16 @@ export function Scene3D({
     }, [viewer])
 
     useEffect(() => viewer?.setGrid(grid), [viewer, grid])
+
+    // the view cube draws on its own canvas over the view, so its clicks never reach the scene's picking
+    const cubeCorner = viewCube === true ? "top-right" : viewCube || null
+    useEffect(() => {
+        if (!viewer || !cubeCorner || !rootRef.current) {
+            return
+        }
+        const cube = new ViewCube(viewer, rootRef.current, { corner: cubeCorner })
+        return () => cube.dispose()
+    }, [viewer, cubeCorner])
 
     useEffect(() => {
         if (!viewer) {
@@ -577,7 +594,7 @@ export function Scene3D({
         [viewer, tf, fixed, source, robotPose, robot, optionsSignature, frameInfo, actions],
     )
     return (
-        <div className={cx("dr-scene", className)} style={style} {...rest}>
+        <div className={cx("dr-scene", className)} style={style} ref={rootRef} {...rest}>
             <div className="dr-scene-host" ref={hostRef} />
             <SceneContext.Provider value={value}>{viewer ? children : null}</SceneContext.Provider>
         </div>

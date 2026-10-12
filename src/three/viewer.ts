@@ -61,6 +61,26 @@ const isPoints = (object: THREE.Object3D): object is THREE.Points => !!(object a
 const isMesh = (object: THREE.Object3D): object is THREE.Mesh => !!(object as Partial<THREE.Mesh>).isMesh
 const isLineSegments2 = (object: THREE.Object3D): boolean => !!(object as Partial<LineSegments2>).isLineSegments2
 
+/**
+ * `direction` as a unit vector no further than `maxPolar` from +z (the orbit's limit): one below it keeps its heading
+ * and sits on the limit (straight down: from the front, -y). Null for a zero or non-finite direction.
+ */
+export function limitPolar(direction: THREE.Vector3, maxPolar: number): THREE.Vector3 | null {
+    const to = direction.clone().normalize()
+    if (!Number.isFinite(to.x) || to.lengthSq() === 0) {
+        return null
+    }
+    if (Math.acos(THREE.MathUtils.clamp(to.z, -1, 1)) > maxPolar) {
+        const flat = new THREE.Vector2(to.x, to.y)
+        if (flat.lengthSq() < 1e-12) {
+            flat.set(0, -1)
+        }
+        flat.normalize().multiplyScalar(Math.sin(maxPolar))
+        to.set(flat.x, flat.y, Math.cos(maxPolar))
+    }
+    return to
+}
+
 /** The canvas renders at the screen's resolution, up to 2× (beyond that the extra pixels cost more than they show). */
 const pixelRatio = () => Math.min(2, globalThis.devicePixelRatio || 1)
 
@@ -127,6 +147,8 @@ export class Viewer {
     #resetListeners: Set<() => void> = new Set()
     #onTop = new OnTopPass()
     #slowSeconds = 0
+    /** a viewFrom() orbit in progress: unit directions (target → camera), start time, length */
+    #glide: { from: THREE.Vector3; turn: THREE.Quaternion; start: number; ms: number; distance: number } | null = null
 
     /**
      * @param host the element the canvas fills (give it a size; it is watched for resizes)
@@ -175,7 +197,11 @@ export class Viewer {
         this.controls.screenSpacePanning = false
         this.controls.maxPolarAngle = freeOrbit ? Math.PI : Math.PI * 0.495
         this.controls.addEventListener("change", () => this.requestRender())
-        this.controls.addEventListener("start", () => this.#panGate.start())
+        this.controls.addEventListener("start", () => {
+            this.#panGate.start()
+            // the user grabbed the view: a viewFrom() glide stops where it is
+            this.#glide = null
+        })
 
         const sky = new THREE.HemisphereLight(0xdde8ff, 0x202830, 1.6)
         const sun = new THREE.DirectionalLight(0xffffff, 1.2)
@@ -457,14 +483,68 @@ export class Viewer {
         this.#place(target, new THREE.Vector3(target.x, target.y - height * 0.002, target.z + height))
     }
 
-    /** Puts the camera at `position` looking at `target` now (no leftover damping, no follow glide). */
-    #place(target: THREE.Vector3, position: THREE.Vector3) {
+    /**
+     * Orbits around the current target to look from `direction` (target → camera; need not be unit), keeping the
+     * distance: a view cube's Top / Front / corner views. Glides there (`ms`, default 450; instant with
+     * `animate: false` or prefers-reduced-motion). Without freeOrbit, directions below the horizon stop at it.
+     */
+    viewFrom(direction: THREE.Vector3, { animate = true, ms = 450 }: { animate?: boolean; ms?: number } = {}) {
+        const to = limitPolar(direction, this.controls.maxPolarAngle)
+        if (!to) {
+            return
+        }
+        const offset = this.camera.position.clone().sub(this.controls.target)
+        const distance = offset.length() || 10
+        const from = offset.normalize()
+        if (!animate || this.#reducedMotion?.matches || from.angleTo(to) < 1e-4) {
+            this.#glide = null
+            this.#place(this.controls.target.clone(), this.controls.target.clone().addScaledVector(to, distance))
+            return
+        }
+        // the shortest turn; straight through the other side turns about +z, so the view stays upright
+        const turn =
+            from.dot(to) < -0.9999
+                ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI)
+                : new THREE.Quaternion().setFromUnitVectors(from, to)
+        this.#glide = { from, turn, start: performance.now(), ms, distance }
+        this.requestRender()
+    }
+
+    /** One step of a viewFrom() glide (eased), around wherever the target is now (it may be following). */
+    #stepGlide(now: number) {
+        const glide = this.#glide
+        if (!glide) {
+            return
+        }
+        const t = THREE.MathUtils.clamp((now - glide.start) / glide.ms, 0, 1)
+        const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        const direction = glide.from
+            .clone()
+            .applyQuaternion(new THREE.Quaternion().slerp(glide.turn, eased))
+            .normalize()
+        // aim only (unlike #place, following carries on undisturbed); the loop's controls.update() follows
+        this.#clearDamping()
+        this.camera.position.copy(this.controls.target).addScaledVector(direction, glide.distance)
+        this.camera.lookAt(this.controls.target)
+        this.#dirty = true
+        if (t >= 1) {
+            this.#glide = null
+        }
+    }
+
+    /** Drops OrbitControls' leftover damping, so a placed camera doesn't drift on. */
+    #clearDamping() {
         const controls = this.controls as OrbitControls & OrbitControlsInternals
         controls._sphericalDelta?.set(0, 0, 0)
         controls._panOffset?.set(0, 0, 0)
         if (controls._scale !== undefined) {
             controls._scale = 1
         }
+    }
+
+    /** Puts the camera at `position` looking at `target` now (no leftover damping, no follow glide). */
+    #place(target: THREE.Vector3, position: THREE.Vector3) {
+        this.#clearDamping()
         this.controls.target.copy(target)
         this.camera.position.copy(position)
         this.camera.lookAt(target)
@@ -610,6 +690,7 @@ export class Viewer {
             this.#following = false
             this.#follow.reset()
         }
+        this.#stepGlide(now)
         focusDistance.value = this.camera.position.distanceTo(this.controls.target)
         this.#beforeControls.copy(this.controls.target)
         if (this.controls.update()) {

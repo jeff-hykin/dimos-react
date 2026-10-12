@@ -217,6 +217,7 @@ function LiveDemo() {
                     fixedFrame="world"
                     style={{ height: 420 }}
                     cameraPosition={[-8, -9, 7]}
+                    viewCube
                 >
                     <TfFeed />
                     <TfFrames names={names} axesSize={0.3} />

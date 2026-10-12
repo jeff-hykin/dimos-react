@@ -32,6 +32,8 @@ export {
     useViewer,
 } from "./three/react.tsx"
 export { LayersPanel, TfFootnote, TfPanel, useLayerManager } from "./three/panels.tsx"
+export { cubeRegion, regionDirection, regionLabel, ViewCube } from "./three/view_cube.ts"
+export type { CubeRegion, ViewCubeCorner, ViewCubeOptions } from "./three/view_cube.ts"
 export { CubeShadePicker, PointLookEditor, RangeInput, RenderingSettings, StylePicker } from "./three/look_editor.tsx"
 export { LayerManager } from "./three/layers/manager.ts"
 export {

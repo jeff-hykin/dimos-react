@@ -10,6 +10,7 @@ import type {
     Key,
     PointerEvent as ReactPointerEvent,
     ReactNode,
+    Ref,
     SelectHTMLAttributes,
     TextareaHTMLAttributes,
 } from "react"
@@ -42,6 +43,8 @@ export interface ButtonProps
     type?: ButtonHTMLAttributes<HTMLButtonElement>["type"]
     /** makes it a link that looks like a button (`download`, `target` pass through) */
     href?: string
+    /** the rendered element (React 19 passes a function component's ref as a prop) */
+    ref?: Ref<ButtonElement>
 }
 
 /** A button; `href` makes it a link that looks like a button (`download`, `target` pass through). */
@@ -58,12 +61,15 @@ export function Button({
     type = "button",
     disabled,
     href,
+    ref,
     ...rest
 }: ButtonProps) {
     const link = href !== undefined
     const Tag = link ? "a" : "button"
     return (
         <Tag
+            // one element type at a time: the ref is the <a>'s or the <button>'s
+            ref={ref as Ref<HTMLButtonElement & HTMLAnchorElement>}
             {...(link ? { href: disabled ? undefined : href, "aria-disabled": disabled || undefined } : { type })}
             className={cx(
                 "dr-btn",

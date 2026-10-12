@@ -4,9 +4,16 @@ import { execFileSync } from "node:child_process"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
 const dimApp = process.env.DIM_APP ?? `${process.env.HOME}/repos/dim-app`
 const tag = process.argv[2] ?? "v0.21.1"
+// dim-app's Desktop helpers ride along (apps import them as dimos-react/dim-app/<file>), with their types
 const files = [
     "source/zenoh.js",
     "source/topic.js",
+    "source/desktop.js",
+    "source/desktop.d.ts",
+    "source/notify.js",
+    "source/notify.d.ts",
+    "source/events.js",
+    "source/events.d.ts",
     "source/vendor/zenoh-gateway/LICENSE",
     "source/vendor/zenoh-gateway/UPSTREAM",
     "source/vendor/zenoh-gateway/zenoh_gateway.js",
@@ -20,6 +27,38 @@ for (const file of files) {
     fs.writeFileSync(target, out)
 }
 fs.writeFileSync("src/vendor/dim-app/VERSION", `jeff-hykin/dim-app ${tag}\n`)
+// the gateway client's types: declarations emitted from its TypeScript source at the vendored commit (zenoh-gateway's
+// client/zenoh_gateway.ts), so apps type-check against the same client they run
+const gateway = process.env.ZENOH_GATEWAY ?? `${process.env.HOME}/repos/zenoh-web`
+const upstream = fs.readFileSync("src/vendor/dim-app/vendor/zenoh-gateway/UPSTREAM", "utf8").trim().split(/\s+/).pop()
+const scratch = fs.mkdtempSync(`${process.env.TMPDIR ?? "/tmp"}/dimos-react-gateway-`)
+fs.mkdirSync(`${scratch}/vendor`)
+for (const file of ["zenoh_gateway.ts", "vendor/fzstd.ts"]) {
+    fs.writeFileSync(`${scratch}/${file}`, execFileSync("git", ["-C", gateway, "show", `${upstream}:client/${file}`]))
+}
+execFileSync("npx", [
+    "tsc",
+    "--declaration",
+    "--emitDeclarationOnly",
+    "--target",
+    "es2022",
+    "--module",
+    "esnext",
+    "--moduleResolution",
+    "bundler",
+    "--allowImportingTsExtensions",
+    "--lib",
+    "es2022,dom,dom.iterable",
+    "--skipLibCheck",
+    "--outDir",
+    `${scratch}/out`,
+    `${scratch}/zenoh_gateway.ts`,
+])
+const declarations = fs
+    .readFileSync(`${scratch}/out/zenoh_gateway.d.ts`, "utf8")
+    .replace(/^\/\/\/ <reference no-default-lib="true"\/>\n/m, "")
+fs.writeFileSync("src/vendor/dim-app/vendor/zenoh-gateway/zenoh_gateway.d.ts", declarations)
+fs.rmSync(scratch, { recursive: true })
 const controller = process.env.CONTROLLER ?? `${process.env.HOME}/repos/dim-live-viewer`
 const schemas = fs.readFileSync(`${controller}/frontend/src/core/lcm/schemas.json`, "utf8")
 fs.writeFileSync(

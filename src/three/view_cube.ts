@@ -282,7 +282,7 @@ export class ViewCube {
 
     #onWheel = (event: WheelEvent) => {
         event.preventDefault()
-        this.#viewer.renderer.domElement.dispatchEvent(new WheelEvent("wheel", event))
+        this.#viewer.canvas.dispatchEvent(new WheelEvent("wheel", event))
     }
 
     /** Dragging the cube orbits the view around its target, like dragging the scene. */

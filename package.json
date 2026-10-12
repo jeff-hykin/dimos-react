@@ -17,6 +17,7 @@
             "types": "./src/three.ts",
             "default": "./src/three.ts"
         },
+        "./dim-app/*": "./src/vendor/dim-app/*",
         "./package.json": "./package.json"
     },
     "files": [

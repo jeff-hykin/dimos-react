@@ -150,4 +150,45 @@ export const FEEDBACK_CSS = /* css */ `
 :root[data-dr-dark] .dr-empty-title { font-size: 11px; letter-spacing: var(--track-label); text-transform: var(--label-case); }
 .dr-empty-text { color: var(--muted-fg); font-size: 13.5px; }
 .dr-empty-actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+/* notice: Desktop's first-run card. Research: a hairline card, a display sentence, a mono micro-label in the accent;
+   Portal: a square panel with an accent edge, a sans sentence, a display micro-label */
+.dr-empty--notice { padding: 16px; }
+.dr-empty--notice.dr-empty--layer { display: grid; place-items: center; padding: 16px; }
+.dr-empty--notice .dr-empty-inner,
+.dr-empty--notice.dr-empty--layer .dr-empty-inner {
+    box-sizing: border-box;
+    width: min(480px, 100%);
+    max-width: none;
+    align-items: stretch;
+    gap: 10px;
+    padding: 22px 24px;
+    text-align: left;
+    background: var(--card);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    backdrop-filter: none;
+}
+.dr-empty--notice .dr-empty-label {
+    font: 500 10.5px/1.5 var(--mono);
+    letter-spacing: var(--track-label);
+    text-transform: var(--label-case);
+    color: var(--primary);
+}
+.dr-empty--notice .dr-empty-inner--warn .dr-empty-label { color: var(--warn); }
+.dr-empty--notice .dr-empty-inner--busy .dr-empty-label::after { content: " …"; }
+.dr-empty--notice .dr-empty-title { font: 400 24px/1.2 var(--display); letter-spacing: -0.01em; text-transform: none; }
+.dr-empty--notice .dr-empty-text { font: 400 13.5px/1.55 var(--sans); }
+.dr-empty--notice .dr-empty-text code { font-size: 12.5px; }
+.dr-empty--notice .dr-empty-actions { justify-content: flex-start; }
+:root[data-dr-dark] .dr-empty--notice .dr-empty-inner {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--primary);
+    box-shadow: none;
+}
+:root[data-dr-dark] .dr-empty--notice .dr-empty-inner--warn { border-left-color: var(--warn); }
+:root[data-dr-dark] .dr-empty--notice .dr-empty-label { font: 400 10px/1.5 var(--display); color: var(--dim); }
+:root[data-dr-dark] .dr-empty--notice .dr-empty-title { font: 500 16px/1.4 var(--sans); letter-spacing: 0; text-transform: none; }
 `

@@ -530,6 +530,15 @@ export interface EmptyStateProps extends Omit<HTMLAttributes<HTMLDivElement>, "t
     tone?: "warn" | "danger"
     /** centers it over a whole view */
     layer?: boolean
+    /**
+     * "notice": Desktop's first-run card (dim-app's emptyState): a micro-label (`label`), a sentence, the details and
+     * the next steps, left-aligned; no icon. Default "centered": icon, title and text centered.
+     */
+    variant?: "centered" | "notice"
+    /** the notice's micro-label (what state this is: "No blueprint running") */
+    label?: ReactNode
+    /** the notice is waiting on something (its label ends in "…") */
+    busy?: boolean
 }
 
 /** A first-run / empty / error message with next steps. `layer` centers it over a whole view (a canvas, a 3D scene). */
@@ -540,10 +549,29 @@ export function EmptyState({
     actions,
     tone,
     layer = false,
+    variant = "centered",
+    label,
+    busy = false,
     className,
     children,
     ...rest
 }: EmptyStateProps) {
+    if (variant === "notice") {
+        return (
+            <div className={cx("dr-empty", "dr-empty--notice", layer && "dr-empty--layer", className)} {...rest}>
+                <div
+                    className={cx("dr-empty-inner", tone && `dr-empty-inner--${tone}`, busy && "dr-empty-inner--busy")}
+                    role="status"
+                >
+                    {label ? <div className="dr-empty-label">{label}</div> : null}
+                    {title ? <div className="dr-empty-title">{title}</div> : null}
+                    {message ? <div className="dr-empty-text">{message}</div> : null}
+                    {children}
+                    {actions ? <div className="dr-empty-actions">{actions}</div> : null}
+                </div>
+            </div>
+        )
+    }
     return (
         <div className={cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className)} {...rest}>
             <div className="dr-empty-inner">

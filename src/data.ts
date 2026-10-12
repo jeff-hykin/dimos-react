@@ -218,7 +218,8 @@ export function zenohSource(options: GetZenohOptions = {}): ZenohSource {
             get().subscribeFrontend(topic, callback, frontendOptions),
         listTopics: async (filter = "dimos/**", { probeMs = 800 } = {}) => {
             const client = (await get().ready).client!
-            return await client.listTopics(filter, { probeMs })
+            // plain objects: a ListedTopic takes any field
+            return (await client.listTopics(filter, { probeMs })).map((topic): ListedTopic => ({ ...topic }))
         },
         get state() {
             return get().state

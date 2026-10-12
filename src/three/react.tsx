@@ -553,7 +553,7 @@ export function Scene3D({
         if (!viewer) {
             return
         }
-        const canvas = viewer.renderer.domElement
+        const canvas = viewer.canvas
         let down: { x: number; y: number } | null = null
         const onDown = (event: PointerEvent) => {
             down = { x: event.clientX, y: event.clientY }

@@ -1,5 +1,6 @@
 // Hand-written types for the vendored zenoh.js (the parts dimos-react uses).
 export { checkTopic } from "./topic.js"
+import type { ZenohGateway } from "./vendor/zenoh-gateway/zenoh_gateway.js"
 
 export type ConnectionState = "connecting" | "connected" | "degraded" | "lost"
 
@@ -25,15 +26,8 @@ export interface ZenohInfo {
 }
 
 /** The zenoh-gateway client (ZenohGateway), once connected. */
-export interface ZenohGatewayClient {
-    state?: ConnectionState
-    clockOffsetMs: number | null
-    now?(): number
-    listTopics(filter?: string, options?: { probeMs?: number }): Promise<{ key: string; [field: string]: unknown }[]>
-    onState(listener: (state: ConnectionState) => void): unknown
-    close?(): void
-    [member: string]: unknown
-}
+/** the gateway client (zenoh-gateway's ZenohGateway, its types emitted from the vendored commit's source) */
+export type ZenohGatewayClient = ZenohGateway
 
 export type ZenohSubscription = (() => void) & {
     unsubscribe(): void

@@ -1,3 +1,4 @@
+// @ts-self-types="./zenoh.d.ts"
 // A page's one connection to Desktop's zenoh-gateway (Desktop's docs/events.md): backend → frontend is always zenoh,
 // frontend → backend is plain HTTP. Every subscription on a page shares this one connection (a module singleton, kept on
 // globalThis so two copies of dim-app on one page share it too).

@@ -1,3 +1,4 @@
+// @ts-self-types="./desktop.d.ts"
 // Opening other apps from an app, and first-run / empty-state messages that send the user there.
 //
 //     import { appInstalled, emptyState, openApp } from "./dim-app/source/desktop.js"

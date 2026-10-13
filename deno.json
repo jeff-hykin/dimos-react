@@ -1,5 +1,5 @@
 {
-    "name": "@dimos/react",
+    "name": "@robotics/dimos-react",
     "version": "0.2.0",
     "license": "MIT",
     "nodeModulesDir": "manual",

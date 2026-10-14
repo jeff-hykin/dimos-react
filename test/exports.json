@@ -35,6 +35,7 @@
         "DataSourceProvider",
         "DialogProvider",
         "DimThemeProvider",
+        "Disclosure",
         "Embed",
         "EmptyState",
         "ErrorBoundary",

@@ -25,3 +25,9 @@ test("CodeBlock marks highlightLine; header={false} drops the header", () => {
     assert(html.includes("dr-code--fill") && !html.includes("dr-code__head"), html)
     assert(/dr-code__line dr-code__line--at"><span>b/.test(html), html)
 })
+
+test("Disclosure: a label summary with its count", () => {
+    const html = renderToStaticMarkup(h(lib.Disclosure, { title: "Modules", count: 9 }, "body"))
+    assert(html.startsWith(`<details class="dr-disclosure" open=""`), html)
+    assert(html.includes("dr-label") && html.includes("· 9"), html)
+})

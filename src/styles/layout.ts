@@ -91,6 +91,11 @@ export const LAYOUT_CSS = /* css */ `
     .dr-topbar-center:not(:empty) { order: 3; flex-basis: 100%; }
     .dr-topbar-center:not(:empty) > * { flex: 1; }
 }
+.dr-disclosure__summary { display: block; margin-bottom: 6px; cursor: pointer; list-style: none; }
+.dr-disclosure__summary::-webkit-details-marker { display: none; }
+.dr-disclosure__summary::before { content: "▸ "; }
+.dr-disclosure[open] > .dr-disclosure__summary::before { content: "▾ "; }
+.dr-disclosure__count { margin-left: 4px; color: var(--muted-fg); letter-spacing: 0; text-transform: none; }
 .dr-toolbar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .dr-toolbar--vertical { flex-direction: column; flex-wrap: nowrap; }
 .dr-toolbar--floating { padding: 4px; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); }

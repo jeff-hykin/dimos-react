@@ -131,6 +131,43 @@ export function Panel({
     )
 }
 
+export interface DisclosureProps extends Omit<HTMLAttributes<HTMLDetailsElement>, "title"> {
+    /** the summary, in the theme's micro-label type */
+    title: ReactNode
+    /** after the title ("· 9"); hidden when null */
+    count?: ReactNode
+    defaultOpen?: boolean
+    /** remembers the open state (localStorage) under this key */
+    persistKey?: string
+}
+
+/** A section that folds under its label (▸ / ▾), remembering whether it's open with `persistKey`. */
+export function Disclosure({
+    title,
+    count,
+    defaultOpen = true,
+    persistKey,
+    className,
+    children,
+    ...rest
+}: DisclosureProps) {
+    const [open, setOpen] = usePersistentState(persistKey ?? "dr.disclosure.__unsaved", defaultOpen)
+    return (
+        <details
+            className={cx("dr-disclosure", className)}
+            open={open}
+            onToggle={(event) => setOpen(event.currentTarget.open)}
+            {...rest}
+        >
+            <summary className="dr-disclosure__summary dr-label">
+                {title}
+                {count !== undefined && count !== null ? <span className="dr-disclosure__count">· {count}</span> : null}
+            </summary>
+            {children}
+        </details>
+    )
+}
+
 /** px from the top-left; negative = from the right/bottom */
 export interface PanelPosition {
     x: number

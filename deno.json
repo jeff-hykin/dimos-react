@@ -1,0 +1,33 @@
+{
+    "name": "@robotics/dimos-react",
+    "version": "0.2.0",
+    "license": "MIT",
+    "nodeModulesDir": "manual",
+    "exports": {
+        ".": "./src/index.ts",
+        "./three": "./src/three.ts",
+        "./graph": "./src/graph.ts",
+        "./dim-app/desktop.js": "./src/vendor/dim-app/desktop.js",
+        "./dim-app/events.js": "./src/vendor/dim-app/events.js",
+        "./dim-app/notify.js": "./src/vendor/dim-app/notify.js",
+        "./dim-app/topic.js": "./src/vendor/dim-app/topic.js",
+        "./dim-app/zenoh.js": "./src/vendor/dim-app/zenoh.js"
+    },
+    "imports": {
+        "react": "npm:react@^19.2.0",
+        "react-dom": "npm:react-dom@^19.2.0",
+        "three": "npm:three@^0.180.0",
+        "@types/react": "npm:@types/react@^19.2.0",
+        "@types/react-dom": "npm:@types/react-dom@^19.2.0",
+        "@types/three": "npm:@types/three@^0.180.0"
+    },
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "react",
+        "lib": ["ES2023", "DOM", "DOM.Iterable"],
+        "jsxImportSourceTypes": "@types/react"
+    },
+    "publish": {
+        "include": ["src", "README.md", "LICENSE"]
+    }
+}

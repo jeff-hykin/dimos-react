@@ -65,4 +65,12 @@ fs.writeFileSync(
     "src/vendor/lcm_schemas.js",
     `// dimos LCM message schemas (from dim-controller's tools/gen_lcm_schemas.ts output)\nexport default ${schemas.trim()}\n`,
 )
+// Deno and jsr read a .js file's types only through @ts-self-types (tsc finds the sibling .d.ts on its own)
+for (const declaration of fs.globSync("src/vendor/**/*.d.ts")) {
+    const script = declaration.replace(/\.d\.ts$/, ".js")
+    const text = fs.existsSync(script) ? fs.readFileSync(script, "utf8") : null
+    if (text !== null && !text.startsWith("// @ts-self-types=")) {
+        fs.writeFileSync(script, `// @ts-self-types="./${declaration.split("/").pop()}"\n${text}`)
+    }
+}
 console.log("vendored dim-app", tag)

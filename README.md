@@ -363,6 +363,24 @@ splats that can't keep up fall back to cubes, `splatFallback`).
 topic; a replay source may publish frames (`{ kind, width, height, encoding, data }`, jpeg/png/webp or raw), decoded
 Image / CompressedImage values or their LCM bytes, and CameraStreams decodes them.
 
+## Graph view
+
+`dimos-react/graph` lays out a directed graph of boxes (hierarchy, vertical, force, radial, circular) and draws it as a
+pannable, zoomable SVG. You size the nodes and draw their contents; it places them without overlap and draws the edges.
+`layout(id, nodes, edges)` alone (no DOM) gives each node's centre and, for the layered layouts, each edge's bends.
+
+```tsx
+import { GraphView } from "dimos-react/graph"
+
+<GraphView
+    nodes={[{ id: "a", w: 80, h: 30 }, { id: "b", w: 80, h: 30 }]}
+    edges={[{ from: "a", to: "b" }]}
+    layout="hierarchy"
+    renderNode={(node) => <text x={8} y={node.h / 2}>{node.id}</text>}
+    onNodeClick={(node) => console.log(node.id)}
+/>
+```
+
 ## Installing
 
 - **No build (import map / esm.sh)** — the main path, as in the quick start:

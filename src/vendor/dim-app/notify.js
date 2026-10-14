@@ -1,3 +1,4 @@
+// @ts-self-types="./notify.d.ts"
 // Notifications → dimOS Desktop's notification center (POST /api/notifications on the Desktop origin).
 //
 //     import { notify } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.18.0/source/notify.js"

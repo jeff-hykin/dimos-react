@@ -17,6 +17,10 @@
             "types": "./src/three.ts",
             "default": "./src/three.ts"
         },
+        "./graph": {
+            "types": "./src/graph.ts",
+            "default": "./src/graph.ts"
+        },
         "./dim-app/*": "./src/vendor/dim-app/*",
         "./package.json": "./package.json"
     },

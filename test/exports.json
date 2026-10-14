@@ -383,5 +383,17 @@
         "useTfIssues",
         "useViewer",
         "writeLocal"
+    ],
+    "graph": [
+        "GraphView",
+        "LAYOUTS",
+        "flowPath",
+        "layered",
+        "layout",
+        "overlaps",
+        "placeInOrder",
+        "separate",
+        "straightPath",
+        "textWidth"
     ]
 }

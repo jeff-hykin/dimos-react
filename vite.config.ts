@@ -1,4 +1,4 @@
-// Library build: dist/index.js and dist/three.js (ESM) plus .d.ts; react, react-dom and three stay external (peer deps)
+// Library build: dist/index.js, dist/three.js and dist/graph.js (ESM) plus .d.ts; react, react-dom and three stay external (peer deps)
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import dts from "vite-plugin-dts"
@@ -12,7 +12,7 @@ export default defineConfig({
         minify: false,
         target: "es2022",
         lib: {
-            entry: { index: "src/index.ts", three: "src/three.ts" },
+            entry: { index: "src/index.ts", three: "src/three.ts", graph: "src/graph.ts" },
             formats: ["es"],
         },
         rollupOptions: {

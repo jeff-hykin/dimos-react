@@ -89,6 +89,8 @@ export const FEEDBACK_CSS = /* css */ `
 .dr-modal--sm { max-width: 400px; }
 .dr-modal--md { max-width: 560px; }
 .dr-modal--lg { max-width: 860px; }
+.dr-modal--xl { max-width: 1100px; height: min(720px, calc(100vh - 32px)); }
+.dr-modal--xl .dr-modal-body { flex: 1; min-height: 0; }
 .dr-modal-head {
     display: flex;
     align-items: center;

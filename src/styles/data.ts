@@ -327,6 +327,9 @@ export const DATA_CSS = /* css */ `
     overflow: auto;
 }
 .dr-code__line { display: flex; gap: 14px; white-space: pre; }
+.dr-code__line--at { margin: 0 -12px; padding: 0 12px; background: var(--sel); }
+.dr-code--fill { flex: 1; min-height: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; }
+.dr-code--fill .dr-code__pre { flex: 1; min-height: 0; }
 .dr-code__num {
     color: var(--code-line);
     min-width: 2ch;

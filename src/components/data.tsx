@@ -637,23 +637,45 @@ export interface CodeBlockProps extends Omit<HTMLAttributes<HTMLDivElement>, "ti
     copy?: boolean
     /** the header's text (default: the language) */
     title?: ReactNode
+    /** false: no header (no language, no copy button) */
+    header?: boolean
     maxHeight?: string | number
+    /** a line (1-based) to mark and scroll to */
+    highlightLine?: number
+    /** fills its parent (a flex column) and scrolls inside, without a border */
+    fill?: boolean
 }
 
-/** Code with light highlighting (the theme's --code-* colors), line numbers and a copy button. */
+/**
+ * Code with light highlighting (the theme's --code-* colors), line numbers and a copy button. `highlightLine` marks a
+ * line and scrolls it into view; `fill` makes it fill its parent.
+ */
 export function CodeBlock({
     code = "",
     language = "js",
     lineNumbers = false,
     copy = true,
     title,
+    header = true,
     maxHeight,
+    highlightLine,
+    fill = false,
     className,
     style,
     ...rest
 }: CodeBlockProps) {
     const [copied, setCopied] = useState(false)
+    const pre = useRef<HTMLPreElement>(null)
     const lines = String(code).replace(/\n$/, "").split("\n")
+    useEffect(() => {
+        const element = pre.current
+        const target = highlightLine
+            ? element?.querySelectorAll<HTMLElement>(".dr-code__line")[highlightLine - 1]
+            : null
+        if (element && target) {
+            element.scrollTop = target.offsetTop - element.offsetTop - 8
+        }
+    }, [code, highlightLine])
     const onCopy = async () => {
         if (await copyText(code)) {
             setCopied(true)
@@ -661,8 +683,8 @@ export function CodeBlock({
         }
     }
     return (
-        <div className={cx("dr-code", className)} style={style} {...rest}>
-            {title || language || copy ? (
+        <div className={cx("dr-code", fill && "dr-code--fill", className)} style={style} {...rest}>
+            {header && (title || language || copy) ? (
                 <div className="dr-code__head">
                     <span className="dr-code__lang">{title ?? language}</span>
                     {copy ? (
@@ -673,10 +695,13 @@ export function CodeBlock({
                     ) : null}
                 </div>
             ) : null}
-            <pre className="dr-code__pre dr-scroll" style={{ maxHeight }}>
+            <pre ref={pre} className="dr-code__pre dr-scroll" style={{ maxHeight }}>
                 <code>
                     {lines.map((line, index) => (
-                        <div key={index} className="dr-code__line">
+                        <div
+                            key={index}
+                            className={cx("dr-code__line", index + 1 === highlightLine && "dr-code__line--at")}
+                        >
                             {lineNumbers ? <span className="dr-code__num">{index + 1}</span> : null}
                             <span>
                                 {tokenizeLine(line, language).map(([kind, text], tokenIndex) =>

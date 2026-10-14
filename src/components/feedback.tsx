@@ -203,7 +203,8 @@ export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"
     title?: ReactNode
     /** buttons */
     footer?: ReactNode
-    size?: "sm" | "md" | "lg"
+    /** xl: a tall viewer (logs, a file), as big as the window allows up to 1100 × 720 */
+    size?: "sm" | "md" | "lg" | "xl"
     dismissable?: boolean
 }
 

@@ -105,9 +105,22 @@ All take `className`, `style` and DOM props; controls take `value` + `onChange(v
 | Feedback      | `Alert`, `toast()` / `useToast()` / `ToastProvider`, `Modal` (`size` sm/md/lg/xl), `useConfirm()`, `usePrompt()` (`DialogProvider`), `EmptyState`, `ErrorBoundary`                                                                                                                                                                                                                                            |
 | Layout        | `AppShell` (`insetBottom`: end above Desktop's dock), `TopBar`, `Toolbar`, `BottomBar`, `Card`, `Tile` + `TileGrid` (a picker's selectable cards), `Panel` (collapsible, glass), `FloatingPanel` (draggable), `ResizeHandle`, `SplitPane`, `Hud`, `Embed` (an iframe filling its parent), `Disclosure` (a folding section under a label, `persistKey`), `Row`, `Column`, `Spacer`, `Separator`, `Heading`, `Label`, `Text`, `Link`, `Icon` (+ `ICONS`) |
 | Navigation    | `Tabs`, `Segmented` (`vertical`), `Menu` (items' `data-*`/`aria-*` reach their buttons), `MenuList`, `ContextMenu`, `MenuAt` (a menu at a point), `Popover`, `Tooltip`, `Sidebar`, `NavRail`, `Stepper` (or each step's own `state`, incl. failed), `Breadcrumbs`, `CommandPalette` (`useCommandPalette`)                                                                                |
-| Data          | `Table` (sortable; `sortRows: false` when a backend sorts), `Tree`, `List`, `ListRow`, `KeyValue`, `KeyValueRow`, `Stat`, `LogView`, `CodeBlock` (`highlightLine`, `fill`, `header={false}`), `Sparkline`, `AttitudeIndicator`, `Timeline` (scrubber), `MediaFrame` (+ `captureFrame`), `SafeHtml` (a server's HTML, sanitized)                                                                                                      |
+| Data          | `Table` (sortable; `sortRows: false` when a backend sorts), `Tree`, `List`, `ListRow`, `KeyValue`, `KeyValueRow`, `Stat`, `LogView`, `StructuredLog`, `Traceback`, `CodeBlock` (`highlightLine`, `fill`, `header={false}`), `Sparkline`, `AttitudeIndicator`, `Timeline` (scrubber), `MediaFrame` (+ `captureFrame`), `SafeHtml` (a server's HTML, sanitized)                                                                                                      |
 | Input devices | `Joystick`, `StickIndicator`, `DPad`                                                                                                                                                                                                                                                                                                                                                     |
 | Hooks         | `copyText` (http-safe clipboard), `usePersistentState`, `useHotkeys`, `useHeldKeys`, `useEscape`, `useMobile`, `useMediaQuery`, `useDrag`, `useNow`, `useGamepad`                                                                                                                                                                                                                        |
+
+## Developer panels (logs, tracebacks, settings, topics)
+
+The parts of a view onto a running dimOS (the gateway's blueprint view is built from them):
+
+- `StructuredLog` — structlog-style records (`{ timestamp, level, logger, event, extra }`): time, level, logger and
+  event, short fields as chips, multi-line ones below, a traceback in `extra` (`traceback_lines`, or an `exception`
+  that is one) drawn by `Traceback`. `follow` / `onFollowChange` keep the newest in view (scrolling up or opening
+  folded frames turns it off); `level` / `onLevelChange`, `query` / `onQueryChange` add a level picker and a search
+  (the filtering is yours, e.g. the server's); `note` ("loading…", an error), `banner`. `LOG_LEVELS`, `splitRecord`.
+- `Traceback({ text, onOpenFile, formatPath })` — a Python traceback (plain, chained, exception groups) frame by frame:
+  your own frames are buttons that open in an editor, each run of library frames folds, and what was raised is summed
+  up with the innermost in bold. `parseTraceback`, `exceptionsOf`, `isTraceback` without the DOM.
 
 ## Live data (zenoh)
 

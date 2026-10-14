@@ -11,6 +11,7 @@ import { SCENE_CSS } from "../styles/scene.ts"
 import { TEXT_CSS } from "../styles/text.ts"
 import { MEDIA_CSS } from "../styles/media.ts"
 import { VIEW_PANEL_CSS } from "../styles/view_panel.ts"
+import { LOGS_CSS } from "../styles/logs.ts"
 
 export const COMPONENT_CSS = [
     BASE_CSS,
@@ -24,4 +25,5 @@ export const COMPONENT_CSS = [
     TEXT_CSS,
     MEDIA_CSS,
     VIEW_PANEL_CSS,
+    LOGS_CSS,
 ].join("\n")

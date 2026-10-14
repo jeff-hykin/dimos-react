@@ -17,6 +17,68 @@ const PLAIN = `Traceback (most recent call last):
 ValueError: no
 `
 
+test("parseTraceback splits frames, code, markers and the exception, and tells library frames apart", () => {
+    const items = lib.parseTraceback(PLAIN)
+    assertEquals(
+        items.map((item) => item.kind),
+        ["head", "frame", "frame", "exception"],
+    )
+    const [, own, library] = items
+    assert(own.kind === "frame" && own.line === 12 && own.func === "start" && !own.library)
+    assertEquals(
+        own.code.map((code) => code.marker),
+        [false, true],
+    )
+    assert(library.kind === "frame" && library.library)
+    assertEquals(lib.exceptionsOf(items), [{ depth: 0, text: "ValueError: no" }])
+    assert(lib.isTraceback(PLAIN) && !lib.isTraceback("just text"))
+})
+
+test("Traceback: own frames open through onOpenFile (as formatPath shows them), library frames fold", () => {
+    const html = renderToStaticMarkup(
+        h(lib.Traceback, {
+            text: PLAIN,
+            onOpenFile: () => {},
+            formatPath: (file: string) => file.replace("/home/me/", ""),
+        }),
+    )
+    assert(html.includes(`<button type="button" class="dr-tb__file"`), html)
+    assert(html.includes(">dimos/dimos/core/module.py:12</button>"), html)
+    assert(html.includes("1 library frame<"), html)
+    assert(html.includes("dr-tb__raised-one--leaf"), html)
+    const plain = renderToStaticMarkup(h(lib.Traceback, { text: PLAIN }))
+    assert(!plain.includes("<button"), plain)
+})
+
+test("StructuredLog: chips for short fields, multi-line ones below, a traceback drawn, filters only when handled", () => {
+    const records = [
+        { timestamp: "2026-10-13T12:00:01Z", level: "info", logger: "core", event: "up", extra: { port: 5 } },
+        {
+            timestamp: "2026-10-13T12:00:02Z",
+            level: "error",
+            logger: "core",
+            event: "boom",
+            extra: { exception: PLAIN, lineno: 3, note: "a\nb" },
+        },
+    ]
+    const split = lib.splitRecord(records[1])
+    assertEquals(split.where, "line 3")
+    assertEquals(
+        split.fields.map(([key]) => key),
+        ["note"],
+    )
+    const html = renderToStaticMarkup(h(lib.StructuredLog, { records }))
+    assert(html.includes("12:00:01") && html.includes(`<span class="dr-slog__key">port</span>5`), html)
+    assert(html.includes("dr-slog__rec--error") && html.includes("dr-tb"), html)
+    assert(html.includes("<pre>a\nb</pre>"), html)
+    assert(!html.includes("dr-slog__tools"), html)
+    const filtered = renderToStaticMarkup(
+        h(lib.StructuredLog, { records: [], note: "loading…", onLevelChange: () => {}, onFollowChange: () => {} }),
+    )
+    assert(filtered.includes("debug and up") && filtered.includes("follow") && !filtered.includes("dr-search"))
+    assert(filtered.includes("loading…"), filtered)
+})
+
 test("CodeBlock marks highlightLine; header={false} drops the header", () => {
     const html = renderToStaticMarkup(
         h(lib.CodeBlock, { code: "a = 1\nb = 2\n", language: "py", highlightLine: 2, header: false, fill: true }),

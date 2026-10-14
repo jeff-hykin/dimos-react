@@ -168,6 +168,27 @@ test("Disclosure: a label summary with its count", () => {
     assert(html.includes("dr-label") && html.includes("· 9"), html)
 })
 
+test("GraphView focus lights a node, its neighbours and the edges between them", () => {
+    const html = renderToStaticMarkup(
+        h(GraphView, {
+            nodes: [
+                { id: "a", w: 40, h: 20 },
+                { id: "b", w: 40, h: 20 },
+                { id: "c", w: 40, h: 20 },
+            ],
+            edges: [
+                { from: "a", to: "b" },
+                { from: "b", to: "c" },
+            ],
+            focus: "a",
+            renderNode: () => null,
+        }),
+    )
+    assert(html.includes(`class="dr-graph dr-graph--focus"`), html)
+    assertEquals([...html.matchAll(/class="node lit"/g)].length, 2)
+    assertEquals([...html.matchAll(/class="edge lit"/g)].length, 1)
+})
+
 test("off Desktop: not framed, no editor to ask, and the page draws its own top bar", () => {
     assert(!lib.framedByDesktop())
     assertEquals(renderToStaticMarkup(h(lib.EditorNote, { status: null })), "")

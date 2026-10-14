@@ -14,6 +14,7 @@ import { VIEW_PANEL_CSS } from "../styles/view_panel.ts"
 import { LOGS_CSS } from "../styles/logs.ts"
 import { SETTINGS_CSS } from "../styles/settings.ts"
 import { TOPICS_CSS } from "../styles/topics.ts"
+import { GRAPH_CSS } from "../styles/graph.ts"
 
 export const COMPONENT_CSS = [
     BASE_CSS,
@@ -30,4 +31,5 @@ export const COMPONENT_CSS = [
     LOGS_CSS,
     SETTINGS_CSS,
     TOPICS_CSS,
+    GRAPH_CSS,
 ].join("\n")

@@ -12,6 +12,7 @@ import {
     useState,
 } from "react"
 import type { CSSProperties, ForwardedRef, ReactNode, Ref } from "react"
+import { cx } from "../cx.ts"
 import { type Box, layout, type LayoutId, type Link, type Placement } from "./layout.ts"
 import { flowPath, type Placed, straightPath } from "./paths.ts"
 
@@ -49,6 +50,8 @@ export interface GraphViewProps<N extends Box, E extends Link> {
     fitMinScale?: Partial<Record<LayoutId, number>>
     /** The background grid's cell at zoom 1 (the container's background is scaled and moved with the view). */
     gridSize?: number
+    /** A node to light up with its neighbours and the edges between them (class "lit"); the rest dim. */
+    focus?: string | null
     className?: string
     style?: CSSProperties
     "aria-label"?: string
@@ -86,6 +89,7 @@ function GraphViewInner<N extends Box, E extends Link>(
         fitPadding = { x: 24, top: 52, bottom: 60 },
         fitMinScale = { hierarchy: 0.8 },
         gridSize = 22,
+        focus = null,
     } = props
     const pane = useRef<HTMLDivElement>(null)
     const svg = useRef<SVGSVGElement>(null)
@@ -301,6 +305,16 @@ function GraphViewInner<N extends Box, E extends Link>(
         }
     }, [zoom, nodeAt])
 
+    const lit = useMemo(() => {
+        const ids = new Set(focus && byId.has(focus) ? [focus] : [])
+        for (const edge of ids.size ? edges : []) {
+            if (edge.from === focus || edge.to === focus) {
+                ids.add(edge.from === focus ? edge.to : edge.from)
+            }
+        }
+        return ids
+    }, [edges, focus, byId])
+
     const layered = layoutId === "hierarchy" || layoutId === "vertical"
     const drawing = useMemo(
         () => (
@@ -318,7 +332,11 @@ function GraphViewInner<N extends Box, E extends Link>(
                         return (
                             <path
                                 key={index}
-                                className={["edge", edgeClassName?.(edge, index)].filter(Boolean).join(" ")}
+                                className={cx(
+                                    "edge",
+                                    focus && (edge.from === focus || edge.to === focus) && "lit",
+                                    edgeClassName?.(edge, index),
+                                )}
                                 style={edgeStyle?.(edge, index)}
                                 d={d}
                                 markerEnd={`url(#${arrow})`}
@@ -332,7 +350,7 @@ function GraphViewInner<N extends Box, E extends Link>(
                         return (
                             <g
                                 key={node.id}
-                                className={["node", nodeClassName?.(node)].filter(Boolean).join(" ")}
+                                className={cx("node", lit.has(node.id) && "lit", nodeClassName?.(node))}
                                 style={nodeStyle?.(node)}
                                 transform={`translate(${node.x - node.w / 2} ${node.y - node.h / 2})`}
                                 tabIndex={focusable?.(node) ? 0 : -1}
@@ -361,13 +379,15 @@ function GraphViewInner<N extends Box, E extends Link>(
             focusable,
             edgeClassName,
             edgeStyle,
+            focus,
+            lit,
         ],
     )
     const grid = gridSize * view.k
     return (
         <div
             ref={pane}
-            className={props.className}
+            className={cx("dr-graph", lit.size > 0 && "dr-graph--focus", props.className)}
             style={{
                 ...props.style,
                 backgroundSize: `${grid}px ${grid}px`,
@@ -409,7 +429,10 @@ function GraphViewInner<N extends Box, E extends Link>(
     )
 }
 
-/** A pannable, zoomable view of a laid-out graph; a ref gives zoom, fit and reveal. */
+/**
+ * A pannable, zoomable view of a laid-out graph on a dotted grid; a ref gives zoom, fit and reveal. Edges and nodes
+ * take the classes "edge" / "node" (plus yours); `focus` lights a node's neighbourhood.
+ */
 export const GraphView = forwardRef(GraphViewInner) as <N extends Box, E extends Link>(
     props: GraphViewProps<N, E> & { ref?: Ref<GraphViewHandle> },
 ) => ReactNode

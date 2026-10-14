@@ -408,6 +408,11 @@ import { GraphView } from "dimos-react/graph"
 />
 ```
 
+It draws on a dotted grid that pans and zooms with the graph; edges and nodes carry the classes `edge` / `node` plus
+yours (an edge with class `flow` animates, `--dr-graph-edge` colors a lit or flowing edge). `focus` (a node id) lights
+that node, its neighbours and the edges between them and dims the rest. `GraphControls({ graph, layout,
+onLayoutChange })`, as a child, adds the zoom buttons and the layout picker.
+
 ## Installing
 
 - **No build (import map / esm.sh)** — the main path, as in the quick start:

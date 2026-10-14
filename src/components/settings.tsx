@@ -32,14 +32,15 @@ export function SettingInput({ field, value, onChange }: SettingInputProps) {
     if (field.kind === "enum") {
         const options = [...(field.nullable ? [null] : []), ...(field.options ?? [])]
         return (
-            <Select
-                size="sm"
-                className="dr-setting-input"
-                aria-label={field.name}
-                value={options.find((option) => JSON.stringify(option) === JSON.stringify(value ?? null))}
-                onChange={onChange}
-                options={options.map((option) => [option, optionLabel(field, option)] as const)}
-            />
+            <span className="dr-setting-input">
+                <Select
+                    size="sm"
+                    aria-label={field.name}
+                    value={options.find((option) => JSON.stringify(option) === JSON.stringify(value ?? null))}
+                    onChange={onChange}
+                    options={options.map((option) => [option, optionLabel(field, option)] as const)}
+                />
+            </span>
         )
     }
     const commit = (text: string) => {

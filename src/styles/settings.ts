@@ -26,7 +26,7 @@ export const SETTINGS_CSS = /* css */ `
 .dr-setting__docs { grid-column: 1 / -1; color: var(--muted-fg); font-size: 11.5px; }
 .dr-setting-input { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .dr-setting-input__box { display: inline-flex; align-items: center; gap: 6px; }
-.dr-setting-input .dr-input-wrap, select.dr-setting-input { width: 150px; }
+.dr-setting-input .dr-input-wrap, .dr-setting-input .dr-select { width: 150px; }
 .dr-setting-input__problem { color: var(--warn); font-size: 11px; }
 
 .dr-setting-group { margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -66,6 +66,6 @@ export const SETTINGS_CSS = /* css */ `
     background: color-mix(in srgb, var(--primary) 6%, transparent);
 }
 @media (max-width: 720px) {
-    .dr-setting-input .dr-input-wrap, select.dr-setting-input { width: 120px; }
+    .dr-setting-input .dr-input-wrap, .dr-setting-input .dr-select { width: 120px; }
 }
 `

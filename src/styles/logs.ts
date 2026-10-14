@@ -1,4 +1,4 @@
-// The structured log and the traceback it draws. Tokens only: errors in the window-close red (--close-red), falling
+// The structured log, the traceback it draws and the editor note. Tokens only: errors in the window-close red (--close-red), falling
 // back to --danger.
 export const LOGS_CSS = /* css */ `
 /* structured log */
@@ -79,4 +79,16 @@ button.dr-tb__file:hover { text-decoration: underline; }
 .dr-tb__raised-one + .dr-tb__raised-one::before { content: "↳ "; }
 .dr-tb__raised-one--leaf { font-size: 12.5px; font-weight: 600; opacity: 1; }
 
+/* how opening a file in the editor went (desktop_frame.tsx) */
+.dr-editor-note {
+    padding: 5px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--raised);
+    color: var(--muted-fg);
+    font: 11px var(--mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dr-editor-note--failed { color: var(--warn); white-space: normal; }
 `

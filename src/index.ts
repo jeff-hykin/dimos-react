@@ -29,6 +29,7 @@ export * from "./components/input_devices.tsx"
 export * from "./components/text.tsx"
 export * from "./components/traceback.tsx"
 export * from "./components/structured_log.tsx"
+export * from "./components/desktop_frame.tsx"
 export * from "./components/media.tsx"
 export {
     cyclePhase,

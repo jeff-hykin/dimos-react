@@ -121,6 +121,9 @@ The parts of a view onto a running dimOS (the gateway's blueprint view is built 
 - `Traceback({ text, onOpenFile, formatPath })` — a Python traceback (plain, chained, exception groups) frame by frame:
   your own frames are buttons that open in an editor, each run of library frames folds, and what was raised is summed
   up with the innermost in bold. `parseTraceback`, `exceptionsOf`, `isTraceback` without the DOM.
+- Framed by Desktop — `framedByDesktop()`, `toDesktop(message)`, `useDesktopMessage(type, handler)`,
+  `useDesktopChrome()` (whether to draw your own top bar), `useDesktopEditor()` (`open(file, line)` in the user's
+  editor, and its answer for `EditorNote`).
 
 ## Live data (zenoh)
 

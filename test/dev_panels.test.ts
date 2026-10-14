@@ -93,3 +93,9 @@ test("Disclosure: a label summary with its count", () => {
     assert(html.startsWith(`<details class="dr-disclosure" open=""`), html)
     assert(html.includes("dr-label") && html.includes("· 9"), html)
 })
+
+test("off Desktop: not framed, no editor to ask, and the page draws its own top bar", () => {
+    assert(!lib.framedByDesktop())
+    assertEquals(renderToStaticMarkup(h(lib.EditorNote, { status: null })), "")
+    assert(renderToStaticMarkup(h(lib.EditorNote, { status: { ok: false, text: "no" } })).includes("--failed"))
+})

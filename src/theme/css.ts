@@ -13,6 +13,7 @@ import { MEDIA_CSS } from "../styles/media.ts"
 import { VIEW_PANEL_CSS } from "../styles/view_panel.ts"
 import { LOGS_CSS } from "../styles/logs.ts"
 import { SETTINGS_CSS } from "../styles/settings.ts"
+import { TOPICS_CSS } from "../styles/topics.ts"
 
 export const COMPONENT_CSS = [
     BASE_CSS,
@@ -28,4 +29,5 @@ export const COMPONENT_CSS = [
     VIEW_PANEL_CSS,
     LOGS_CSS,
     SETTINGS_CSS,
+    TOPICS_CSS,
 ].join("\n")

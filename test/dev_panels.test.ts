@@ -132,6 +132,27 @@ test("SettingInput takes its kind's control; SettingRow marks a saved value and 
     assert(choices.startsWith("<select"), choices)
 })
 
+test("message types: colored by type, then package, else a stable pick; rates and bandwidth formatted", () => {
+    assertEquals(lib.messageTypeColor("sensor_msgs.Image"), "var(--warn)")
+    assertEquals(lib.messageTypeColor("geometry_msgs/Wrench"), "var(--info)")
+    assertEquals(lib.messageTypeColor("x.Odd"), lib.messageTypeColor("x.Odd"))
+    assertEquals(lib.messageTypeName("sensor_msgs.Image"), "Image")
+    assertEquals([lib.formatRate(9.94), lib.formatRate(120.4)], ["9.9 Hz", "120 Hz"])
+    assertEquals([lib.formatBandwidth(850), lib.formatBandwidth(1234567)], ["850 B/s", "1.2 MB/s"])
+    assertEquals(lib.heatStyle(0, 10), undefined)
+    const html = renderToStaticMarkup(
+        h(lib.TopicRates, {
+            rows: [
+                { topic: "/odom", type: "nav_msgs/Odometry", hz: 10, bps: 2000 },
+                { topic: "/quiet", hz: 0 },
+            ],
+        }),
+    )
+    assert(html.includes("/odom") && html.includes("10.0 Hz") && html.includes("2.0 KB/s"), html)
+    assert(html.includes(`class="dr-rates--quiet"`), html)
+    assert(renderToStaticMarkup(h(lib.TopicRates, { rows: [] })).includes("no topics on the bus"))
+})
+
 test("CodeBlock marks highlightLine; header={false} drops the header", () => {
     const html = renderToStaticMarkup(
         h(lib.CodeBlock, { code: "a = 1\nb = 2\n", language: "py", highlightLine: 2, header: false, fill: true }),

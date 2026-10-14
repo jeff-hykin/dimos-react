@@ -31,6 +31,7 @@ export * from "./components/traceback.tsx"
 export * from "./components/structured_log.tsx"
 export * from "./settings.ts"
 export * from "./components/settings.tsx"
+export * from "./components/topics.tsx"
 export * from "./components/desktop_frame.tsx"
 export * from "./components/media.tsx"
 export {

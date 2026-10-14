@@ -680,23 +680,20 @@ function TooltipBox({
     placement: Placement
     children: ReactNode
 }) {
-    const box = useRef<HTMLDivElement>(null)
     const [position, setPosition] = useState({ x: -9999, y: -9999 })
-    useIsoLayoutEffect(() => {
-        if (box.current) {
-            setPosition(
-                placeFloating(
-                    anchor.getBoundingClientRect(),
-                    { width: box.current.offsetWidth, height: box.current.offsetHeight },
-                    placement,
-                    6,
-                ),
-            )
-        }
-    }, [anchor, placement])
+    // the box mounts a render later (Portal), so it places itself once it exists
+    const place = useCallback(
+        (box: HTMLDivElement | null) => {
+            if (box) {
+                const size = { width: box.offsetWidth, height: box.offsetHeight }
+                setPosition(placeFloating(anchor.getBoundingClientRect(), size, placement, 6))
+            }
+        },
+        [anchor, placement],
+    )
     return (
         <Portal>
-            <div ref={box} role="tooltip" className="dr-tooltip" style={{ left: position.x, top: position.y }}>
+            <div ref={place} role="tooltip" className="dr-tooltip" style={{ left: position.x, top: position.y }}>
                 {children}
             </div>
         </Portal>

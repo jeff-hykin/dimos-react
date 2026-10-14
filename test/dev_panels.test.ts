@@ -79,6 +79,59 @@ test("StructuredLog: chips for short fields, multi-line ones below, a traceback 
     assert(filtered.includes("loading…"), filtered)
 })
 
+test("settings: kinds from a JSON schema and from Python annotations, and typed text parsed by kind", () => {
+    const root = { $defs: { Mode: { enum: ["a", "b"] } } }
+    assertEquals(lib.schemaKind(lib.resolveSchema({ $ref: "#/$defs/Mode" }, root)), "enum")
+    const optional = { anyOf: [{ type: "integer" }, { type: "null" }] }
+    assertEquals(lib.schemaKind(lib.resolveSchema(optional)), "integer")
+    assert(lib.schemaNullable(optional))
+    assertEquals(lib.schemaKind({ type: "string", format: "path" }), "path")
+    assertEquals(lib.pythonTypeKind("float | None"), { kind: "number", nullable: true })
+    assertEquals(lib.pythonTypeKind("Optional[Path]"), { kind: "path", nullable: true })
+    assertEquals(lib.pythonTypeKind("Foo").kind, "json")
+    const integer = { kind: "integer", nullable: true } as const
+    assertEquals(lib.parseSettingText(integer, "3"), { value: 3 })
+    assertEquals(lib.parseSettingText(integer, "3.5"), { error: "a whole number" })
+    assertEquals(lib.parseSettingText(integer, " "), { value: null })
+    assertEquals(lib.parseSettingText({ kind: "json" }, "[1"), { error: "JSON" })
+    assertEquals([lib.settingText(null), lib.settingText({ a: 1 }), lib.settingLabel("")], ["", `{"a":1}`, `""`])
+    assert(lib.sameValue({ a: 1 }, { a: 1 }) && lib.sameValue(null, undefined))
+})
+
+test("SettingInput takes its kind's control; SettingRow marks a saved value and offers its reset", () => {
+    const toggle = renderToStaticMarkup(
+        h(lib.SettingInput, { field: { name: "on", kind: "bool" }, value: true, onChange: () => {} }),
+    )
+    assert(toggle.includes(`role="switch"`) || toggle.includes("dr-toggle"), toggle)
+    const choice = renderToStaticMarkup(
+        h(lib.SettingInput, {
+            field: { name: "mode", kind: "enum", nullable: true, options: ["a", ""] },
+            value: "a",
+            onChange: () => {},
+        }),
+    )
+    assert(choice.includes(">(none)</option>") && choice.includes(">(empty)</option>"), choice)
+    const secret = renderToStaticMarkup(
+        h(lib.SettingInput, { field: { name: "key", kind: "string", secret: true }, value: "•••", onChange: () => {} }),
+    )
+    assert(secret.includes(`type="password"`) && secret.includes(">show</button>"), secret)
+    const row = renderToStaticMarkup(
+        h(lib.SettingRow, {
+            label: "fps",
+            saved: true,
+            resetTo: 5,
+            onReset: () => {},
+            docs: "https://d",
+            children: "x",
+        }),
+    )
+    assert(row.includes(">saved</span>") && row.includes(`title="back to 5"`) && row.includes("How do I find this?"))
+    const choices = renderToStaticMarkup(
+        h(lib.SettingChoice, { labels: ["a", "b", "c", "d", "e"], value: 1, onChange: () => {}, label: "pick" }),
+    )
+    assert(choices.startsWith("<select"), choices)
+})
+
 test("CodeBlock marks highlightLine; header={false} drops the header", () => {
     const html = renderToStaticMarkup(
         h(lib.CodeBlock, { code: "a = 1\nb = 2\n", language: "py", highlightLine: 2, header: false, fill: true }),

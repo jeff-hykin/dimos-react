@@ -3,7 +3,7 @@ import fs from "node:fs"
 import { execFileSync } from "node:child_process"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
 const dimApp = process.env.DIM_APP ?? `${process.env.HOME}/repos/dim-app`
-const tag = process.argv[2] ?? "v0.22.0"
+const tag = process.argv[2] ?? "v0.22.1"
 // dim-app's Desktop helpers ride along (apps import them as dimos-react/dim-app/<file>), with their types
 const files = [
     "source/zenoh.js",

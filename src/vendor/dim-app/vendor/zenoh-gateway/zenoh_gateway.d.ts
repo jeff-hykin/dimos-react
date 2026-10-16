@@ -305,6 +305,9 @@ export interface LeaseOptions {
     /** a newer lease on overlapping keys takes this one over ("takenOver"); false: it is refused while this is held */
     allowTakeover?: boolean;
     maxSeconds?: number;
+    /** heartbeat silence (ms) that ends it, instead of the connection's heartbeat deadline, so deadmen can stay tight
+     * while the lease rides out a stall; at most the server's slowest lease heartbeat (default 60 s) */
+    timeoutMs?: number;
     onLost?: (reason: string) => void;
 }
 export declare class Lease {
@@ -316,6 +319,9 @@ export declare class Lease {
     readonly expiresInMs: number | null;
     /** why it ended: "takenOver" | "heartbeat" | "maxSeconds" | "disconnected" | "force-expired by peer N" | "released" | "renewed" */
     lost: string | null;
+    /** the heartbeat silence that ends it, as the gateway applies it; null: the connection's heartbeat deadline (or a
+     * gateway older than 0.5.17, which ignores `timeoutMs`) */
+    timeoutMs: number | null;
     /** `keys`: the ones only we publish on; `subscribe`: the ones only we subscribe to */
     constructor(owner: ZenohGateway, group: string, keys: string[], subscribe: string[], expiresInMs: number | null);
     onLost(listener: (reason: string) => void): () => void;

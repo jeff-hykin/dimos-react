@@ -420,16 +420,22 @@
         "writeLocal"
     ],
     "graph": [
+        "BlueprintGraph",
         "GraphControls",
         "GraphView",
         "LAYOUTS",
+        "buildBlueprintGraph",
         "flowPath",
         "layered",
         "layout",
+        "moduleClassName",
         "overlaps",
         "placeInOrder",
         "separate",
         "straightPath",
-        "textWidth"
+        "textWidth",
+        "topicOf",
+        "useFullscreen",
+        "useNoPagePinch"
     ]
 }

@@ -636,6 +636,7 @@ export interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
     selected?: boolean
     loading?: boolean
     align?: "center" | "start"
+    ref?: Ref<HTMLButtonElement>
 }
 
 /**

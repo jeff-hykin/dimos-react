@@ -413,6 +413,11 @@ yours (an edge with class `flow` animates, `--dr-graph-edge` colors a lit or flo
 that node, its neighbours and the edges between them and dims the rest. `GraphControls({ graph, layout,
 onLayoutChange })`, as a child, adds the zoom buttons and the layout picker.
 
+`<BlueprintGraph modules={blueprint.modules} />` draws a dimos blueprint's module graph straight from the gateway's
+`GET blueprints/{name}` answer (modules, the topics they write and read, tinted by message type), with the controls and
+a Fullscreen button (the Fullscreen API, or a full-window overlay where it's refused; Esc leaves both). `rates` (Hz per
+topic) shows live topics flowing; `spot`, `onModule`, `onTopic` and `onHover` let a page drive the lighting.
+
 ## Installing
 
 - **No build (import map / esm.sh)** — the main path, as in the quick start:

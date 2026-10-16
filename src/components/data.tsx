@@ -411,6 +411,7 @@ export interface ListRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "titl
     /** show a drag grip (an object = props for it, e.g. from useDrag) */
     handle?: boolean | HTMLAttributes<HTMLSpanElement>
     disabled?: boolean
+    ref?: Ref<HTMLDivElement>
 }
 
 /** A list row: icon, title, subtitle, meta on the right, actions. `handle`: a drag grip. */

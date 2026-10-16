@@ -28,4 +28,26 @@ export const GRAPH_CSS = /* css */ `
 .dr-graph__zoom, .dr-graph__layouts { position: absolute; bottom: 12px; }
 .dr-graph__zoom { left: 12px; }
 .dr-graph__layouts { right: 12px; flex-wrap: wrap; max-width: calc(100% - 160px); }
+/* <BlueprintGraph>: module and topic nodes, the fullscreen button, and the graph filling the window */
+.dr-bpgraph { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg); touch-action: pan-x pan-y; }
+.dr-bpgraph > .dr-graph { position: absolute; inset: 0; }
+.dr-bpgraph--overlay { position: fixed; inset: 0; z-index: 2147483000; }
+.dr-bpgraph:fullscreen { width: 100vw; height: 100vh; }
+.dr-bpgraph__fullscreen { position: absolute; top: 10px; right: 10px; }
+.dr-bpgraph__empty { display: grid; place-items: center; height: 100%; min-height: 80px; color: var(--muted-fg); font: 13px var(--sans); }
+.dr-bpgraph .node text { dominant-baseline: central; }
+.dr-bpgraph .node.module { cursor: pointer; }
+.dr-bpgraph .node.module .box { fill: var(--surface); stroke: var(--border-strong); stroke-width: 1.5; }
+.dr-bpgraph .node.module:is(:hover, :focus-visible, .lit) .box { stroke: var(--primary); }
+.dr-bpgraph .node.module :is(.bar, .tag) { fill: var(--primary); stroke: none; }
+.dr-bpgraph .node.module .tag { font: 600 9.5px var(--sans); letter-spacing: 0.18em; }
+.dr-bpgraph .node.module .name { fill: var(--fg); font: 600 15px var(--sans); }
+.dr-bpgraph .node.module .more { fill: var(--muted-fg); font: 16px var(--sans); text-anchor: middle; }
+.dr-bpgraph .node.topic .box { fill: var(--bg); stroke: color-mix(in srgb, var(--dr-bpgraph-type, var(--muted-fg)) 60%, transparent); stroke-width: 1.3; }
+.dr-bpgraph .node.topic:is(.loose, .extra):not(:hover) .box { stroke: var(--border-strong); stroke-dasharray: 4 3; }
+.dr-bpgraph .node.topic.live .box { stroke: var(--dr-bpgraph-type, var(--muted-fg)); }
+.dr-bpgraph__view--running .node.topic:not(.live) { opacity: 0.85; }
+.dr-bpgraph .node.topic .name { fill: var(--fg); font: 500 12px var(--mono); }
+.dr-bpgraph .node.topic .rate { fill: var(--dr-bpgraph-type, var(--muted-fg)); font: 10px var(--mono); }
+.dr-bpgraph .node .port { fill: var(--bg); stroke: var(--muted-fg); }
 `

@@ -220,13 +220,17 @@ export function useFullscreen(element: HTMLElement | null): {
         document.addEventListener("fullscreenchange", onChange)
         return () => document.removeEventListener("fullscreenchange", onChange)
     }, [element])
+    // Esc leaves the overlay, and the native mode too where the browser doesn't (a frame, a headless page)
     useEffect(() => {
-        if (mode !== "overlay") {
+        if (!mode) {
             return
         }
         const onKey = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
                 event.stopPropagation()
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {})
+                }
                 setMode(null)
             }
         }
@@ -270,6 +274,8 @@ export interface BlueprintGraphProps {
     onModule?: (name: string) => void
     onTopic?: (topic: string | null) => void
     onHover?: (spot: BlueprintSpot) => void
+    /** the smallest zoom a fit may pick, per layout (GraphView's; `{}` always fits the whole graph, for a small box) */
+    fitMinScale?: Partial<Record<LayoutId, number>>
     /** the zoom buttons and layout picker (default on) */
     controls?: boolean
     /** the fullscreen toggle, top right (default on) */
@@ -364,6 +370,7 @@ export const BlueprintGraph = forwardRef<GraphViewHandle, BlueprintGraphProps>(f
                     layout={layout}
                     focus={focus}
                     port={PORT}
+                    fitMinScale={props.fitMinScale}
                     focusable={(node) => node.kind === "module"}
                     nodeClassName={(node) =>
                         cx(

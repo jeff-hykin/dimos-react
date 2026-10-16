@@ -1,6 +1,8 @@
 // Hand-written types for the vendored zenoh.js (the parts dimos-react uses).
 export { checkTopic } from "./topic.js"
-import type { ZenohGateway } from "./vendor/zenoh-gateway/zenoh_gateway.js"
+import type { Lease, LeaseOptions, ZenohGateway } from "./vendor/zenoh-gateway/zenoh_gateway.js"
+
+export type { Lease, LeaseOptions }
 
 export type ConnectionState = "connecting" | "connected" | "degraded" | "lost"
 
@@ -73,6 +75,11 @@ export declare class AppZenoh {
     subscribeDesktop(type: string, callback: (event: any, message: ZenohMessage) => void, options?: ZenohUnderOptions): ZenohSubscription
     subscribeDimos(type: string, callback: (event: any, message: ZenohMessage) => void, options?: ZenohUnderOptions): ZenohSubscription
     subscribeJob(jobId: string | number, callback: (event: any, message: ZenohMessage) => void, options?: ZenohUnderOptions): ZenohSubscription
+    /**
+     * zenoh-gateway >= 0.5.16: exclusive publish/subscribe keys among the gateway's pages, once connected (take it before
+     * subscribing to its keys; needs connectOptions' heartbeat). `allowTakeover`: a newer page ends it ("takenOver").
+     */
+    lease(options: LeaseOptions): Promise<Lease>
     onState(listener: (state: ConnectionState) => void): () => boolean
     onReconnect(listener: () => void): () => boolean
     close(): void

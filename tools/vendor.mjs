@@ -3,7 +3,7 @@ import fs from "node:fs"
 import { execFileSync } from "node:child_process"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
 const dimApp = process.env.DIM_APP ?? `${process.env.HOME}/repos/dim-app`
-const tag = process.argv[2] ?? "v0.21.1"
+const tag = process.argv[2] ?? "v0.22.0"
 // dim-app's Desktop helpers ride along (apps import them as dimos-react/dim-app/<file>), with their types
 const files = [
     "source/zenoh.js",
@@ -36,24 +36,28 @@ fs.mkdirSync(`${scratch}/vendor`)
 for (const file of ["zenoh_gateway.ts", "vendor/fzstd.ts"]) {
     fs.writeFileSync(`${scratch}/${file}`, execFileSync("git", ["-C", gateway, "show", `${upstream}:client/${file}`]))
 }
-execFileSync("npx", [
-    "tsc",
-    "--declaration",
-    "--emitDeclarationOnly",
-    "--target",
-    "es2022",
-    "--module",
-    "esnext",
-    "--moduleResolution",
-    "bundler",
-    "--allowImportingTsExtensions",
-    "--lib",
-    "es2022,dom,dom.iterable",
-    "--skipLibCheck",
-    "--outDir",
-    `${scratch}/out`,
-    `${scratch}/zenoh_gateway.ts`,
-])
+// run in the scratch dir: TypeScript 6 refuses files on the command line next to a tsconfig.json (TS5112)
+execFileSync(
+    `${process.cwd()}/node_modules/.bin/tsc`,
+    [
+        "--declaration",
+        "--emitDeclarationOnly",
+        "--target",
+        "es2022",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--allowImportingTsExtensions",
+        "--lib",
+        "es2022,dom,dom.iterable",
+        "--skipLibCheck",
+        "--outDir",
+        `${scratch}/out`,
+        `${scratch}/zenoh_gateway.ts`,
+    ],
+    { cwd: scratch },
+)
 const declarations = fs
     .readFileSync(`${scratch}/out/zenoh_gateway.d.ts`, "utf8")
     .replace(/^\/\/\/ <reference no-default-lib="true"\/>\n/m, "")

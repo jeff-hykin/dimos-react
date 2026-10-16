@@ -259,6 +259,8 @@ export declare class Subscription extends Endpoint {
     /** messages the gateway accepted for us but we never got whole (queue, age, maxHz, network) */
     get dropped(): number;
     attach(peer: RTCPeerConnection): void;
+    /** Also after it opened: another client's lease took its key, so its channel and track go. */
+    _rejected(reason: string): void;
     close(): void;
 }
 export declare class Publisher extends Endpoint {
@@ -293,15 +295,29 @@ export declare class Publisher extends Endpoint {
     close(): void;
 }
 /** An exclusive right to publish on a group of keys among this gateway's clients (SPEC "Leases"). */
+export interface LeaseOptions {
+    /** a group the server defines (its keys and grants), or a name for this one; unset = unnamed */
+    group?: string;
+    /** keys only the holder may publish on: the gateway drops other clients' puts there */
+    publish?: string[];
+    /** keys only the holder may subscribe to: the gateway ends and refuses other clients' subscriptions there */
+    subscribe?: string[];
+    /** a newer lease on overlapping keys takes this one over ("takenOver"); false: it is refused while this is held */
+    allowTakeover?: boolean;
+    maxSeconds?: number;
+    onLost?: (reason: string) => void;
+}
 export declare class Lease {
     #private;
     readonly owner: ZenohGateway;
     readonly group: string;
     readonly keys: string[];
+    readonly subscribe: string[];
     readonly expiresInMs: number | null;
-    /** why it ended: "heartbeat" | "maxSeconds" | "disconnected" | "force-expired by peer N" | "released" */
+    /** why it ended: "takenOver" | "heartbeat" | "maxSeconds" | "disconnected" | "force-expired by peer N" | "released" | "renewed" */
     lost: string | null;
-    constructor(owner: ZenohGateway, group: string, keys: string[], expiresInMs: number | null);
+    /** `keys`: the ones only we publish on; `subscribe`: the ones only we subscribe to */
+    constructor(owner: ZenohGateway, group: string, keys: string[], subscribe: string[], expiresInMs: number | null);
     onLost(listener: (reason: string) => void): () => void;
     release(): Promise<void>;
     _lose(reason: string): void;
@@ -401,11 +417,13 @@ export declare class ZenohGateway {
         probeMs?: number;
     }): Promise<Topic[]>;
     /**
-     * Takes (or renews) the exclusive right to publish on `group`'s keys among this gateway's clients: the
-     * server's group, or `keys` for one it doesn't define. Needs a heartbeat; it ends when the heartbeat
-     * stops, at `maxSeconds`, on disconnect, by `release()` or by force-expiry (`onLost` says which).
+     * Takes (or renews) the exclusive right, among this gateway's clients, to publish on `publish` and subscribe to
+     * `subscribe` (or a server group's keys). Needs a heartbeat; it ends when the heartbeat stops, at `maxSeconds`, on
+     * disconnect, by `release()`, by force-expiry or, with `allowTakeover`, when a newer lease overlaps it (`onLost`
+     * says which). The older form `lease(group, { keys })` is `lease({ group, publish: keys })`.
      */
-    lease(group: string, { keys, maxSeconds }?: {
+    lease(options: LeaseOptions): Promise<Lease>;
+    lease(group: string, options?: {
         keys?: string[];
         maxSeconds?: number;
     }): Promise<Lease>;

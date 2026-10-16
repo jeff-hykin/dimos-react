@@ -325,8 +325,10 @@ export class Camera3dLayer {
         }
         this.#frustum.commit()
         this.#frustum.object.visible = settings.frustum
+        // an image's frame_id is optical by ROS convention, so auto means optical unless the frame says it's a body frame
         const optical =
-            settings.convention === "optical" || (settings.convention === "auto" && /optical/i.test(this.#frame ?? ""))
+            settings.convention === "optical" ||
+            (settings.convention === "auto" && !/(^|_)body(_|$)/i.test(this.#frame ?? ""))
         this.#content.matrix.copy(optical ? new THREE.Matrix4() : OPTICAL_TO_BODY)
         this.#content.matrixWorldNeedsUpdate = true
         this.context.setStatus({
@@ -430,7 +432,7 @@ export function Camera3dSettingsEditor({ settings, topic }: Camera3dSettingsEdit
                 <Select
                     value={value.convention}
                     options={[
-                        ["auto", "auto (by name)"],
+                        ["auto", "auto (optical unless named body)"],
                         ["optical", "optical (z forward)"],
                         ["body", "body (x forward)"],
                     ]}

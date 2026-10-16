@@ -44,7 +44,8 @@ test("no layout overlaps nodes, even crowded, with cycles and loose nodes", () =
             assert(!overlaps(nodes, positions), `${id} overlaps with ${modules} modules and ${extras} extras`)
         }
     }
-})
+    // 25 layouts of up to 80 nodes: well under a second alone, but past vitest's 5 s on a loaded machine
+}, 30_000)
 
 test("the layered layout runs edges left to right and routes long ones through their layers", () => {
     const nodes = ["a", "b", "c", "d"].map((id) => ({ id, w: 40, h: 20 }))

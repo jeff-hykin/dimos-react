@@ -185,8 +185,9 @@ export const DATA_CSS = /* css */ `
     gap: 10px;
     padding: 8px 10px;
     min-height: 40px;
+    margin-inline: var(--list-inset, 0); /* a skin's inset rows: a picked one reads as a button, not a stripe */
     color: var(--fg);
-    border-radius: var(--radius-sm);
+    border-radius: var(--list-row-radius, var(--radius-sm));
     outline: none;
 }
 .dr-list-row--clickable { cursor: pointer; }

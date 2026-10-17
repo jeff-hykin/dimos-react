@@ -1,6 +1,7 @@
 // A page framed by Desktop (its Details modal, a panel): Desktop answers dimos:* messages from the frame. It says
 // whether the page should draw its own top bar (dimos:chrome → dimos:chrome-ok), closes it (dimos:close) and opens
-// files in the user's editor (dimos:open-in-editor → dimos:open-in-editor-result).
+// files in the user's editor (dimos:open-in-editor → dimos:open-in-editor-result) and hides or shows a preloaded page
+// (dimos:visible).
 import { useEffect, useState } from "react"
 import { cx } from "../cx.ts"
 import { useLatest } from "../hooks.ts"
@@ -26,17 +27,30 @@ export function useDesktopMessage(type: string, handler: (data: Record<string, u
     }, [type, latest])
 }
 
-/** Whether to draw the page's own top bar: always off Desktop; framed, once Desktop says so (dimos:chrome-ok). */
-export function useDesktopChrome(): boolean {
+/**
+ * Whether to draw the page's own top bar: always off Desktop; framed, once Desktop says so (dimos:chrome-ok).
+ * `{ pausable: true }` tells Desktop the page stops polling while hidden (useDesktopVisible), so it may preload it.
+ */
+export function useDesktopChrome(features: { pausable?: boolean } = {}): boolean {
     const framed = framedByDesktop()
     const [chrome, setChrome] = useState(!framed)
     useDesktopMessage("dimos:chrome-ok", () => setChrome(true))
+    const pausable = !!features.pausable
     useEffect(() => {
         if (framed) {
-            toDesktop({ type: "dimos:chrome" })
+            toDesktop({ type: "dimos:chrome", ...(pausable ? { pausable } : {}) })
         }
-    }, [framed])
+    }, [framed, pausable])
     return chrome
+}
+
+/** Whether the page is shown: false from the start with ?hidden=1 (Desktop preloading it), then per dimos:visible. */
+export function useDesktopVisible(): boolean {
+    const [visible, setVisible] = useState(
+        () => typeof location === "undefined" || new URLSearchParams(location.search).get("hidden") !== "1",
+    )
+    useDesktopMessage("dimos:visible", (data) => setVisible(!!data.visible))
+    return visible
 }
 
 export interface EditorStatus {

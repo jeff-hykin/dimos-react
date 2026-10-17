@@ -241,6 +241,7 @@
         "useDesktopChrome",
         "useDesktopEditor",
         "useDesktopMessage",
+        "useDesktopVisible",
         "useDrag",
         "useEscape",
         "useGamepad",

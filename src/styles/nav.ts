@@ -37,6 +37,7 @@ export const NAV_CSS = /* css */ `
 .dr-tabs__item--active {
     color: var(--primary);
     border-bottom-color: var(--primary);
+    background: var(--pick-bg, transparent);
 }
 :root[data-dr-dark] .dr-tabs__item--active { text-shadow: var(--head-shadow, none); }
 .dr-tabs--sm .dr-tabs__item { padding: 5px 9px; font-size: 12px; }
@@ -52,7 +53,7 @@ export const NAV_CSS = /* css */ `
 }
 .dr-tabs--pill .dr-tabs__item:hover { background: var(--hover); }
 .dr-tabs--pill .dr-tabs__item--active {
-    background: var(--sel);
+    background: var(--pick-bg, var(--sel));
     border-color: var(--primary);
 }
 .dr-tabs__badge,
@@ -96,14 +97,14 @@ export const NAV_CSS = /* css */ `
 .dr-segmented__item--active,
 .dr-segmented__item--active:hover {
     color: var(--fg);
-    background: var(--card);
+    background: var(--pick-bg, var(--card));
     border-color: var(--border);
     box-shadow: var(--shadow-xs, none);
 }
 :root[data-dr-dark] .dr-segmented__item--active,
 :root[data-dr-dark] .dr-segmented__item--active:hover {
     color: var(--primary);
-    background: var(--sel);
+    background: var(--pick-bg, var(--sel));
     border-color: var(--primary);
 }
 .dr-segmented--sm .dr-segmented__item { padding: 3px 8px; font-size: 11.5px; }
@@ -302,7 +303,7 @@ export const NAV_CSS = /* css */ `
 .dr-navrail__item--active,
 .dr-navrail__item--active:hover {
     color: var(--primary);
-    background: var(--sel);
+    background: var(--pick-bg, var(--sel));
     box-shadow: inset var(--list-rule, 2px) 0 0 var(--primary);
 }
 .dr-navrail__label { font: 10.5px/1.2 var(--sans); }
@@ -457,7 +458,7 @@ button.dr-stepper__mark:hover { box-shadow: var(--dr-focus); }
     color: var(--fg);
 }
 .dr-palette__item > .dr-icon { color: var(--muted-fg); }
-.dr-palette__item--active { background: var(--sel); }
+.dr-palette__item--active { background: var(--pick-bg, var(--sel)); }
 .dr-palette__item--active > .dr-icon { color: var(--primary); }
 .dr-palette__noicon { width: 15px; flex: none; }
 .dr-palette__label { flex: 1; min-width: 0; }

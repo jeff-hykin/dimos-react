@@ -194,7 +194,7 @@ export const DATA_CSS = /* css */ `
 .dr-list-row:focus-visible { box-shadow: var(--dr-focus); }
 .dr-list-row--selected,
 .dr-list-row--selected:hover {
-    background: var(--sel);
+    background: var(--pick-bg, var(--sel));
     box-shadow: inset var(--list-rule, 2px) 0 0 var(--primary);
 }
 .dr-list-row--disabled { opacity: 0.5; cursor: not-allowed; }

@@ -183,7 +183,7 @@ export const LAYOUT_CSS = /* css */ `
 .dr-tile:disabled { opacity: 0.5; cursor: default; }
 .dr-tile--start { align-items: stretch; text-align: left; padding: 12px 14px; }
 .dr-tile--start .dr-tile__title, .dr-tile--start .dr-tile__subtitle { white-space: normal; }
-.dr-tile--selected { border-color: var(--primary); background: var(--sel); }
+.dr-tile--selected { border-color: var(--primary); background: var(--pick-bg, var(--sel)); }
 .dr-tile--loading { cursor: default; }
 .dr-tile__media { display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; color: var(--primary); }
 .dr-tile__media img { max-width: 100%; max-height: 100%; }

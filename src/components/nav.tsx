@@ -143,7 +143,7 @@ function choiceGroup<T extends string | number>(
                         disabled={item.disabled}
                         title={item.title}
                         className={cx(`${baseClass}__item`, active && `${baseClass}__item--active`)}
-                        data-block={active ? "" : undefined}
+                        data-block={active && variant === "pill" ? "" : undefined}
                         onClick={() => onChange?.(item.value)}
                         {...item.props}
                     >

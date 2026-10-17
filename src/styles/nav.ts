@@ -37,7 +37,6 @@ export const NAV_CSS = /* css */ `
 .dr-tabs__item--active {
     color: var(--primary);
     border-bottom-color: var(--primary);
-    background: var(--pick-bg, transparent);
 }
 :root[data-dr-dark] .dr-tabs__item--active { text-shadow: var(--head-shadow, none); }
 .dr-tabs--sm .dr-tabs__item { padding: 5px 9px; font-size: 12px; }
@@ -97,7 +96,7 @@ export const NAV_CSS = /* css */ `
 .dr-segmented__item--active,
 .dr-segmented__item--active:hover {
     color: var(--fg);
-    background: var(--pick-bg, var(--card));
+    background: var(--card);
     border-color: var(--border);
     box-shadow: var(--shadow-xs, none);
 }

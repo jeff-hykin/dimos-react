@@ -143,7 +143,6 @@ function choiceGroup<T extends string | number>(
                         disabled={item.disabled}
                         title={item.title}
                         className={cx(`${baseClass}__item`, active && `${baseClass}__item--active`)}
-                        data-block={active && variant === "pill" ? "" : undefined}
                         onClick={() => onChange?.(item.value)}
                         {...item.props}
                     >
@@ -810,7 +809,6 @@ export function NavRail<T extends Key = string>({
                             aria-current={active ? "page" : undefined}
                             disabled={item.disabled}
                             className={cx("dr-navrail__item", active && "dr-navrail__item--active")}
-                            data-block={active ? "" : undefined}
                             onClick={() => onChange?.(item.value)}
                         >
                             <Icon name={item.icon} size={20} />
@@ -1075,7 +1073,6 @@ export function CommandPalette({ open, onClose, commands = [], placeholder = "Ty
                                     role="option"
                                     aria-selected={index === active}
                                     className={cx("dr-palette__item", index === active && "dr-palette__item--active")}
-                                    data-block={index === active ? "" : undefined}
                                     onPointerMove={() => setActive(index)}
                                     onClick={() => run(command)}
                                 >

@@ -671,7 +671,6 @@ export function Tile({
             type="button"
             className={cx("dr-tile", align === "start" && "dr-tile--start", selected && "dr-tile--selected", className)}
             aria-pressed={selected === undefined ? undefined : !!selected}
-            data-block={selected ? "" : undefined}
             {...rest}
         >
             {media || icon ? (

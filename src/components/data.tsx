@@ -440,7 +440,6 @@ export function ListRow({
             role="listitem"
             tabIndex={onClick && !disabled ? 0 : undefined}
             aria-selected={selected || undefined}
-            data-block={selected ? "" : undefined}
             onClick={disabled ? undefined : onClick}
             onKeyDown={
                 onClick && !disabled

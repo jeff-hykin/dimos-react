@@ -22,7 +22,7 @@ export const NAV_CSS = /* css */ `
     color: var(--muted-fg);
     background: none;
     border: 0;
-    border-bottom: 2px solid transparent;
+    border-bottom: var(--tab-rule, 2px) solid transparent;
     cursor: pointer;
     white-space: nowrap;
     transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
@@ -35,7 +35,7 @@ export const NAV_CSS = /* css */ `
 .dr-tabs__item:focus-visible { outline: none; box-shadow: var(--dr-focus); }
 .dr-tabs__item:disabled { opacity: 0.45; cursor: not-allowed; }
 .dr-tabs__item--active {
-    color: var(--primary);
+    color: var(--tab-active-fg, var(--primary));
     border-bottom-color: var(--primary);
 }
 :root[data-dr-dark] .dr-tabs__item--active { text-shadow: var(--head-shadow, none); }
@@ -52,7 +52,7 @@ export const NAV_CSS = /* css */ `
 }
 .dr-tabs--pill .dr-tabs__item:hover { background: var(--hover); }
 .dr-tabs--pill .dr-tabs__item--active {
-    background: var(--pick-bg, var(--sel));
+    background: var(--sel);
     border-color: var(--primary);
 }
 .dr-tabs__badge,
@@ -61,8 +61,9 @@ export const NAV_CSS = /* css */ `
     font: 500 10px/1.5 var(--mono);
     padding: 0 6px;
     border-radius: var(--radius-pill);
-    background: var(--primary);
-    color: var(--primary-fg);
+    background: var(--badge-bg, var(--primary));
+    color: var(--badge-fg, var(--primary-fg));
+    box-shadow: inset 0 0 0 1px var(--badge-border, transparent);
 }
 
 /* segmented */
@@ -103,7 +104,7 @@ export const NAV_CSS = /* css */ `
 :root[data-dr-dark] .dr-segmented__item--active,
 :root[data-dr-dark] .dr-segmented__item--active:hover {
     color: var(--primary);
-    background: var(--pick-bg, var(--sel));
+    background: var(--sel);
     border-color: var(--primary);
 }
 .dr-segmented--sm .dr-segmented__item { padding: 3px 8px; font-size: 11.5px; }
@@ -302,7 +303,7 @@ export const NAV_CSS = /* css */ `
 .dr-navrail__item--active,
 .dr-navrail__item--active:hover {
     color: var(--primary);
-    background: var(--pick-bg, var(--sel));
+    background: var(--sel);
     box-shadow: inset var(--list-rule, 2px) 0 0 var(--primary);
 }
 .dr-navrail__label { font: 10.5px/1.2 var(--sans); }
@@ -457,7 +458,7 @@ button.dr-stepper__mark:hover { box-shadow: var(--dr-focus); }
     color: var(--fg);
 }
 .dr-palette__item > .dr-icon { color: var(--muted-fg); }
-.dr-palette__item--active { background: var(--pick-bg, var(--sel)); }
+.dr-palette__item--active { background: var(--sel); }
 .dr-palette__item--active > .dr-icon { color: var(--primary); }
 .dr-palette__noicon { width: 15px; flex: none; }
 .dr-palette__label { flex: 1; min-width: 0; }

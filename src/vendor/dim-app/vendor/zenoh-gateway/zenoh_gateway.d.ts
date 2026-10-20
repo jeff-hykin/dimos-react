@@ -39,6 +39,46 @@ export interface VideoFrameInfo {
     quality: number;
     keyframe: boolean;
     encodedBytes: number;
+    /** the frame's media time on its track (its RTP timestamp less the track's first, ms; a video element's
+     * requestVideoFrameCallback `rtpTimestamp` says which frame is showing); absent from gateways before 0.5.20 */
+    mediaTimeMs?: number;
+    /** when the gateway wrote it to the track (unix ms, gateway clock); absent from gateways before 0.5.20 */
+    writtenMs?: number;
+    /** the frame's RTP timestamp: a video element's requestVideoFrameCallback `rtpTimestamp` names this frame exactly
+     * (absent from gateways before 0.5.20, and until the gateway saw the track's first packet) */
+    rtpTimestamp?: number;
+    /** when the gateway got the frame's sample and finished encoding it (unix ms, gateway clock; the sample's own time is
+     * the message's `timestamp`); absent from gateways before 0.5.20 */
+    receivedMs?: number;
+    encodedMs?: number;
+}
+/** Percentiles of one latency, ms. */
+export interface LatencySpread {
+    p50: number;
+    p95: number;
+}
+/** End-to-end video latency over the frames a video element showed lately (`Subscription.watchVideoLatency`), ms. */
+export interface VideoLatency {
+    /** frames measured, and shown frames no metadata named (lost, or from a gateway before 0.5.20) */
+    frames: number;
+    unmatched: number;
+    /** the sample's timestamp to the frame on screen */
+    total: LatencySpread;
+    /** where it went: to the gateway (zenoh), decoding + encoding there, waiting to be written to the track, then RTP
+     * pacer + network + jitter buffer + decode to the screen; `toReceived`/`receivedToShown` split that last stage
+     * where the browser reports a frame's receive time (Chrome) */
+    stages: {
+        toGateway: LatencySpread;
+        encoding: LatencySpread;
+        toTrack: LatencySpread;
+        trackToShown: LatencySpread;
+        toReceived?: LatencySpread;
+        receivedToShown?: LatencySpread;
+    };
+    /** source-to-shown from the stamp the frame's own RTP packets carry (abs-capture-time, which Chrome reports in
+     * `getSynchronizationSources()`), on frames shown while they were the newest received: a check that the stamp
+     * that came with the video agrees with the one the metadata named */
+    captureToShown?: LatencySpread;
 }
 export interface Message {
     key: string;
@@ -79,16 +119,26 @@ export interface SubscribeOptions {
     compress?: "zstd" | "none";
     /** video channels: most bits/s the stream asks for (default: the server's) */
     maxBitrate?: number;
-    /** video channels: smallest share of the source's width and height the picture may shrink to (default 0.25) */
+    /** video channels: smallest share of the source's width and height the picture may shrink to (default 0) */
     minResolutionScale?: number;
+    /** video channels: [width, height] the picture never shrinks below, aspect kept (default [160, 64]) */
+    minResolution?: [number, number];
     /** video channels: [width, height] box the picture is fitted into */
     maxResolution?: [number, number];
+    /** video channels: the encoder may skip frames to hold its bitrate (default true; libwebrtc does the same for cameras) */
+    frameDropping?: boolean;
+    /** video channels: a keyframe at least this often, ms, on top of the ones the browser asks for after a loss (default 60000) */
+    keyframeIntervalMs?: number;
+    /** video channels: a keyframe when the encoder sees a new scene (default false: at low bitrates they cost more than they fix) */
+    sceneChangeKeyframes?: boolean;
+    /** video channels: the quantizer (H.264's 0-51) the picture's size aims for: lower = smaller, sharper (default 30) */
+    targetQp?: number;
     /** video channels: [min, max] ms the browser may hold a frame to smooth out jitter (default [0, 0]: show at once) */
     playoutDelay?: [number, number];
 }
 /** What `Subscription.update` may change on a running subscription; `null` puts an option back to its default. */
 export type SubscriptionUpdate = {
-    [option in "maxHz" | "minQuality" | "qualityToHzTradeoff" | "bandwidthPriority" | "maxBitrate" | "minResolutionScale" | "maxResolution" | "playoutDelay"]?: SubscribeOptions[option] | null;
+    [option in "maxHz" | "minQuality" | "qualityToHzTradeoff" | "bandwidthPriority" | "maxBitrate" | "minResolutionScale" | "minResolution" | "maxResolution" | "frameDropping" | "keyframeIntervalMs" | "sceneChangeKeyframes" | "targetQp" | "playoutDelay"]?: SubscribeOptions[option] | null;
 } & {
     encodeOptions?: {
         quality?: number;
@@ -108,6 +158,11 @@ export interface ConnectOptions {
     /** sent as `Authorization: Bearer <token>`; the gateway's authorize hook turns it into a grant */
     token?: string;
     reconnect?: boolean;
+    /** ms the connection may stay "disconnected", or (when the page comes back from hidden) go without receiving a
+     *  byte, before the client starts a fresh connection at once instead of waiting for the browser to declare the old
+     *  one failed (default 2000; a phone drops a backgrounded tab's connection, which then took ~5 s to come back). A
+     *  connection that is still receiving is kept. */
+    freshAfterMs?: number;
     statsIntervalMs?: number;
     heartbeatHz?: number;
     heartbeatMisses?: number;
@@ -254,6 +309,15 @@ export declare class Subscription extends Endpoint {
      * Changes the running subscription's options in place: same channel and track, no resubscribe; the gateway's
      * next frame uses them. Reconnects keep them too.
      */
+    /**
+     * Measures end-to-end latency on each frame `element` shows of this video subscription (requestVideoFrameCallback:
+     * Chrome, Firefox, Safari): the frame's RTP timestamp names its metadata, whose gateway times the connection's
+     * clock sync brings to this clock. Read it with `videoLatency()`; returns a function that stops measuring.
+     */
+    watchVideoLatency(element: HTMLVideoElement): () => void;
+    /** End-to-end latency of the frames a watched video element showed lately (see `watchVideoLatency`): its latest 300,
+     * or those of the last `windowMs`; null before any. */
+    videoLatency(windowMs?: number): VideoLatency | null;
     update(changes: SubscriptionUpdate): Promise<void>;
     get state(): SubscriptionState;
     /** messages the gateway accepted for us but we never got whole (queue, age, maxHz, network) */

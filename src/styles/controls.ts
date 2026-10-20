@@ -113,7 +113,8 @@ export const CONTROLS_CSS = /* css */ `
 .dr-input-clear:hover { color: var(--fg); background: var(--hover); }
 .dr-search input::-webkit-search-cancel-button { display: none; }
 .dr-number { width: 100%; }
-.dr-textarea { min-height: 84px; line-height: 1.5; resize: vertical; padding: 9px 11px; }
+/* a box of lines rounds like a card, not a control: a pill skin's 999px --radius made it a stadium */
+.dr-textarea { min-height: 84px; line-height: 1.5; resize: vertical; padding: 9px 11px; border-radius: min(var(--radius), var(--radius-lg)); }
 .dr-select {
     cursor: pointer;
     padding-right: 32px;
@@ -251,6 +252,13 @@ export const CONTROLS_CSS = /* css */ `
 :root[data-dr-dark] .dr-slider input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--primary), var(--glow); }
 .dr-slider input[type="range"]:focus-visible { outline: none; }
 .dr-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: var(--dr-focus); }
+/* touch: only the thumb takes a finger (a tap or a scroll that starts on the track scrolls the page instead of moving
+   the value), and the thumb is big enough to grab; the range slider's inputs already work this way */
+@media (pointer: coarse) {
+    .dr-slider input[type="range"] { pointer-events: none; height: 26px; }
+    .dr-slider input[type="range"]::-webkit-slider-thumb { pointer-events: auto; width: 22px; height: 22px; margin-top: -10px; }
+    .dr-slider input[type="range"]::-moz-range-thumb { pointer-events: auto; width: 20px; height: 20px; }
+}
 .dr-slider-value { font: 12px var(--mono); color: var(--muted-fg); min-width: 3.5em; text-align: right; white-space: nowrap; }
 .dr-slider--disabled { opacity: 0.5; }
 .dr-range { --dr-from: 0%; --dr-to: 100%; }

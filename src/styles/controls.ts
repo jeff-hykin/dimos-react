@@ -203,8 +203,9 @@ export const CONTROLS_CSS = /* css */ `
 }
 .dr-toggle input:checked + .dr-toggle-track { background: var(--primary); border-color: var(--primary); }
 .dr-toggle input:checked + .dr-toggle-track .dr-toggle-knob { transform: translateX(14px); background: var(--primary-fg); }
-:root[data-dr-dark] .dr-toggle input:checked + .dr-toggle-track { background: var(--sel); }
-:root[data-dr-dark] .dr-toggle input:checked + .dr-toggle-track .dr-toggle-knob { background: var(--primary); box-shadow: var(--glow); }
+/* --toggle-on / --toggle-on-knob: a skin whose accent is neutral (Vibeslop) fills an on switch solid; unset, the accent tint */
+:root[data-dr-dark] .dr-toggle input:checked + .dr-toggle-track { background: var(--toggle-on, var(--sel)); }
+:root[data-dr-dark] .dr-toggle input:checked + .dr-toggle-track .dr-toggle-knob { background: var(--toggle-on-knob, var(--primary)); box-shadow: var(--glow); }
 .dr-toggle input:focus-visible + .dr-toggle-track { box-shadow: var(--dr-focus); }
 .dr-toggle--sm .dr-toggle-track { width: 28px; height: 16px; }
 .dr-toggle--sm .dr-toggle-knob { width: 10px; height: 10px; }

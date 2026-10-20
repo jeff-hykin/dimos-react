@@ -158,10 +158,9 @@ export interface ConnectOptions {
     /** sent as `Authorization: Bearer <token>`; the gateway's authorize hook turns it into a grant */
     token?: string;
     reconnect?: boolean;
-    /** ms the connection may stay "disconnected", or (when the page comes back from hidden) go without receiving a
-     *  byte, before the client starts a fresh connection at once instead of waiting for the browser to declare the old
-     *  one failed (default 2000; a phone drops a backgrounded tab's connection, which then took ~5 s to come back). A
-     *  connection that is still receiving is kept. */
+    /** ms the page may be hidden or frozen, or the connection "disconnected", before the client starts a fresh
+     *  connection at once instead of catching up or waiting for the browser to declare the old one failed (default 2000;
+     *  a phone drops a backgrounded tab's connection, which then took ~5 s to come back) */
     freshAfterMs?: number;
     statsIntervalMs?: number;
     heartbeatHz?: number;

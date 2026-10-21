@@ -5,7 +5,7 @@ import { cx } from "../cx.ts"
 import { useStore } from "./store.ts"
 import { GradientPicker } from "./gradient_picker.tsx"
 import { CUBE_SHADES, POINT_STYLES } from "./point_material.ts"
-import { rendering, splatFallback } from "./rendering.ts"
+import { appRendering, rendering, splatFallback } from "./rendering.ts"
 import { ColorSwatch } from "../components/input_devices.tsx"
 import { Button, Field, NumberInput, Select, Slider } from "../components/controls.tsx"
 import type { NumberInputProps, SelectProps } from "../components/controls.tsx"
@@ -108,7 +108,34 @@ export function RenderingSettings() {
             <Field label="Cube shading">
                 <CubeShadePicker />
             </Field>
+            <NearShrinkSetting />
         </div>
+    )
+}
+
+/** Settings → Rendering's near-shrink distance: points closer than it shrink, so walls next to the camera open up. */
+export function NearShrinkSetting() {
+    const { nearShrink } = useStore(rendering)
+    const app = useStore(appRendering)
+    const value = nearShrink ?? app.nearShrink
+    return (
+        <Field
+            label="See through near the camera"
+            hint={
+                nearShrink === null
+                    ? "points closer than this shrink, so a wall you're next to doesn't hide what's behind it (the app's default)"
+                    : "points closer than this shrink, so a wall you're next to doesn't hide what's behind it"
+            }
+        >
+            <Slider
+                min={0}
+                max={4}
+                step={0.25}
+                value={value}
+                format={(meters) => (meters > 0 ? `${meters} m` : "off")}
+                onChange={(meters) => rendering.update({ nearShrink: meters })}
+            />
+        </Field>
     )
 }
 

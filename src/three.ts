@@ -34,7 +34,14 @@ export {
 export { LayersPanel, TfFootnote, TfPanel, useLayerManager } from "./three/panels.tsx"
 export { cubeRegion, regionDirection, regionLabel, ViewCube } from "./three/view_cube.ts"
 export type { CubeRegion, ViewCubeCorner, ViewCubeOptions } from "./three/view_cube.ts"
-export { CubeShadePicker, PointLookEditor, RangeInput, RenderingSettings, StylePicker } from "./three/look_editor.tsx"
+export {
+    CubeShadePicker,
+    NearShrinkSetting,
+    PointLookEditor,
+    RangeInput,
+    RenderingSettings,
+    StylePicker,
+} from "./three/look_editor.tsx"
 export { LayerManager } from "./three/layers/manager.ts"
 export {
     allLayerTypes,
@@ -64,7 +71,16 @@ export { TfFramesLayer } from "./three/layers/tf_frames.tsx"
 export { Camera3dLayer } from "./three/layers/camera3d.tsx"
 export { checkTf, confirmedIssues, TF_STALE_MS } from "./three/tf_check.ts"
 export { FrameHighlighter } from "./three/frame_highlight.ts"
-export { FRAME_BUDGET_MS, rendering, resolveLook, resolveStyle, splatFallback } from "./three/rendering.ts"
+export {
+    appRendering,
+    FRAME_BUDGET_MS,
+    rendering,
+    resolveLook,
+    resolveNearShrink,
+    resolveStyle,
+    setRenderingDefaults,
+    splatFallback,
+} from "./three/rendering.ts"
 export {
     CLOUD_PRESETS,
     cloudChanges,

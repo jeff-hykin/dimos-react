@@ -7,7 +7,7 @@ import { useStore } from "../store.ts"
 import { headerFrameId } from "../../lcm.ts"
 import { decodeMessage } from "../../data.ts"
 import { applyLook, makePointMaterial } from "../point_material.ts"
-import { rendering, resolveLook, splatFallback } from "../rendering.ts"
+import { appRendering, rendering, resolveLook, splatFallback } from "../rendering.ts"
 import {
     CLOUD_PRESETS,
     cloudQualities,
@@ -204,6 +204,7 @@ export class CloudLayer {
         this.#unsubscribe.push(settings.subscribe(() => this.#onSettings()))
         this.#unsubscribe.push(
             rendering.subscribe(() => this.#onSettings()),
+            appRendering.subscribe(() => this.#onSettings()),
             splatFallback.subscribe(() => this.#onSettings()),
         )
         this.#onSettings()

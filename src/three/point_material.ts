@@ -48,6 +48,9 @@ export interface PointLook {
     solid?: string
     opacity?: number
     cubeShade?: CubeShade
+    /** meters: points closer to the camera than this shrink with their distance, so a wall you're next to doesn't
+     *  hide what's behind it (0 = off) */
+    nearShrink?: number
 }
 
 /** The look a point layer starts from; props override any field. */
@@ -62,6 +65,7 @@ export const DEFAULT_LOOK: Required<Omit<PointLook, "period">> = {
     solid: "#ffffff",
     opacity: 1,
     cubeShade: "soft",
+    nearShrink: 0,
 }
 
 const COLOR: Record<ColorMode, number> = { height: 0, intensity: 1, range: 2, solid: 3 }
@@ -71,6 +75,7 @@ const vertexShader = /* glsl */ `
 uniform float uSize;
 uniform float uPxPerMeter;
 uniform float uMinPx;
+uniform float uNearShrink;
 uniform int uStyle;
 uniform int uColorMode;
 uniform int uAxis;
@@ -120,6 +125,8 @@ void main() {
     float depth = max(1e-3, -mv.z);
     // a cube's silhouette can reach sqrt(3)/2 of its edge from the center; a splat's soft edge needs room too
     float px = uSize * uPxPerMeter / depth * (uStyle == 2 ? 1.8 : uStyle == 3 ? 1.8 : 1.0);
+    // inside uNearShrink a point keeps the screen size it had there, so it shrinks in the world as the camera nears
+    if (uNearShrink > 0.0) px *= min(1.0, depth / uNearShrink);
 #ifdef SPLAT
     // over the splat budget, a stable random subset is drawn: blended splats are fill-bound, and where a map is dense
     // enough to exceed the budget its splats already overlap so much that the dropped ones don't change the picture
@@ -234,6 +241,7 @@ export function makePointMaterial(pixelsPerMeter: { value: number }): THREE.Shad
             uSize: { value: 0.05 },
             uPxPerMeter: pixelsPerMeter,
             uMinPx: { value: 1.5 },
+            uNearShrink: { value: 0 },
             uStyle: { value: 0 },
             uColorMode: { value: 0 },
             uAxis: { value: 2 },
@@ -272,6 +280,7 @@ export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, ra
     const uniforms = material.uniforms
     uniforms.uCubeShade.value = CUBE_SHADES[look.cubeShade]?.id ?? 0
     uniforms.uSize.value = Math.max(0.001, look.size)
+    uniforms.uNearShrink.value = Math.max(0, look.nearShrink ?? 0)
     const style = POINT_STYLES[look.style] ?? POINT_STYLES.disc
     uniforms.uStyle.value = style.id
     const wanted: Set<string> = new Set()

@@ -7,13 +7,32 @@ import type { EditablePointLook } from "./look_editor.tsx"
 export interface RenderingDefaults {
     pointStyle: PointStyle
     cubeShade: CubeShade
+    /** meters (PointLook.nearShrink) for every layer whose look doesn't set it; null = the app's default */
+    nearShrink: number | null
 }
 
 /** The page-wide defaults (saved per viewer). A layer whose look says style "default" follows `pointStyle`. */
 export const rendering = localStore<RenderingDefaults>("dimos-react.rendering", {
     pointStyle: "voxel",
     cubeShade: "soft",
+    nearShrink: null,
 })
+
+/** What an app picks for the fields a viewer left on default (setRenderingDefaults); never saved. */
+export const appRendering = new Store<{ nearShrink: number }>({ nearShrink: 0 })
+
+/**
+ * An app's own rendering defaults, e.g. `setRenderingDefaults({ nearShrink: 1.5 })` to see through walls the camera
+ * is next to. A viewer's choice in Settings → Rendering still wins.
+ */
+export function setRenderingDefaults(defaults: Partial<{ nearShrink: number }>) {
+    appRendering.update(defaults)
+}
+
+/** The near-shrink distance in effect: the viewer's choice, else the app's. */
+export function resolveNearShrink(): number {
+    return rendering.get().nearShrink ?? appRendering.get().nearShrink
+}
 
 /** Set while splats are drawn as cubes because frames took longer than FRAME_BUDGET_MS for 3 s (the Viewer sets it). */
 export const splatFallback = new Store({ active: false, frameMs: 0 })
@@ -31,5 +50,10 @@ export function resolveStyle(style?: string | null): PointStyle {
 
 /** A look with "default" style and the page's cube shading resolved, ready for applyLook. */
 export function resolveLook(look: EditablePointLook): PointLook {
-    return { ...look, style: resolveStyle(look.style), cubeShade: look.cubeShade ?? rendering.get().cubeShade }
+    return {
+        ...look,
+        style: resolveStyle(look.style),
+        cubeShade: look.cubeShade ?? rendering.get().cubeShade,
+        nearShrink: look.nearShrink ?? resolveNearShrink(),
+    }
 }

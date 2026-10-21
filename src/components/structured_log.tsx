@@ -37,8 +37,8 @@ export function splitRecord(record: LogRecord): {
     const traceback = Array.isArray(extra.traceback_lines)
         ? extra.traceback_lines.join("")
         : isTraceback(extra.exception)
-          ? extra.exception
-          : null
+        ? extra.exception
+        : null
     if (traceback) {
         for (const key of ["traceback_lines", "exception", "exception_type", "exception_message"]) {
             delete extra[key]
@@ -67,11 +67,16 @@ function Record({ record, onOpenFile, formatPath }: RecordProps) {
                 <span className="dr-slog__ts">{shortTime(record.timestamp)}</span>
                 <span className="dr-slog__lv">{record.level}</span>
                 <span className="dr-slog__ev">
-                    {record.logger ? (
-                        <span className="dr-slog__logger" title={where ? `${record.logger} ${where}` : record.logger}>
-                            {record.logger}
-                        </span>
-                    ) : null}
+                    {record.logger
+                        ? (
+                            <span
+                                className="dr-slog__logger"
+                                title={where ? `${record.logger} ${where}` : record.logger}
+                            >
+                                {record.logger}
+                            </span>
+                        )
+                        : null}
                     {record.event}
                     {fields
                         .filter(([, value]) => !multiline(value))
@@ -91,9 +96,9 @@ function Record({ record, onOpenFile, formatPath }: RecordProps) {
                         <pre>{String(value).replace(/\n$/, "")}</pre>
                     </div>
                 ))}
-            {traceback ? (
-                <Traceback text={traceback} onOpenFile={onOpenFile} formatPath={formatPath} className="dr-slog__tb" />
-            ) : null}
+            {traceback
+                ? <Traceback text={traceback} onOpenFile={onOpenFile} formatPath={formatPath} className="dr-slog__tb" />
+                : null}
         </div>
     )
 }
@@ -157,29 +162,35 @@ export function StructuredLog({
     const filters = onLevelChange || onQueryChange || onFollowChange
     return (
         <div className={cx("dr-slog", className)} {...rest}>
-            {filters ? (
-                <div className="dr-slog__tools">
-                    {onLevelChange ? (
-                        <Select
-                            size="sm"
-                            aria-label="lowest level"
-                            className="dr-slog__level"
-                            value={level ?? "info"}
-                            onChange={onLevelChange}
-                            options={LOG_LEVELS.map((name) => [name, `${name} and up`] as const)}
-                        />
-                    ) : null}
-                    {onQueryChange ? (
-                        <SearchInput
-                            placeholder="search the log…"
-                            aria-label="search the log"
-                            value={query ?? ""}
-                            onChange={onQueryChange}
-                        />
-                    ) : null}
-                    {onFollowChange ? <Checkbox label="follow" value={follow} onChange={onFollowChange} /> : null}
-                </div>
-            ) : null}
+            {filters
+                ? (
+                    <div className="dr-slog__tools">
+                        {onLevelChange
+                            ? (
+                                <Select
+                                    size="sm"
+                                    aria-label="lowest level"
+                                    className="dr-slog__level"
+                                    value={level ?? "info"}
+                                    onChange={onLevelChange}
+                                    options={LOG_LEVELS.map((name) => [name, `${name} and up`] as const)}
+                                />
+                            )
+                            : null}
+                        {onQueryChange
+                            ? (
+                                <SearchInput
+                                    placeholder="search the log…"
+                                    aria-label="search the log"
+                                    value={query ?? ""}
+                                    onChange={onQueryChange}
+                                />
+                            )
+                            : null}
+                        {onFollowChange ? <Checkbox label="follow" value={follow} onChange={onFollowChange} /> : null}
+                    </div>
+                )
+                : null}
             {banner}
             <div
                 ref={box}

@@ -20,7 +20,7 @@ import { Alert, EmptyState } from "../components/feedback.tsx"
 import type { LayerEntry } from "./layers/manager.ts"
 import type { LayerCommonSettings } from "./layers/registry.ts"
 import type { Store } from "./store.ts"
-import type { TfTree, TfSnapshot } from "./tf.ts"
+import type { TfSnapshot, TfTree } from "./tf.ts"
 import type { TfIssue } from "./tf_check.ts"
 
 export interface UseLayerManagerOptions {
@@ -89,17 +89,21 @@ function LayerRow({ manager, entry }: { manager: LayerManager; entry: LayerEntry
                     </span>
                 </button>
             </div>
-            {entry.enabled && (status.problem || status.info) ? (
-                <div className={cx("dr-layer-status", status.problem && "dr-layer-status--problem")}>
-                    {status.problem ?? status.info}
-                </div>
-            ) : null}
-            {open ? (
-                <div className="dr-layer-settings">
-                    <OnTopSetting settings={entry.settings} />
-                    {Settings ? <Settings settings={entry.settings} topic={entry.topic} /> : null}
-                </div>
-            ) : null}
+            {entry.enabled && (status.problem || status.info)
+                ? (
+                    <div className={cx("dr-layer-status", status.problem && "dr-layer-status--problem")}>
+                        {status.problem ?? status.info}
+                    </div>
+                )
+                : null}
+            {open
+                ? (
+                    <div className="dr-layer-settings">
+                        <OnTopSetting settings={entry.settings} />
+                        {Settings ? <Settings settings={entry.settings} topic={entry.topic} /> : null}
+                    </div>
+                )
+                : null}
         </div>
     )
 }
@@ -119,32 +123,34 @@ export function LayersPanel({ manager, emptyText, className }: LayersPanelProps)
     const other = topics.filter((topic) => !drawn.has(topic.key))
     return (
         <div className={cx("dr-layers", className)}>
-            {!list.length ? (
-                <EmptyState
-                    icon="layers"
-                    title="Waiting for topics…"
-                    message={emptyText ?? "Start a blueprint (or a replay) and they appear here."}
-                />
-            ) : null}
+            {!list.length
+                ? (
+                    <EmptyState
+                        icon="layers"
+                        title="Waiting for topics…"
+                        message={emptyText ?? "Start a blueprint (or a replay) and they appear here."}
+                    />
+                )
+                : null}
             {[...groups].map(([label, entries]) => (
                 <section key={label} className="dr-layer-group">
                     <h3 className="dr-layer-group-title">{label}</h3>
-                    {entries.map((entry) => (
-                        <LayerRow key={entry.topic.key} manager={manager} entry={entry} />
-                    ))}
+                    {entries.map((entry) => <LayerRow key={entry.topic.key} manager={manager} entry={entry} />)}
                 </section>
             ))}
-            {other.length ? (
-                <details className="dr-layer-group dr-layer-other">
-                    <summary>{`${other.length} other topics (not drawn)`}</summary>
-                    {other.map((topic) => (
-                        <div key={topic.key} className="dr-layer-other-topic">
-                            <span>{topic.name}</span>
-                            <span className="dr-layer-type">{topic.type}</span>
-                        </div>
-                    ))}
-                </details>
-            ) : null}
+            {other.length
+                ? (
+                    <details className="dr-layer-group dr-layer-other">
+                        <summary>{`${other.length} other topics (not drawn)`}</summary>
+                        {other.map((topic) => (
+                            <div key={topic.key} className="dr-layer-other-topic">
+                                <span>{topic.name}</span>
+                                <span className="dr-layer-type">{topic.type}</span>
+                            </div>
+                        ))}
+                    </details>
+                )
+                : null}
         </div>
     )
 }
@@ -196,9 +202,9 @@ function TreeRows({
             onPointerLeave={() => onHover?.(null)}
         >
             <span>{frame}</span>
-            {edge ? (
-                <span className="dr-tf-age">{edge.isStatic ? "static" : `${Math.round(edge.ageMs)} ms`}</span>
-            ) : null}
+            {edge
+                ? <span className="dr-tf-age">{edge.isStatic ? "static" : `${Math.round(edge.ageMs)} ms`}</span>
+                : null}
         </div>,
     )
     const children = snapshot.edges
@@ -265,21 +271,25 @@ export function TfPanel({
     }
     return (
         <div className={cx("dr-tf-panel", className)}>
-            {onFixedFrame ? (
-                <Field label="Fixed frame" hint="everything is drawn relative to this frame">
-                    <Select
-                        value={fixedFrame}
-                        options={[["", `auto (${active})`], ...snapshot.frames.map((frame) => [frame, frame])]}
-                        onChange={onFixedFrame}
-                    />
-                </Field>
-            ) : null}
-            {robotFrame ? (
-                <p className="dr-hint">
-                    {`Robot frame: ${robotFrame} `}
-                    <Badge tone={robotFound ? "ok" : "warn"}>{robotFound ? "in TF" : "not in TF yet"}</Badge>
-                </p>
-            ) : null}
+            {onFixedFrame
+                ? (
+                    <Field label="Fixed frame" hint="everything is drawn relative to this frame">
+                        <Select
+                            value={fixedFrame}
+                            options={[["", `auto (${active})`], ...snapshot.frames.map((frame) => [frame, frame])]}
+                            onChange={onFixedFrame}
+                        />
+                    </Field>
+                )
+                : null}
+            {robotFrame
+                ? (
+                    <p className="dr-hint">
+                        {`Robot frame: ${robotFrame} `}
+                        <Badge tone={robotFound ? "ok" : "warn"}>{robotFound ? "in TF" : "not in TF yet"}</Badge>
+                    </p>
+                )
+                : null}
             {issues.map((issue) => (
                 <Alert
                     key={issue.kind + issue.summary}
@@ -294,9 +304,9 @@ export function TfPanel({
             <div className="dr-tf-tree" ref={tree} onPointerLeave={() => onHover?.(null)}>
                 {rows}
             </div>
-            {hovered && !hoveredPlaced ? (
-                <p className="dr-hint">{`${hovered} isn't connected to ${active}: it can't be shown in the view`}</p>
-            ) : null}
+            {hovered && !hoveredPlaced
+                ? <p className="dr-hint">{`${hovered} isn't connected to ${active}: it can't be shown in the view`}</p>
+                : null}
         </div>
     )
 }

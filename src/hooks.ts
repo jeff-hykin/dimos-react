@@ -299,10 +299,10 @@ export function useGamepad({
             const found = [...navigator.getGamepads()].find(Boolean)
             const next: GamepadState | null = found
                 ? {
-                      id: found.id,
-                      axes: found.axes.map((value) => (Math.abs(value) < deadzone ? 0 : value)),
-                      buttons: found.buttons.map((button) => button.pressed),
-                  }
+                    id: found.id,
+                    axes: found.axes.map((value) => (Math.abs(value) < deadzone ? 0 : value)),
+                    buttons: found.buttons.map((button) => button.pressed),
+                }
                 : null
             const signature = JSON.stringify(next)
             if (signature !== last) {

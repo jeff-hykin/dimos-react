@@ -96,10 +96,10 @@ export const settingLabel = (value: unknown): string =>
     value === null || value === undefined
         ? "—"
         : value === ""
-          ? '""'
-          : typeof value === "string"
-            ? value
-            : JSON.stringify(value)
+        ? '""'
+        : typeof value === "string"
+        ? value
+        : JSON.stringify(value)
 
 /** The value typed text means for this setting, or what it should have been. */
 export function parseSettingText(

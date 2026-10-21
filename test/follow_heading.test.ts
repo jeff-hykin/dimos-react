@@ -39,12 +39,14 @@ test("a body frame and its optical frame give the same heading", () => {
 })
 
 test("pitch and roll don't change the heading", () => {
-    for (const [pitch, roll] of [
-        [25, 0],
-        [-30, 15],
-        [0, 40],
-        [60, -20],
-    ]) {
+    for (
+        const [pitch, roll] of [
+            [25, 0],
+            [-30, 15],
+            [0, 40],
+            [60, -20],
+        ]
+    ) {
         const body = bodyPose(deg(70), deg(pitch), deg(roll))
         assertAlmostEquals(headingOf(body, "front_camera")!, deg(70), 1e-9)
         assertAlmostEquals(headingOf(body.clone().multiply(OPTICAL_IN_BODY), "front_camera_optical")!, deg(70), 1e-9)

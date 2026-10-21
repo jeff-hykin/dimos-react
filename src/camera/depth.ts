@@ -104,7 +104,8 @@ export class DepthMaterial {
                 scale: { value: 0.001 },
                 opacity: { value: 1 },
             },
-            vertexShader: /* glsl */ `out vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            vertexShader:
+                /* glsl */ `out vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
             fragmentShader: /* glsl */ `
                 uniform sampler2D depth;
                 uniform sampler2D ramp;

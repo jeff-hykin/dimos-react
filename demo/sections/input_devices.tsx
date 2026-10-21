@@ -54,7 +54,9 @@ export function InputDevicesSection() {
                     <span
                         className="dr-mono dr-small"
                         style={{ padding: 6, display: "block" }}
-                    >{`${(dragBox ?? box).width} × ${(dragBox ?? box).height}`}</span>
+                    >
+                        {`${(dragBox ?? box).width} × ${(dragBox ?? box).height}`}
+                    </span>
                     <ResizeHandle
                         onResize={({ dx, dy, done }) => {
                             const next = { width: Math.max(120, box.width + dx), height: Math.max(60, box.height + dy) }
@@ -105,11 +107,13 @@ export function InputDevicesSection() {
                     hint=".mcap · .urdf · .pcd"
                     onFiles={setFiles}
                 />
-                {files.length ? (
-                    <div className="dr-small dr-mono" style={{ marginTop: 8 }}>
-                        {files.map((file) => file.name).join(", ")}
-                    </div>
-                ) : null}
+                {files.length
+                    ? (
+                        <div className="dr-small dr-mono" style={{ marginTop: 8 }}>
+                            {files.map((file) => file.name).join(", ")}
+                        </div>
+                    )
+                    : null}
             </Card>
             <Card title="ColorSwatch">
                 <ColorSwatch

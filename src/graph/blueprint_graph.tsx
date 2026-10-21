@@ -213,8 +213,8 @@ export function useFullscreen(element: HTMLElement | null): {
                 document.fullscreenElement && document.fullscreenElement === element
                     ? "native"
                     : was === "native"
-                      ? null
-                      : was,
+                    ? null
+                    : was
             )
         }
         document.addEventListener("fullscreenchange", onChange)
@@ -358,102 +358,96 @@ export const BlueprintGraph = forwardRef<GraphViewHandle, BlueprintGraphProps>(f
             style={props.style}
             data-fullscreen={mode ?? undefined}
         >
-            {nodes.length === 0 ? (
-                <div className="dr-bpgraph__empty">{empty}</div>
-            ) : (
-                <GraphView<BlueprintNode, BlueprintEdge>
-                    ref={setRefs}
-                    className={cx("dr-bpgraph__view", rates && "dr-bpgraph__view--running")}
-                    aria-label={props["aria-label"] ?? "Module graph"}
-                    nodes={nodes}
-                    edges={edges}
-                    layout={layout}
-                    focus={focus}
-                    port={PORT}
-                    fitMinScale={props.fitMinScale}
-                    focusable={(node) => node.kind === "module"}
-                    nodeClassName={(node) =>
-                        cx(
-                            node.kind,
-                            node.kind === "topic" && node.extra && "extra",
-                            node.kind === "topic" && node.loose && "loose",
-                            node.kind === "topic" && hz(node.topic) > 0 && "live",
-                        )
-                    }
-                    nodeTitle={(node) =>
-                        node.kind === "module"
-                            ? node.name
-                            : `/${node.topic}\n${node.type}` +
-                              (node.extra ? "\n(not wired in this blueprint)" : "") +
-                              (node.loose ? "\n(only written or only read here)" : "")
-                    }
-                    edgeClassName={(edge) => (hz(edge.topic) > 0 ? "flow" : undefined)}
-                    nodeStyle={(node) =>
-                        node.kind === "topic"
-                            ? ({ "--dr-bpgraph-type": messageTypeColor(node.type) } as CSSProperties)
-                            : undefined
-                    }
-                    edgeStyle={(edge) =>
-                        ({ "--dr-graph-edge": messageTypeColor(types.get(edge.topic)) }) as CSSProperties
-                    }
-                    onNodeClick={(node) => (node.kind === "module" ? onModule?.(node.name) : onTopic?.(node.topic))}
-                    onBackgroundClick={() => onTopic?.(null)}
-                    onHover={(node) => {
-                        const next: BlueprintSpot = node
-                            ? node.kind === "module"
-                                ? { module: node.name }
-                                : { topic: node.topic }
-                            : null
-                        setHovered(next)
-                        onHover?.(next)
-                    }}
-                    renderNode={(node) => (
-                        <>
-                            <rect className="box" width={node.w} height={node.h} />
-                            {node.kind === "module" ? (
-                                <>
-                                    <rect className="bar" width={MODULE_BAR} height={node.h} />
-                                    <text x={MODULE_BAR + MODULE_PAD_X} y={node.h / 2} className="tag">
-                                        MOD
-                                    </text>
-                                    <text
-                                        x={MODULE_BAR + MODULE_PAD_X + node.tagW + TAG_GAP}
-                                        y={node.h / 2}
-                                        className="name"
-                                    >
-                                        {node.label}
-                                    </text>
-                                    <text x={node.w - CHEV_W / 2 - 2} y={node.h / 2} className="more">
-                                        ›
-                                    </text>
-                                </>
-                            ) : (
-                                <>
-                                    <text x={PAD_X} y={hz(node.topic) ? 11 : node.h / 2} className="name">
-                                        {node.topic}
-                                    </text>
-                                    <text x={PAD_X} y={22} className="rate">
-                                        {hz(node.topic) ? formatRate(hz(node.topic)) : ""}
-                                    </text>
-                                </>
+            {nodes.length === 0
+                ? <div className="dr-bpgraph__empty">{empty}</div>
+                : (
+                    <GraphView<BlueprintNode, BlueprintEdge>
+                        ref={setRefs}
+                        className={cx("dr-bpgraph__view", rates && "dr-bpgraph__view--running")}
+                        aria-label={props["aria-label"] ?? "Module graph"}
+                        nodes={nodes}
+                        edges={edges}
+                        layout={layout}
+                        focus={focus}
+                        port={PORT}
+                        fitMinScale={props.fitMinScale}
+                        focusable={(node) => node.kind === "module"}
+                        nodeClassName={(node) =>
+                            cx(
+                                node.kind,
+                                node.kind === "topic" && node.extra && "extra",
+                                node.kind === "topic" && node.loose && "loose",
+                                node.kind === "topic" && hz(node.topic) > 0 && "live",
                             )}
-                            {[0, node.w].map((x) => (
-                                <rect
-                                    key={x}
-                                    className="port"
-                                    x={x - PORT / 2}
-                                    y={node.h / 2 - PORT / 2}
-                                    width={PORT}
-                                    height={PORT}
-                                />
-                            ))}
-                        </>
-                    )}
-                >
-                    {props.children}
-                    {controls && <GraphControls graph={ownRef} layout={layout} onLayoutChange={setLayout} />}
-                </GraphView>
-            )}
+                        nodeTitle={(node) =>
+                            node.kind === "module" ? node.name : `/${node.topic}\n${node.type}` +
+                                (node.extra ? "\n(not wired in this blueprint)" : "") +
+                                (node.loose ? "\n(only written or only read here)" : "")}
+                        edgeClassName={(edge) => (hz(edge.topic) > 0 ? "flow" : undefined)}
+                        nodeStyle={(node) =>
+                            node.kind === "topic"
+                                ? ({ "--dr-bpgraph-type": messageTypeColor(node.type) } as CSSProperties)
+                                : undefined}
+                        edgeStyle={(edge) =>
+                            ({ "--dr-graph-edge": messageTypeColor(types.get(edge.topic)) }) as CSSProperties}
+                        onNodeClick={(node) => (node.kind === "module" ? onModule?.(node.name) : onTopic?.(node.topic))}
+                        onBackgroundClick={() => onTopic?.(null)}
+                        onHover={(node) => {
+                            const next: BlueprintSpot = node
+                                ? node.kind === "module" ? { module: node.name } : { topic: node.topic }
+                                : null
+                            setHovered(next)
+                            onHover?.(next)
+                        }}
+                        renderNode={(node) => (
+                            <>
+                                <rect className="box" width={node.w} height={node.h} />
+                                {node.kind === "module"
+                                    ? (
+                                        <>
+                                            <rect className="bar" width={MODULE_BAR} height={node.h} />
+                                            <text x={MODULE_BAR + MODULE_PAD_X} y={node.h / 2} className="tag">
+                                                MOD
+                                            </text>
+                                            <text
+                                                x={MODULE_BAR + MODULE_PAD_X + node.tagW + TAG_GAP}
+                                                y={node.h / 2}
+                                                className="name"
+                                            >
+                                                {node.label}
+                                            </text>
+                                            <text x={node.w - CHEV_W / 2 - 2} y={node.h / 2} className="more">
+                                                ›
+                                            </text>
+                                        </>
+                                    )
+                                    : (
+                                        <>
+                                            <text x={PAD_X} y={hz(node.topic) ? 11 : node.h / 2} className="name">
+                                                {node.topic}
+                                            </text>
+                                            <text x={PAD_X} y={22} className="rate">
+                                                {hz(node.topic) ? formatRate(hz(node.topic)) : ""}
+                                            </text>
+                                        </>
+                                    )}
+                                {[0, node.w].map((x) => (
+                                    <rect
+                                        key={x}
+                                        className="port"
+                                        x={x - PORT / 2}
+                                        y={node.h / 2 - PORT / 2}
+                                        width={PORT}
+                                        height={PORT}
+                                    />
+                                ))}
+                            </>
+                        )}
+                    >
+                        {props.children}
+                        {controls && <GraphControls graph={ownRef} layout={layout} onLayoutChange={setLayout} />}
+                    </GraphView>
+                )}
             {fullscreen && (
                 <Button
                     size="sm"

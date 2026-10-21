@@ -16,7 +16,7 @@ export interface SettingInputProps {
 
 const optionLabel = (field: SettingField, option: unknown) =>
     field.optionLabels?.[(field.options ?? []).indexOf(option)] ??
-    (option === null ? "(none)" : option === "" ? "(empty)" : String(option))
+        (option === null ? "(none)" : option === "" ? "(empty)" : String(option))
 
 /**
  * The input a setting's kind takes: a Toggle (bool), a Select (enum; "(none)" too when nullable), or a box that
@@ -65,16 +65,18 @@ export function SettingInput({ field, value, onChange }: SettingInputProps) {
                     onCommit={commit}
                     onFocus={(event) => field.secret && event.target.value === HIDDEN_SECRET && event.target.select()}
                 />
-                {field.secret ? (
-                    <button
-                        type="button"
-                        className="dr-setting__link"
-                        title="Saved; never shown again. Type a new one to replace it."
-                        onClick={() => setRevealed(!revealed)}
-                    >
-                        {revealed ? "hide" : "show"}
-                    </button>
-                ) : null}
+                {field.secret
+                    ? (
+                        <button
+                            type="button"
+                            className="dr-setting__link"
+                            title="Saved; never shown again. Type a new one to replace it."
+                            onClick={() => setRevealed(!revealed)}
+                        >
+                            {revealed ? "hide" : "show"}
+                        </button>
+                    )
+                    : null}
             </span>
             {problem ? <span className="dr-setting-input__problem">{problem}</span> : null}
         </span>
@@ -92,24 +94,26 @@ export interface SettingChoiceProps {
 
 /** One of a few named choices: a Segmented control for up to four, a Select past that. */
 export function SettingChoice({ labels, value, onChange, label }: SettingChoiceProps) {
-    return labels.length <= 4 ? (
-        <Segmented<number>
-            size="sm"
-            label={label}
-            items={labels.map((text, index) => ({ value: index, label: text }))}
-            value={value < 0 ? null : value}
-            onChange={(index) => index !== value && onChange(index)}
-        />
-    ) : (
-        <Select
-            size="sm"
-            aria-label={label}
-            value={value}
-            placeholder="—"
-            options={labels.map((text, index) => [index, text] as const)}
-            onChange={onChange}
-        />
-    )
+    return labels.length <= 4
+        ? (
+            <Segmented<number>
+                size="sm"
+                label={label}
+                items={labels.map((text, index) => ({ value: index, label: text }))}
+                value={value < 0 ? null : value}
+                onChange={(index) => index !== value && onChange(index)}
+            />
+        )
+        : (
+            <Select
+                size="sm"
+                aria-label={label}
+                value={value}
+                placeholder="—"
+                options={labels.map((text, index) => [index, text] as const)}
+                onChange={onChange}
+            />
+        )
 }
 
 export interface SettingRowProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
@@ -154,27 +158,31 @@ export function SettingRow({
             </span>
             <span className="dr-setting__control">
                 {children}
-                {onReset ? (
-                    saved ? (
-                        <button
-                            type="button"
-                            className="dr-setting__link dr-setting__reset"
-                            title={`back to ${settingLabel(resetTo)}`}
-                            aria-label={`reset ${typeof label === "string" ? label : ""}`.trim()}
-                            onClick={onReset}
-                        >
-                            reset
-                        </button>
-                    ) : (
-                        <span className="dr-setting__reset" />
+                {onReset
+                    ? (
+                        saved
+                            ? (
+                                <button
+                                    type="button"
+                                    className="dr-setting__link dr-setting__reset"
+                                    title={`back to ${settingLabel(resetTo)}`}
+                                    aria-label={`reset ${typeof label === "string" ? label : ""}`.trim()}
+                                    onClick={onReset}
+                                >
+                                    reset
+                                </button>
+                            )
+                            : <span className="dr-setting__reset" />
                     )
-                ) : null}
+                    : null}
             </span>
-            {docs ? (
-                <a className="dr-setting__docs" href={docs} target="_blank" rel="noopener noreferrer">
-                    How do I find this?
-                </a>
-            ) : null}
+            {docs
+                ? (
+                    <a className="dr-setting__docs" href={docs} target="_blank" rel="noopener noreferrer">
+                        How do I find this?
+                    </a>
+                )
+                : null}
         </div>
     )
 }

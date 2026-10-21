@@ -132,19 +132,27 @@ function ToastItem({ entry }: { entry: ToastEntry }) {
                 {entry.title ? <div className="dr-toast-title">{entry.title}</div> : null}
                 {entry.message ? <div className="dr-toast-text">{entry.message}</div> : null}
             </div>
-            {entry.action ? (
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                        entry.action?.onClick?.()
-                        dismissToast(entry.id)
-                    }}
-                >
-                    {entry.action.label}
-                </Button>
-            ) : null}
-            <IconButton icon="close" label="Dismiss" size="sm" onClick={() => dismissToast(entry.id)} />
+            {entry.action
+                ? (
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                            entry.action?.onClick?.()
+                            dismissToast(entry.id)
+                        }}
+                    >
+                        {entry.action.label}
+                    </Button>
+                )
+                : null}
+            <IconButton
+                icon="close"
+                label="Dismiss"
+                size="sm"
+                onClick={() =>
+                    dismissToast(entry.id)}
+            />
         </div>
     )
 }
@@ -167,9 +175,7 @@ export function ToastViewport({ position = "bottom-right" }: ToastViewportProps)
     }
     return createPortal(
         <div className={cx("dr-toasts", `dr-toasts--${position}`)} aria-live="polite">
-            {list.map((entry) => (
-                <ToastItem key={entry.id} entry={entry} />
-            ))}
+            {list.map((entry) => <ToastItem key={entry.id} entry={entry} />)}
         </div>,
         document.body,
     )
@@ -258,22 +264,26 @@ export function Modal({
                 tabIndex={-1}
                 {...rest}
             >
-                {title || dismissable ? (
-                    <header className="dr-modal-head">
-                        <div id={titleId} className="dr-modal-title">
-                            {title}
-                        </div>
-                        {dismissable ? (
-                            <IconButton
-                                icon="close"
-                                label="Close"
-                                size="sm"
-                                className="dr-modal-close"
-                                onClick={onClose}
-                            />
-                        ) : null}
-                    </header>
-                ) : null}
+                {title || dismissable
+                    ? (
+                        <header className="dr-modal-head">
+                            <div id={titleId} className="dr-modal-title">
+                                {title}
+                            </div>
+                            {dismissable
+                                ? (
+                                    <IconButton
+                                        icon="close"
+                                        label="Close"
+                                        size="sm"
+                                        className="dr-modal-close"
+                                        onClick={onClose}
+                                    />
+                                )
+                                : null}
+                        </header>
+                    )
+                    : null}
                 <div className="dr-modal-body">{children}</div>
                 {footer ? <footer className="dr-modal-foot">{footer}</footer> : null}
             </div>
@@ -309,11 +319,13 @@ const DialogContext = createContext<OpenDialog | null>(null)
 
 /** Hosts useConfirm / usePrompt dialogs (AppProvider includes it). */
 export function DialogProvider({ children }: { children?: ReactNode }) {
-    const [dialog, setDialog] = useState<{
-        kind: DialogKind
-        options: PromptOptions
-        resolve: (result: DialogResult) => void
-    } | null>(null)
+    const [dialog, setDialog] = useState<
+        {
+            kind: DialogKind
+            options: PromptOptions
+            resolve: (result: DialogResult) => void
+        } | null
+    >(null)
     const [text, setText] = useState("")
     const open = useCallback<OpenDialog>(
         (kind, options) =>
@@ -353,15 +365,17 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                 ]}
             >
                 {options.message ? <p className="dr-modal-message">{options.message}</p> : null}
-                {isPrompt ? (
-                    <TextInput
-                        value={text}
-                        onChange={setText}
-                        onEnter={submit}
-                        placeholder={options.placeholder}
-                        autoFocus={true}
-                    />
-                ) : null}
+                {isPrompt
+                    ? (
+                        <TextInput
+                            value={text}
+                            onChange={setText}
+                            onEnter={submit}
+                            placeholder={options.placeholder}
+                            autoFocus={true}
+                        />
+                    )
+                    : null}
             </Modal>
         </DialogContext.Provider>
     )
@@ -576,11 +590,13 @@ export function EmptyState({
     return (
         <div className={cx("dr-empty", layer && "dr-empty--layer", tone && `dr-empty--${tone}`, className)} {...rest}>
             <div className="dr-empty-inner">
-                {icon ? (
-                    <span className="dr-empty-icon">
-                        <Icon name={icon} size={28} strokeWidth={1.5} />
-                    </span>
-                ) : null}
+                {icon
+                    ? (
+                        <span className="dr-empty-icon">
+                            <Icon name={icon} size={28} strokeWidth={1.5} />
+                        </span>
+                    )
+                    : null}
                 {title ? <div className="dr-empty-title">{title}</div> : null}
                 {message ? <div className="dr-empty-text">{message}</div> : null}
                 {children}

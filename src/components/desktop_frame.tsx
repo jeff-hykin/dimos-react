@@ -64,8 +64,9 @@ export function useDesktopEditor(): {
     status: EditorStatus | null
 } {
     const [status, setStatus] = useState<EditorStatus | null>(null)
-    useDesktopMessage("dimos:open-in-editor-result", (data) =>
-        setStatus({ ok: !!data.ok, text: String(data.text ?? "") }),
+    useDesktopMessage(
+        "dimos:open-in-editor-result",
+        (data) => setStatus({ ok: !!data.ok, text: String(data.text ?? "") }),
     )
     const open = (file: string, line: number) => {
         setStatus(null)
@@ -76,9 +77,14 @@ export function useDesktopEditor(): {
 
 /** One line saying how opening a file in the editor went (nothing before an answer). */
 export function EditorNote({ status, className }: { status: EditorStatus | null; className?: string }) {
-    return status ? (
-        <div className={cx("dr-editor-note", !status.ok && "dr-editor-note--failed", className)} title={status.text}>
-            {status.text}
-        </div>
-    ) : null
+    return status
+        ? (
+            <div
+                className={cx("dr-editor-note", !status.ok && "dr-editor-note--failed", className)}
+                title={status.text}
+            >
+                {status.text}
+            </div>
+        )
+        : null
 }

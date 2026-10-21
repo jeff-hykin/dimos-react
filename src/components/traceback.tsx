@@ -103,25 +103,29 @@ function frameRows(
         <div key={key} className={cx("dr-tb__row", frame.library ? "dr-tb__frame--lib" : "dr-tb__frame--own")}>
             <Gutter text={frame.gutter} />
             {frame.indent}
-            {frame.library ? (
-                <span className="dr-tb__path" title={frame.file}>
-                    {frame.file}:{frame.line}
-                </span>
-            ) : onOpenFile ? (
-                <button
-                    type="button"
-                    className="dr-tb__file"
-                    title={`${frame.file}:${frame.line} (open in the editor)`}
-                    data-tb-open
-                    onClick={() => onOpenFile(formatPath(frame.file), frame.line)}
-                >
-                    {shown}
-                </button>
-            ) : (
-                <span className="dr-tb__file" title={`${frame.file}:${frame.line}`}>
-                    {shown}
-                </span>
-            )}
+            {frame.library
+                ? (
+                    <span className="dr-tb__path" title={frame.file}>
+                        {frame.file}:{frame.line}
+                    </span>
+                )
+                : onOpenFile
+                ? (
+                    <button
+                        type="button"
+                        className="dr-tb__file"
+                        title={`${frame.file}:${frame.line} (open in the editor)`}
+                        data-tb-open
+                        onClick={() => onOpenFile(formatPath(frame.file), frame.line)}
+                    >
+                        {shown}
+                    </button>
+                )
+                : (
+                    <span className="dr-tb__file" title={`${frame.file}:${frame.line}`}>
+                        {shown}
+                    </span>
+                )}
             {frame.func ? <span className="dr-tb__func">in {frame.func}</span> : null}
         </div>,
         ...frame.code.map(({ text, marker }, index) => (
@@ -190,22 +194,24 @@ export function Traceback({ text, onOpenFile, formatPath = (file) => file, class
     return (
         <div className={cx("dr-tb", className)} {...rest}>
             <div className="dr-tb__lines">{rows}</div>
-            {raised.length > 0 ? (
-                <div className="dr-tb__raised" data-tb-raised>
-                    {raised.map(({ depth, text: what }, index) => {
-                        const innermost = !(raised[index + 1]?.depth > depth) && !/^\w*ExceptionGroup:/.test(what)
-                        return (
-                            <div
-                                key={index}
-                                className={cx("dr-tb__raised-one", innermost && "dr-tb__raised-one--leaf")}
-                                style={{ "--dr-tb-depth": String(depth) } as CSSProperties}
-                            >
-                                {what}
-                            </div>
-                        )
-                    })}
-                </div>
-            ) : null}
+            {raised.length > 0
+                ? (
+                    <div className="dr-tb__raised" data-tb-raised>
+                        {raised.map(({ depth, text: what }, index) => {
+                            const innermost = !(raised[index + 1]?.depth > depth) && !/^\w*ExceptionGroup:/.test(what)
+                            return (
+                                <div
+                                    key={index}
+                                    className={cx("dr-tb__raised-one", innermost && "dr-tb__raised-one--leaf")}
+                                    style={{ "--dr-tb-depth": String(depth) } as CSSProperties}
+                                >
+                                    {what}
+                                </div>
+                            )
+                        })}
+                    </div>
+                )
+                : null}
         </div>
     )
 }

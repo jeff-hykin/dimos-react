@@ -5,7 +5,7 @@ import * as THREE from "three"
 import { disposeTree } from "../robot_model.ts"
 import { FatLines } from "../lines.ts"
 import { LabelPool } from "../labels.ts"
-import { registerLayer, rgba, subscribeDecoded, type LayerContext, type Topic } from "./registry.ts"
+import { type LayerContext, registerLayer, rgba, subscribeDecoded, type Topic } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"
 import { poseMatrix } from "./pose.tsx"
 

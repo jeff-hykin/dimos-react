@@ -38,15 +38,17 @@ export function Card({
 }: CardProps) {
     return (
         <section className={cx("dr-card", padded && "dr-card--padded", glass && "dr-glass", className)} {...rest}>
-            {title || actions ? (
-                <header className="dr-card-head">
-                    <div className="dr-card-titles">
-                        {title ? <h3 className="dr-card-title">{title}</h3> : null}
-                        {description ? <div className="dr-card-desc">{description}</div> : null}
-                    </div>
-                    {actions ? <div className="dr-card-actions">{actions}</div> : null}
-                </header>
-            ) : null}
+            {title || actions
+                ? (
+                    <header className="dr-card-head">
+                        <div className="dr-card-titles">
+                            {title ? <h3 className="dr-card-title">{title}</h3> : null}
+                            {description ? <div className="dr-card-desc">{description}</div> : null}
+                        </div>
+                        {actions ? <div className="dr-card-actions">{actions}</div> : null}
+                    </header>
+                )
+                : null}
             {children}
         </section>
     )
@@ -104,28 +106,32 @@ export function Panel({
     }
     return (
         <section className={cx("dr-panel", glass && "dr-glass", !isOpen && "dr-panel--closed", className)} {...rest}>
-            {title || actions ? (
-                <header className="dr-panel-head">
-                    {collapsible ? (
-                        <button
-                            type="button"
-                            className="dr-panel-toggle"
-                            aria-expanded={isOpen}
-                            onClick={() => setOpen(!isOpen)}
-                        >
-                            <Icon name={isOpen ? "chevron-down" : "chevron-right"} size={14} />
-                            {icon ? <Icon name={icon} size={15} /> : null}
-                            <span className="dr-panel-title">{title}</span>
-                        </button>
-                    ) : (
-                        <div className="dr-panel-toggle dr-panel-toggle--static">
-                            {icon ? <Icon name={icon} size={15} /> : null}
-                            <span className="dr-panel-title">{title}</span>
-                        </div>
-                    )}
-                    {actions ? <div className="dr-panel-actions">{actions}</div> : null}
-                </header>
-            ) : null}
+            {title || actions
+                ? (
+                    <header className="dr-panel-head">
+                        {collapsible
+                            ? (
+                                <button
+                                    type="button"
+                                    className="dr-panel-toggle"
+                                    aria-expanded={isOpen}
+                                    onClick={() => setOpen(!isOpen)}
+                                >
+                                    <Icon name={isOpen ? "chevron-down" : "chevron-right"} size={14} />
+                                    {icon ? <Icon name={icon} size={15} /> : null}
+                                    <span className="dr-panel-title">{title}</span>
+                                </button>
+                            )
+                            : (
+                                <div className="dr-panel-toggle dr-panel-toggle--static">
+                                    {icon ? <Icon name={icon} size={15} /> : null}
+                                    <span className="dr-panel-title">{title}</span>
+                                </div>
+                            )}
+                        {actions ? <div className="dr-panel-actions">{actions}</div> : null}
+                    </header>
+                )
+                : null}
             {isOpen ? <div className={cx("dr-panel-body", bodyClassName)}>{children}</div> : null}
         </section>
     )
@@ -244,11 +250,13 @@ export function FloatingPanel({
                 </div>
                 <div className="dr-panel-actions" onPointerDown={(event) => event.stopPropagation()}>
                     {actions}
-                    {onClose ? (
-                        <button type="button" className="dr-panel-close" aria-label="Close" onClick={onClose}>
-                            <Icon name="close" size={14} />
-                        </button>
-                    ) : null}
+                    {onClose
+                        ? (
+                            <button type="button" className="dr-panel-close" aria-label="Close" onClick={onClose}>
+                                <Icon name="close" size={14} />
+                            </button>
+                        )
+                        : null}
                 </div>
             </header>
             <div className="dr-panel-body">{children}</div>
@@ -673,9 +681,9 @@ export function Tile({
             aria-pressed={selected === undefined ? undefined : !!selected}
             {...rest}
         >
-            {media || icon ? (
-                <span className="dr-tile__media">{media ?? <Icon name={icon ?? ""} size={40} />}</span>
-            ) : null}
+            {media || icon
+                ? <span className="dr-tile__media">{media ?? <Icon name={icon ?? ""} size={40} />}</span>
+                : null}
             {title ? <span className="dr-tile__title">{title}</span> : null}
             {subtitle ? <span className="dr-tile__subtitle">{subtitle}</span> : null}
             {children}

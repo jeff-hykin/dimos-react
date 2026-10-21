@@ -88,11 +88,9 @@ export function RenderingSettings() {
         <div className="dr-layer-settings-grid">
             <Field
                 label="Point style"
-                hint={
-                    fallback.active
-                        ? `glow couldn't keep up (${fallback.frameMs.toFixed(0)} ms a frame): drawn as cubes`
-                        : "every point layer that keeps its style on default"
-                }
+                hint={fallback.active
+                    ? `glow couldn't keep up (${fallback.frameMs.toFixed(0)} ms a frame): drawn as cubes`
+                    : "every point layer that keeps its style on default"}
             >
                 <StylePicker
                     value={value.pointStyle}
@@ -100,11 +98,13 @@ export function RenderingSettings() {
                     onChange={(pointStyle) => rendering.update({ pointStyle: pointStyle as PointStyle })}
                 />
             </Field>
-            {fallback.active ? (
-                <Button size="sm" onClick={() => splatFallback.set({ active: false, frameMs: 0 })}>
-                    Try glow again
-                </Button>
-            ) : null}
+            {fallback.active
+                ? (
+                    <Button size="sm" onClick={() => splatFallback.set({ active: false, frameMs: 0 })}>
+                        Try glow again
+                    </Button>
+                )
+                : null}
             <Field label="Cube shading">
                 <CubeShadePicker />
             </Field>
@@ -121,11 +121,9 @@ export function NearShrinkSetting() {
     return (
         <Field
             label="See through near the camera"
-            hint={
-                nearShrink === null
-                    ? "points closer than this shrink, so a wall you're next to doesn't hide what's behind it (the app's default)"
-                    : "points closer than this shrink, so a wall you're next to doesn't hide what's behind it"
-            }
+            hint={nearShrink === null
+                ? "points closer than this shrink, so a wall you're next to doesn't hide what's behind it (the app's default)"
+                : "points closer than this shrink, so a wall you're next to doesn't hide what's behind it"}
         >
             <Slider
                 min={0}
@@ -182,34 +180,36 @@ export function PointLookEditor({ look, onChange }: PointLookEditorProps) {
                     onChange={(colorMode) => set({ colorMode })}
                 />
             </Field>
-            {look.colorMode === "solid" ? (
-                <Field label="Solid">
-                    <ColorSwatch value={look.solid} onChange={(solid) => set({ solid })} />
-                </Field>
-            ) : (
-                [
+            {look.colorMode === "solid"
+                ? (
+                    <Field label="Solid">
+                        <ColorSwatch value={look.solid} onChange={(solid) => set({ solid })} />
+                    </Field>
+                )
+                : [
                     <GradientPicker key="gradients" value={look.gradient} onChange={(gradient) => set({ gradient })} />,
-                    look.colorMode === "height" ? (
-                        <Field label="Axis" key="axis">
-                            <Select<0 | 1 | 2>
-                                value={look.axis}
-                                options={[
-                                    [2, "z (height)"],
-                                    [0, "x"],
-                                    [1, "y"],
-                                ]}
-                                onChange={(axis) => set({ axis })}
-                            />
-                        </Field>
-                    ) : null,
+                    look.colorMode === "height"
+                        ? (
+                            <Field label="Axis" key="axis">
+                                <Select<0 | 1 | 2>
+                                    value={look.axis}
+                                    options={[
+                                        [2, "z (height)"],
+                                        [0, "x"],
+                                        [1, "y"],
+                                    ]}
+                                    onChange={(axis) => set({ axis })}
+                                />
+                            </Field>
+                        )
+                        : null,
                     <Field label="Range" hint="empty = automatic (5th–95th percentile)" key="range">
                         <span className="dr-range-inputs">
                             <RangeInput value={look.rangeMin} onChange={(rangeMin) => set({ rangeMin })} />
                             <RangeInput value={look.rangeMax} onChange={(rangeMax) => set({ rangeMax })} />
                         </span>
                     </Field>,
-                ]
-            )}
+                ]}
             <Field label="Opacity">
                 <Slider
                     min={0.1}

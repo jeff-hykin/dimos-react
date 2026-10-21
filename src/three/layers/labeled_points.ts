@@ -4,7 +4,7 @@
 import * as THREE from "three"
 import { LabelPool } from "../labels.ts"
 import { cssColor } from "../robot_model.ts"
-import { placeLayer, registerLayer, subscribeDecoded, type LayerContext, type Topic } from "./registry.ts"
+import { type LayerContext, placeLayer, registerLayer, subscribeDecoded, type Topic } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"
 import { colorFor } from "./path.tsx"
 
@@ -110,10 +110,10 @@ export class LabeledPoints {
                     show(
                         Array.isArray(message.value)
                             ? message.value.map((entity: EntityMarker) => ({
-                                  label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
-                                  color: ENTITY_COLORS[entity.type] ?? OTHER,
-                                  position: new THREE.Vector3(entity.x, entity.y, entity.z),
-                              }))
+                                label: `${entity.id}: ${String(entity.label).slice(0, 40)}`,
+                                color: ENTITY_COLORS[entity.type] ?? OTHER,
+                                position: new THREE.Vector3(entity.x, entity.y, entity.z),
+                            }))
                             : entitiesOf(message.bytes),
                         "",
                         message.timestamp,
@@ -157,10 +157,9 @@ export class LabeledPoints {
             const entities: LabeledPoint[] = []
             for (const item of this.#data) {
                 const position = new THREE.Vector3(...(item.position ?? [0, 0, 0]))
-                const matrix =
-                    !item.frame || item.frame === frame.fixedFrame
-                        ? null
-                        : this.context.tf.lookup(item.frame, frame.fixedFrame)
+                const matrix = !item.frame || item.frame === frame.fixedFrame
+                    ? null
+                    : this.context.tf.lookup(item.frame, frame.fixedFrame)
                 if (item.frame && item.frame !== frame.fixedFrame && !matrix) {
                     continue
                 }

@@ -85,11 +85,13 @@ function roomCloud() {
             add(6, -4 + along * 8, z)
         }
     }
-    for (const [cx, cy, size] of [
-        [3.5, 2, 0.8],
-        [-3, -2.5, 1.1],
-        [-4, 2.5, 0.6],
-    ]) {
+    for (
+        const [cx, cy, size] of [
+            [3.5, 2, 0.8],
+            [-3, -2.5, 1.1],
+            [-4, 2.5, 0.6],
+        ]
+    ) {
         for (let index = 0; index < 2500; index++) {
             add(cx + (Math.random() - 0.5) * size, cy + (Math.random() - 0.5) * size, Math.random() * size)
         }
@@ -353,8 +355,11 @@ function costmap() {
             for (const [cx, cy, size] of boxes) {
                 distance = Math.min(distance, Math.max(Math.abs(px - cx), Math.abs(py - cy)) - size / 2)
             }
-            data[row * width + column] =
-                distance <= 0 ? 100 : distance < 0.6 ? Math.round(99 * (1 - distance / 0.6)) : 0
+            data[row * width + column] = distance <= 0
+                ? 100
+                : distance < 0.6
+                ? Math.round(99 * (1 - distance / 0.6))
+                : 0
         }
     }
     return {
@@ -482,13 +487,13 @@ function useReplay() {
                 route: (key) =>
                     key === ODOM_KEY
                         ? {
-                              frame: "odom",
-                              points: Array.from({ length: 600 }, (_, index) => {
-                                  const t = (index / 600) * REPLAY_SECONDS
-                                  const [x, y] = loopPose(t)
-                                  return [t, x, y, 0.05]
-                              }),
-                          }
+                            frame: "odom",
+                            points: Array.from({ length: 600 }, (_, index) => {
+                                const t = (index / 600) * REPLAY_SECONDS
+                                const [x, y] = loopPose(t)
+                                return [t, x, y, 0.05]
+                            }),
+                        }
                         : null,
             }),
         [],
@@ -596,24 +601,22 @@ function ReplayView({ state, setPlaying, seek }: ReplayViewProps) {
                             ["rendering", "Rendering"],
                         ]}
                     />
-                    {tab === "layers" ? (
-                        <LayersPanel manager={manager} />
-                    ) : tab === "tf" ? (
-                        <TfPanel
-                            tf={tf}
-                            fixedFrame={fixedFrame}
-                            activeFixedFrame={info.fixedFrame}
-                            onFixedFrame={setFixedFrame}
-                            issues={issues}
-                            robotFrame="base_link"
-                            robotFound={info.robotFound}
-                            hovered={hovered}
-                            hoveredPlaced={placed}
-                            onHover={setHovered}
-                        />
-                    ) : (
-                        <RenderingSettings />
-                    )}
+                    {tab === "layers" ? <LayersPanel manager={manager} /> : tab === "tf"
+                        ? (
+                            <TfPanel
+                                tf={tf}
+                                fixedFrame={fixedFrame}
+                                activeFixedFrame={info.fixedFrame}
+                                onFixedFrame={setFixedFrame}
+                                issues={issues}
+                                robotFrame="base_link"
+                                robotFound={info.robotFound}
+                                hovered={hovered}
+                                hoveredPlaced={placed}
+                                onHover={setHovered}
+                            />
+                        )
+                        : <RenderingSettings />}
                 </Column>
             </Row>
             <Row gap={12} align="center" style={{ marginTop: 12 }}>

@@ -122,8 +122,9 @@ export function Table<Row>({
             return rows
         }
         const read = column.value ?? ((row: Row) => field(row, column.key))
-        const compare =
-            typeof column.sort === "function" ? column.sort : (a: Row, b: Row) => compareValues(read(a), read(b))
+        const compare = typeof column.sort === "function"
+            ? column.sort
+            : (a: Row, b: Row) => compareValues(read(a), read(b))
         const out = [...rows].sort(compare)
         return currentSort.dir === "desc" ? out.reverse() : out
     }, [rows, columns, currentSort?.key, currentSort?.dir, sortRows])
@@ -131,8 +132,8 @@ export function Table<Row>({
         typeof rowKey === "function"
             ? rowKey(row, index)
             : rowKey
-              ? (field(row, rowKey) as Key)
-              : ((field(row, "id") ?? field(row, "key") ?? index) as Key)
+            ? (field(row, rowKey) as Key)
+            : ((field(row, "id") ?? field(row, "key") ?? index) as Key)
     const onHeader = (column: TableColumn<Row>) => {
         if (!column.sort) {
             return
@@ -158,59 +159,59 @@ export function Table<Row>({
                                     style={{ width: column.width, textAlign: column.align }}
                                     className={cx(column.sort && "dr-table__sortable", active && "dr-table__sorted")}
                                     onClick={() => onHeader(column)}
-                                    aria-sort={
-                                        active ? (currentSort!.dir === "asc" ? "ascending" : "descending") : undefined
-                                    }
+                                    aria-sort={active
+                                        ? (currentSort!.dir === "asc" ? "ascending" : "descending")
+                                        : undefined}
                                 >
                                     <span>{column.label ?? column.key}</span>
-                                    {column.sort ? (
-                                        <Icon
-                                            name={
-                                                active
-                                                    ? currentSort!.dir === "asc"
-                                                        ? "chevron-up"
-                                                        : "chevron-down"
-                                                    : "sort"
-                                            }
-                                            size={12}
-                                            className="dr-table__sort-icon"
-                                        />
-                                    ) : null}
+                                    {column.sort
+                                        ? (
+                                            <Icon
+                                                name={active
+                                                    ? currentSort!.dir === "asc" ? "chevron-up" : "chevron-down"
+                                                    : "sort"}
+                                                size={12}
+                                                className="dr-table__sort-icon"
+                                            />
+                                        )
+                                        : null}
                                 </th>
                             )
                         })}
                     </tr>
                 </thead>
                 <tbody>
-                    {sorted.length === 0 ? (
-                        <tr>
-                            <td className="dr-table__empty" colSpan={columns.length}>
-                                {empty}
-                            </td>
-                        </tr>
-                    ) : (
-                        sorted.map((row, index) => {
-                            const key = keyOf(row, index)
-                            return (
-                                <tr
-                                    key={key}
-                                    className={cx(
-                                        onRowClick && "dr-table__clickable",
-                                        selected === key && "dr-table__selected",
-                                    )}
-                                    onClick={onRowClick ? () => onRowClick(row, index) : undefined}
-                                >
-                                    {columns.map((column) => (
-                                        <td key={column.key} style={{ textAlign: column.align }}>
-                                            {column.render
-                                                ? column.render(row, index)
-                                                : String(field(row, column.key) ?? "")}
-                                        </td>
-                                    ))}
-                                </tr>
-                            )
-                        })
-                    )}
+                    {sorted.length === 0
+                        ? (
+                            <tr>
+                                <td className="dr-table__empty" colSpan={columns.length}>
+                                    {empty}
+                                </td>
+                            </tr>
+                        )
+                        : (
+                            sorted.map((row, index) => {
+                                const key = keyOf(row, index)
+                                return (
+                                    <tr
+                                        key={key}
+                                        className={cx(
+                                            onRowClick && "dr-table__clickable",
+                                            selected === key && "dr-table__selected",
+                                        )}
+                                        onClick={onRowClick ? () => onRowClick(row, index) : undefined}
+                                    >
+                                        {columns.map((column) => (
+                                            <td key={column.key} style={{ textAlign: column.align }}>
+                                                {column.render
+                                                    ? column.render(row, index)
+                                                    : String(field(row, column.key) ?? "")}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                )
+                            })
+                        )}
                 </tbody>
             </table>
         </div>
@@ -298,9 +299,9 @@ export function Tree<Node extends TreeNode>({
                         <span className="dr-tree__label">
                             {renderLabel ? renderLabel(node) : (node.label ?? node.id)}
                         </span>
-                        {node.badge !== undefined && node.badge !== null ? (
-                            <span className="dr-tree__badge">{node.badge}</span>
-                        ) : null}
+                        {node.badge !== undefined && node.badge !== null
+                            ? <span className="dr-tree__badge">{node.badge}</span>
+                            : null}
                     </div>
                     {hasChildren && isOpen ? <ul role="group">{renderNodes(node.children!, depth + 1)}</ul> : null}
                 </li>
@@ -371,11 +372,13 @@ export function Stat({ label, value, unit, delta, tone, hint, className, ...rest
                 {value}
                 {unit ? <span className="dr-stat__unit">{unit}</span> : null}
             </div>
-            {delta !== undefined && delta !== null ? (
-                <div className={cx("dr-stat__delta", `dr-stat__delta--${deltaTone}`)}>
-                    {typeof delta === "number" && delta > 0 ? `+${delta}` : String(delta)}
-                </div>
-            ) : null}
+            {delta !== undefined && delta !== null
+                ? (
+                    <div className={cx("dr-stat__delta", `dr-stat__delta--${deltaTone}`)}>
+                        {typeof delta === "number" && delta > 0 ? `+${delta}` : String(delta)}
+                    </div>
+                )
+                : null}
             {hint ? <div className="dr-stat__hint">{hint}</div> : null}
         </div>
     )
@@ -441,39 +444,43 @@ export function ListRow({
             tabIndex={onClick && !disabled ? 0 : undefined}
             aria-selected={selected || undefined}
             onClick={disabled ? undefined : onClick}
-            onKeyDown={
-                onClick && !disabled
-                    ? (event) => {
-                          // keys typed into a control inside the row (a rename box) are that control's
-                          if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-                              event.preventDefault()
-                              onClick(event)
-                          }
-                      }
-                    : undefined
-            }
+            onKeyDown={onClick && !disabled
+                ? (event) => {
+                    // keys typed into a control inside the row (a rename box) are that control's
+                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+                        event.preventDefault()
+                        onClick(event)
+                    }
+                }
+                : undefined}
             {...rest}
         >
-            {handle ? (
-                <span className="dr-list-row__handle" {...(typeof handle === "object" ? handle : {})}>
-                    <Icon name="grip" size={14} />
-                </span>
-            ) : null}
-            {icon ? (
-                <span className="dr-list-row__icon">
-                    {typeof icon === "string" ? <Icon name={icon} size={16} /> : icon}
-                </span>
-            ) : null}
+            {handle
+                ? (
+                    <span className="dr-list-row__handle" {...(typeof handle === "object" ? handle : {})}>
+                        <Icon name="grip" size={14} />
+                    </span>
+                )
+                : null}
+            {icon
+                ? (
+                    <span className="dr-list-row__icon">
+                        {typeof icon === "string" ? <Icon name={icon} size={16} /> : icon}
+                    </span>
+                )
+                : null}
             <span className="dr-list-row__text">
                 <span className="dr-list-row__title">{title}</span>
                 {subtitle ? <span className="dr-list-row__subtitle">{subtitle}</span> : null}
             </span>
             {meta !== undefined && meta !== null ? <span className="dr-list-row__meta">{meta}</span> : null}
-            {actions ? (
-                <span className="dr-list-row__actions" onClick={(event) => event.stopPropagation()}>
-                    {actions}
-                </span>
-            ) : null}
+            {actions
+                ? (
+                    <span className="dr-list-row__actions" onClick={(event) => event.stopPropagation()}>
+                        {actions}
+                    </span>
+                )
+                : null}
         </div>
     )
 }
@@ -553,25 +560,30 @@ export function LogView({
                 ref={box}
                 onScroll={onScroll}
             >
-                {shown.length === 0 ? (
-                    <div className="dr-log__empty">{filter ? "No lines match" : "No output yet"}</div>
-                ) : (
-                    shown.map((line, index) => (
-                        <div key={index} className={cx("dr-log__line", line.level && `dr-log__line--${line.level}`)}>
-                            {showTime && line.ts !== undefined ? (
-                                <span className="dr-log__ts">{formatTs(line.ts)}</span>
-                            ) : null}
-                            <span className="dr-log__text">{line.text}</span>
-                        </div>
-                    ))
-                )}
+                {shown.length === 0
+                    ? <div className="dr-log__empty">{filter ? "No lines match" : "No output yet"}</div>
+                    : (
+                        shown.map((line, index) => (
+                            <div
+                                key={index}
+                                className={cx("dr-log__line", line.level && `dr-log__line--${line.level}`)}
+                            >
+                                {showTime && line.ts !== undefined
+                                    ? <span className="dr-log__ts">{formatTs(line.ts)}</span>
+                                    : null}
+                                <span className="dr-log__text">{line.text}</span>
+                            </div>
+                        ))
+                    )}
             </div>
-            {!atEnd && follow ? (
-                <button type="button" className="dr-log__jump" onClick={jump}>
-                    <Icon name="arrow-down" size={12} />
-                    Jump to end
-                </button>
-            ) : null}
+            {!atEnd && follow
+                ? (
+                    <button type="button" className="dr-log__jump" onClick={jump}>
+                        <Icon name="arrow-down" size={12} />
+                        Jump to end
+                    </button>
+                )
+                : null}
         </div>
     )
 }
@@ -594,12 +606,11 @@ export type TokenKind = "kw" | "str" | "num" | "com" | "func" | "plain"
 /** Splits one line of code into [kind, text] tokens (kw, str, num, com, func, plain). */
 export function tokenizeLine(line: string, language = "js"): [TokenKind, string][] {
     const keywords = new Set((KEYWORDS[language] ?? KEYWORDS.js).split(" "))
-    const comment =
-        language === "py" || language === "python" || language === "sh" || language === "bash"
-            ? "#[^\\n]*"
-            : language === "json"
-              ? "(?!)"
-              : "\\/\\/[^\\n]*"
+    const comment = language === "py" || language === "python" || language === "sh" || language === "bash"
+        ? "#[^\\n]*"
+        : language === "json"
+        ? "(?!)"
+        : "\\/\\/[^\\n]*"
     const pattern = new RegExp(
         `(${comment})|("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`)|(\\b\\d+(?:\\.\\d+)?\\b)|([A-Za-z_$][\\w$]*)(?=\\s*\\()|([A-Za-z_$][\\w$]*)`,
         "g",
@@ -685,17 +696,21 @@ export function CodeBlock({
     }
     return (
         <div className={cx("dr-code", fill && "dr-code--fill", className)} style={style} {...rest}>
-            {header && (title || language || copy) ? (
-                <div className="dr-code__head">
-                    <span className="dr-code__lang">{title ?? language}</span>
-                    {copy ? (
-                        <button type="button" className="dr-code__copy" onClick={onCopy} aria-label="Copy code">
-                            <Icon name={copied ? "check" : "copy"} size={13} />
-                            {copied ? "Copied" : "Copy"}
-                        </button>
-                    ) : null}
-                </div>
-            ) : null}
+            {header && (title || language || copy)
+                ? (
+                    <div className="dr-code__head">
+                        <span className="dr-code__lang">{title ?? language}</span>
+                        {copy
+                            ? (
+                                <button type="button" className="dr-code__copy" onClick={onCopy} aria-label="Copy code">
+                                    <Icon name={copied ? "check" : "copy"} size={13} />
+                                    {copied ? "Copied" : "Copy"}
+                                </button>
+                            )
+                            : null}
+                    </div>
+                )
+                : null}
             <pre ref={pre} className="dr-code__pre dr-scroll" style={{ maxHeight }}>
                 <code>
                     {lines.map((line, index) => (
@@ -762,11 +777,9 @@ export function AttitudeIndicator({
         >
             <div
                 className="dr-attitude__sky"
-                style={
-                    known
-                        ? { transform: `rotate(${(-deg(roll)).toFixed(1)}deg) translateY(${shift.toFixed(0)}px)` }
-                        : undefined
-                }
+                style={known
+                    ? { transform: `rotate(${(-deg(roll)).toFixed(1)}deg) translateY(${shift.toFixed(0)}px)` }
+                    : undefined}
             />
             <div className="dr-attitude__cross" />
             <div className="dr-attitude__yaw">{`yaw ${yaw === null ? "—" : deg(yaw).toFixed(0)}°`}</div>
@@ -774,10 +787,11 @@ export function AttitudeIndicator({
     )
 }
 
-export interface SparklineProps extends Omit<
-    SVGAttributes<SVGSVGElement>,
-    "values" | "width" | "height" | "color" | "fill" | "min" | "max" | "strokeWidth"
-> {
+export interface SparklineProps extends
+    Omit<
+        SVGAttributes<SVGSVGElement>,
+        "values" | "width" | "height" | "color" | "fill" | "min" | "max" | "strokeWidth"
+    > {
     values: number[]
     /** px */
     width?: number
@@ -830,12 +844,12 @@ export function Sparkline({
             {...rest}
         >
             {title ? <title>{title}</title> : null}
-            {points.length > 1 && fill ? (
-                <path d={`${line}L${width},${height}L0,${height}Z`} className="dr-sparkline__fill" />
-            ) : null}
-            {points.length > 1 ? (
-                <path d={line} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" />
-            ) : null}
+            {points.length > 1 && fill
+                ? <path d={`${line}L${width},${height}L0,${height}Z`} className="dr-sparkline__fill" />
+                : null}
+            {points.length > 1
+                ? <path d={line} fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" />
+                : null}
             {points.length ? <circle cx={points.at(-1)![0]} cy={points.at(-1)![1]} r={2} fill="currentColor" /> : null}
         </svg>
     )
@@ -935,17 +949,19 @@ export function Timeline({
     }
     return (
         <div className={cx("dr-timeline", disabled && "dr-timeline--disabled", className)} style={style} {...rest}>
-            {onPlayPause ? (
-                <button
-                    type="button"
-                    className="dr-timeline__play"
-                    onClick={() => onPlayPause(!playing)}
-                    disabled={disabled}
-                    aria-label={playing ? "Pause" : "Play"}
-                >
-                    <Icon name={playing ? "pause" : "play"} size={16} />
-                </button>
-            ) : null}
+            {onPlayPause
+                ? (
+                    <button
+                        type="button"
+                        className="dr-timeline__play"
+                        onClick={() => onPlayPause(!playing)}
+                        disabled={disabled}
+                        aria-label={playing ? "Pause" : "Play"}
+                    >
+                        <Icon name={playing ? "pause" : "play"} size={16} />
+                    </button>
+                )
+                : null}
             <span className="dr-timeline__time">{show(value)}</span>
             <div
                 className="dr-timeline__track"
@@ -1035,20 +1051,22 @@ export function MediaFrame({
             style={{ maxHeight: height, aspectRatio: "16 / 9", ...style }}
             {...rest}
         >
-            {isVideo ? (
-                <video
-                    ref={setRef}
-                    className="dr-media__el"
-                    style={{ objectFit: fit }}
-                    autoPlay={true}
-                    muted={true}
-                    playsInline={true}
-                    onPlaying={() => setPlaying(true)}
-                    onEmptied={() => setPlaying(false)}
-                />
-            ) : src ? (
-                <img ref={setRef} className="dr-media__el" style={{ objectFit: fit }} src={src} alt={alt} />
-            ) : null}
+            {isVideo
+                ? (
+                    <video
+                        ref={setRef}
+                        className="dr-media__el"
+                        style={{ objectFit: fit }}
+                        autoPlay={true}
+                        muted={true}
+                        playsInline={true}
+                        onPlaying={() => setPlaying(true)}
+                        onEmptied={() => setPlaying(false)}
+                    />
+                )
+                : src
+                ? <img ref={setRef} className="dr-media__el" style={{ objectFit: fit }} src={src} alt={alt} />
+                : null}
             {!shown && placeholder ? <div className="dr-media__placeholder">{placeholder}</div> : null}
         </div>
     )

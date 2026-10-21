@@ -162,7 +162,7 @@ export class LayerManager {
         return this.entries
             .get()
             .list.flatMap((entry) =>
-                entry.enabled && entry.status.frame ? [{ name: entry.topic.name, frame: entry.status.frame }] : [],
+                entry.enabled && entry.status.frame ? [{ name: entry.topic.name, frame: entry.status.frame }] : []
             )
     }
 

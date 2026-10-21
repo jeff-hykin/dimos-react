@@ -297,22 +297,26 @@ function MenuAtDemo({ onAction }: { onAction: (action: string) => void }) {
             <div className="demo-target" onClick={(event) => setMenu({ x: event.clientX, y: event.clientY })}>
                 Click anywhere here
             </div>
-            {menu ? (
-                <MenuAt
-                    x={menu.x}
-                    y={menu.y}
-                    onClose={() => setMenu(null)}
-                    items={[
-                        { label: "Go here", icon: "pin", onSelect: () => onAction("Go here") },
-                        { label: "Label this spot…", icon: "edit", onSelect: () => onAction("Label") },
-                    ]}
-                >
-                    <div
-                        className="dr-mono dr-small dr-muted"
-                        style={{ padding: "4px 8px" }}
-                    >{`${menu.x}, ${menu.y}`}</div>
-                </MenuAt>
-            ) : null}
+            {menu
+                ? (
+                    <MenuAt
+                        x={menu.x}
+                        y={menu.y}
+                        onClose={() => setMenu(null)}
+                        items={[
+                            { label: "Go here", icon: "pin", onSelect: () => onAction("Go here") },
+                            { label: "Label this spot…", icon: "edit", onSelect: () => onAction("Label") },
+                        ]}
+                    >
+                        <div
+                            className="dr-mono dr-small dr-muted"
+                            style={{ padding: "4px 8px" }}
+                        >
+                            {`${menu.x}, ${menu.y}`}
+                        </div>
+                    </MenuAt>
+                )
+                : null}
         </Card>
     )
 }

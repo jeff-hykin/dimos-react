@@ -56,8 +56,11 @@ export class GraphLayer {
         this.#unsubscribe = settings.subscribe(() => this.#restyle())
         this.#restyle()
         if (topic) {
-            this.#stop = subscribeDecoded(context, topic, { maxHz: 5, decodeAs: "nav_msgs.Path" }, (path, timestamp) =>
-                this.#onGraph(path, timestamp),
+            this.#stop = subscribeDecoded(
+                context,
+                topic,
+                { maxHz: 5, decodeAs: "nav_msgs.Path" },
+                (path, timestamp) => this.#onGraph(path, timestamp),
             )
         }
     }

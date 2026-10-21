@@ -264,8 +264,7 @@ export function DataSection() {
                                     text: `[nav] replanned path (${old.length} poses)`,
                                     level: "info",
                                 },
-                            ])
-                        }
+                            ])}
                     >
                         Append line
                     </Button>

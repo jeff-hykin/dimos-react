@@ -83,7 +83,7 @@ export interface Map2DEvents {
 function retainedFor(map: Map2DContext, key: string): RetainedMapData {
     let entry = map.retained.get(key)
     if (!entry) {
-        map.retained.set(key, (entry = {}))
+        map.retained.set(key, entry = {})
     }
     return entry
 }
@@ -243,8 +243,10 @@ class MapSource {
             { delivery: "latest", maxHz: 1 },
             (message) => {
                 const value = message.value as LcmStruct | undefined
-                this.#cloudFrame = kept.cloudFrame =
-                    (value ? (value.frame ?? value.header?.frame_id) : headerFrameId(topic.type, message.bytes)) ?? ""
+                this.#cloudFrame =
+                    kept.cloudFrame =
+                        (value ? (value.frame ?? value.header?.frame_id) : headerFrameId(topic.type, message.bytes)) ??
+                            ""
                 frameStop?.()
                 frameStop = null
             },
@@ -501,11 +503,11 @@ export class Map2DRenderer {
             this.#base?.dispose()
             this.#base = base
                 ? new MapSource(
-                      this.map,
-                      base,
-                      () => (isGridTopic(base) ? this.#palette.gridLut : this.#palette.heatLut),
-                      changed,
-                  )
+                    this.map,
+                    base,
+                    () => (isGridTopic(base) ? this.#palette.gridLut : this.#palette.heatLut),
+                    changed,
+                )
                 : null
         }
         if (overlay?.key !== this.#overlay?.topic.key) {
@@ -788,10 +790,12 @@ export class Map2DRenderer {
         context.stroke()
         // the map: world → screen (y flipped), then each image's own placement; row 0 lands at the lowest y
         context.imageSmoothingEnabled = false
-        for (const [source, alpha] of [
-            [this.#base, 1],
-            [this.#overlay, 0.85],
-        ] as const) {
+        for (
+            const [source, alpha] of [
+                [this.#base, 1],
+                [this.#overlay, 0.85],
+            ] as const
+        ) {
             if (source) {
                 context.setTransform(
                     ratio * scale,
@@ -839,12 +843,11 @@ export class Map2DRenderer {
         }
         // the planned path, placed through TF into the fixed frame
         const path = this.#path
-        const placed =
-            path && path.points.length > 1
-                ? path.frame && path.frame !== this.map.fixedFrame()
-                    ? this.map.tf.lookup(path.frame, this.map.fixedFrame())
-                    : null
+        const placed = path && path.points.length > 1
+            ? path.frame && path.frame !== this.map.fixedFrame()
+                ? this.map.tf.lookup(path.frame, this.map.fixedFrame())
                 : null
+            : null
         if (path && path.points.length > 1 && (placed || !path.frame || path.frame === this.map.fixedFrame())) {
             const e = placed?.elements
             context.strokeStyle = css(palette.path, 0.95)

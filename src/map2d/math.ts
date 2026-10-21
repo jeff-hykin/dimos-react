@@ -193,14 +193,13 @@ export function gridLut(palette: GridPalette): RgbaPixels {
     const lut = new Uint8ClampedArray(256 * 4)
     for (let byte = 0; byte < 256; byte++) {
         const value = byte > 127 ? byte - 256 : byte
-        const rgba =
-            value < 0
-                ? palette.unknown
-                : value === 0
-                  ? palette.free
-                  : value >= LETHAL
-                    ? palette.lethal
-                    : mix(palette.low, palette.high, Math.sqrt(value / LETHAL))
+        const rgba = value < 0
+            ? palette.unknown
+            : value === 0
+            ? palette.free
+            : value >= LETHAL
+            ? palette.lethal
+            : mix(palette.low, palette.high, Math.sqrt(value / LETHAL))
         lut.set(rgba, byte * 4)
     }
     return lut
@@ -372,11 +371,7 @@ export const isCloudTopic = (topic: Pick<Topic, "type">): boolean => topic.type 
 /** an accumulated cloud map (the 3D view's global map) first, other map clouds, single scans, then occupancy grids */
 const rank = (topic: Topic): number =>
     isCloudTopic(topic)
-        ? /^\/global_map$/.test(topic.name)
-            ? 0
-            : /map|global|voxel/i.test(topic.name)
-              ? 1
-              : 2
+        ? /^\/global_map$/.test(topic.name) ? 0 : /map|global|voxel/i.test(topic.name) ? 1 : 2
         : 10 + (/^\/map$/.test(topic.name) ? 0 : /global/.test(topic.name) ? 1 : /map/.test(topic.name) ? 2 : 3)
 /** The topics the panel can draw as its base, best first: point clouds (as a top-down heatmap), then occupancy grids. */
 export function mapCandidates<T extends Topic>(topics: T[]): T[] {

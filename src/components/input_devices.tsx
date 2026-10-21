@@ -261,8 +261,8 @@ export function FileDrop({
                 rule.startsWith(".")
                     ? file.name.toLowerCase().endsWith(rule)
                     : rule.endsWith("/*")
-                      ? file.type.startsWith(rule.slice(0, -1))
-                      : file.type === rule,
+                    ? file.type.startsWith(rule.slice(0, -1))
+                    : file.type === rule
             )
     }
     const take = (list: FileList | null | undefined) => {
@@ -317,11 +317,13 @@ export function FileDrop({
                 <div key="t" className="dr-filedrop__title">
                     {title}
                 </div>,
-                hint ? (
-                    <div key="h" className="dr-filedrop__hint">
-                        {hint}
-                    </div>
-                ) : null,
+                hint
+                    ? (
+                        <div key="h" className="dr-filedrop__hint">
+                            {hint}
+                        </div>
+                    )
+                    : null,
             ]}
         </div>
     )

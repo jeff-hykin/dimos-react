@@ -310,9 +310,11 @@ export class PoseLayer {
         }
         if (frame.now - this.#since > 1000) {
             this.context.setStatus({
-                info: `${((this.#count * 1000) / (frame.now - this.#since)).toFixed(
-                    0,
-                )} Hz · trail ${this.#trail.count} · ${this.#frame || "no frame"}`,
+                info: `${
+                    ((this.#count * 1000) / (frame.now - this.#since)).toFixed(
+                        0,
+                    )
+                } Hz · trail ${this.#trail.count} · ${this.#frame || "no frame"}`,
             })
             this.#count = 0
             this.#since = frame.now

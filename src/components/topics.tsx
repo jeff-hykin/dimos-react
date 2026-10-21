@@ -44,8 +44,8 @@ export function messageTypeToken(type: string | null | undefined): string {
     const pkg = (type ?? "").split(/[./]/).find((part) => part.endsWith("_msgs")) ?? ""
     return (
         TYPE_COLORS[messageTypeName(type)] ??
-        PACKAGE_COLORS[pkg] ??
-        PALETTE[[...(type ?? "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % PALETTE.length]
+            PACKAGE_COLORS[pkg] ??
+            PALETTE[[...(type ?? "")].reduce((sum, char) => sum + char.charCodeAt(0), 0) % PALETTE.length]
     )
 }
 
@@ -109,13 +109,15 @@ export function TopicRates({ rows, empty, visibleRows = 6.5, className, style, .
         >
             <table>
                 <tbody>
-                    {rows.length === 0 ? (
-                        <tr>
-                            <td className="dr-rates__empty" colSpan={3}>
-                                {empty ?? "no topics on the bus"}
-                            </td>
-                        </tr>
-                    ) : null}
+                    {rows.length === 0
+                        ? (
+                            <tr>
+                                <td className="dr-rates__empty" colSpan={3}>
+                                    {empty ?? "no topics on the bus"}
+                                </td>
+                            </tr>
+                        )
+                        : null}
                     {rows.map((row) => {
                         const type = String(row.type ?? "").replace(/\//g, ".")
                         return (

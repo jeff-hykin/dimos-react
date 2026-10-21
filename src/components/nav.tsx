@@ -50,7 +50,10 @@ export interface ChoiceItem<T extends string | number = string> {
  * as an array rather than a tuple, so any array is taken (its first item is the value).
  */
 export type ChoiceInput<T extends string | number> =
-    (T & string) | readonly [T, ReactNode?] | readonly NoInfer<T | ReactNode>[] | ChoiceItem<T>
+    | (T & string)
+    | readonly [T, ReactNode?]
+    | readonly NoInfer<T | ReactNode>[]
+    | ChoiceItem<T>
 
 /** [[value, label]] or [{ value, label, … }] → [{ value, label, … }] */
 const normalizeItems = <T extends string | number>(items: readonly ChoiceInput<T>[] = []): ChoiceItem<T>[] =>
@@ -58,9 +61,9 @@ const normalizeItems = <T extends string | number>(items: readonly ChoiceInput<T
         Array.isArray(item)
             ? { value: item[0], label: item[1] }
             : typeof item === "string"
-              ? { value: item, label: item }
-              : // Array.isArray doesn't narrow readonly arrays away, so name what's left
-                (item as ChoiceItem<T>),
+            ? { value: item, label: item }
+            // Array.isArray doesn't narrow readonly arrays away, so name what's left
+            : (item as ChoiceItem<T>)
     )
 
 /** Renders into document.body (nothing during server rendering). */
@@ -72,10 +75,11 @@ function Portal({ children }: { children?: ReactNode }) {
 
 // ── Tabs / Segmented ──
 
-export interface TabsProps<T extends string | number = string> extends Omit<
-    HTMLAttributes<HTMLDivElement>,
-    "onChange"
-> {
+export interface TabsProps<T extends string | number = string> extends
+    Omit<
+        HTMLAttributes<HTMLDivElement>,
+        "onChange"
+    > {
     items: readonly ChoiceInput<T>[]
     /** null: none selected (e.g. tabs that open a panel, all closed) */
     value: T | null
@@ -129,8 +133,7 @@ function choiceGroup<T extends string | number>(
             {list.map((item) => {
                 const active = item.value === value
                 // with none selected, the first enabled item is the one Tab reaches
-                const focusable =
-                    active ||
+                const focusable = active ||
                     (!list.some((other) => other.value === value) && item === list.find((other) => !other.disabled))
                 return (
                     <button
@@ -148,9 +151,9 @@ function choiceGroup<T extends string | number>(
                     >
                         {item.icon ? <Icon name={item.icon} size={15} /> : null}
                         {item.label !== undefined ? <span>{item.label}</span> : null}
-                        {item.badge !== undefined && item.badge !== null ? (
-                            <span className={`${baseClass}__badge`}>{item.badge}</span>
-                        ) : null}
+                        {item.badge !== undefined && item.badge !== null
+                            ? <span className={`${baseClass}__badge`}>{item.badge}</span>
+                            : null}
                     </button>
                 )
             })}
@@ -344,28 +347,31 @@ export function Popover({
         "aria-expanded": isOpen,
         "aria-haspopup": "dialog",
     }
-    const triggerElement =
-        typeof trigger === "function" ? (
+    const triggerElement = typeof trigger === "function"
+        ? (
             trigger({ ...triggerProps, open: isOpen })
-        ) : isValidElement<Partial<TriggerProps>>(trigger) ? (
-            cloneElement(trigger, triggerProps)
-        ) : (
-            <span {...triggerProps}>{trigger}</span>
         )
+        : isValidElement<Partial<TriggerProps>>(trigger)
+        ? (
+            cloneElement(trigger, triggerProps)
+        )
+        : <span {...triggerProps}>{trigger}</span>
     return (
         <span className="dr-popover-anchor">
             {triggerElement}
-            {isOpen && anchor ? (
-                <Floating
-                    anchor={anchor}
-                    placement={placement}
-                    onClose={() => setOpen(false)}
-                    className={cx("dr-popover", className)}
-                    style={style}
-                >
-                    {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
-                </Floating>
-            ) : null}
+            {isOpen && anchor
+                ? (
+                    <Floating
+                        anchor={anchor}
+                        placement={placement}
+                        onClose={() => setOpen(false)}
+                        className={cx("dr-popover", className)}
+                        style={style}
+                    >
+                        {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
+                    </Floating>
+                )
+                : null}
         </span>
     )
 }
@@ -477,13 +483,13 @@ export function MenuList({ items, onClose, autoFocus = true }: MenuListProps) {
                         }}
                     >
                         <span className="dr-menu__icon">
-                            {item.checked !== undefined ? (
-                                item.checked ? (
-                                    <Icon name="check" size={14} />
-                                ) : null
-                            ) : item.icon ? (
-                                <Icon name={item.icon} size={14} />
-                            ) : null}
+                            {item.checked !== undefined
+                                ? (
+                                    item.checked ? <Icon name="check" size={14} /> : null
+                                )
+                                : item.icon
+                                ? <Icon name={item.icon} size={14} />
+                                : null}
                         </span>
                         <span className="dr-menu__label">{item.label}</span>
                         {item.shortcut ? <span className="dr-menu__shortcut">{item.shortcut}</span> : null}
@@ -520,12 +526,15 @@ export function Menu({ items, trigger, placement = "bottom-start", open, onOpenC
             }
         },
     }
-    const triggerElement =
-        typeof trigger === "function" ? (
+    const triggerElement = typeof trigger === "function"
+        ? (
             trigger({ ...triggerProps, open: isOpen })
-        ) : isValidElement<Partial<TriggerProps>>(trigger) ? (
+        )
+        : isValidElement<Partial<TriggerProps>>(trigger)
+        ? (
             cloneElement(trigger, triggerProps)
-        ) : (
+        )
+        : (
             <button type="button" className="dr-menu-trigger" {...triggerProps}>
                 {trigger ?? <Icon name="more-horizontal" />}
             </button>
@@ -537,17 +546,19 @@ export function Menu({ items, trigger, placement = "bottom-start", open, onOpenC
     return (
         <span className="dr-popover-anchor">
             {triggerElement}
-            {isOpen && anchor ? (
-                <Floating
-                    anchor={anchor}
-                    placement={placement}
-                    onClose={close}
-                    role="presentation"
-                    className={className}
-                >
-                    <MenuList items={items} onClose={close} />
-                </Floating>
-            ) : null}
+            {isOpen && anchor
+                ? (
+                    <Floating
+                        anchor={anchor}
+                        placement={placement}
+                        onClose={close}
+                        role="presentation"
+                        className={className}
+                    >
+                        <MenuList items={items} onClose={close} />
+                    </Floating>
+                )
+                : null}
         </span>
     )
 }
@@ -571,36 +582,30 @@ export function ContextMenu({ items, children, disabled, className, ...rest }: C
     return (
         <div
             className={cx("dr-context-menu", className)}
-            onContextMenu={
-                disabled
-                    ? undefined
-                    : (event) => {
-                          event.preventDefault()
-                          openAt(event, event.clientX, event.clientY)
-                      }
-            }
-            onPointerDown={
-                disabled
-                    ? undefined
-                    : (event) => {
-                          if (event.pointerType !== "touch") {
-                              return
-                          }
-                          const { clientX, clientY } = event
-                          press.current = setTimeout(() => openAt(event, clientX, clientY), 550)
-                      }
-            }
+            onContextMenu={disabled ? undefined : (event) => {
+                event.preventDefault()
+                openAt(event, event.clientX, event.clientY)
+            }}
+            onPointerDown={disabled ? undefined : (event) => {
+                if (event.pointerType !== "touch") {
+                    return
+                }
+                const { clientX, clientY } = event
+                press.current = setTimeout(() => openAt(event, clientX, clientY), 550)
+            }}
             onPointerUp={() => clearTimeout(press.current)}
             onPointerMove={() => clearTimeout(press.current)}
             onPointerCancel={() => clearTimeout(press.current)}
             {...rest}
         >
             {children}
-            {menu ? (
-                <Floating point={{ x: menu.x, y: menu.y }} onClose={() => setMenu(null)} role="presentation">
-                    <MenuList items={menu.items} onClose={() => setMenu(null)} />
-                </Floating>
-            ) : null}
+            {menu
+                ? (
+                    <Floating point={{ x: menu.x, y: menu.y }} onClose={() => setMenu(null)} role="presentation">
+                        <MenuList items={menu.items} onClose={() => setMenu(null)} />
+                    </Floating>
+                )
+                : null}
         </div>
     )
 }
@@ -652,21 +657,25 @@ export function Tooltip({ content, children, delay = 350, placement = "top", dis
         setOpen(false)
     }
     const handlers = { onPointerEnter: show, onPointerLeave: hide, onFocus: show, onBlur: hide }
-    const child = isValidElement<typeof handlers & { ref?: (element: HTMLElement | null) => void }>(children) ? (
-        cloneElement(children, { ref: setAnchor, ...handlers })
-    ) : (
-        <span ref={setAnchor} {...handlers}>
-            {children}
-        </span>
-    )
+    const child = isValidElement<typeof handlers & { ref?: (element: HTMLElement | null) => void }>(children)
+        ? (
+            cloneElement(children, { ref: setAnchor, ...handlers })
+        )
+        : (
+            <span ref={setAnchor} {...handlers}>
+                {children}
+            </span>
+        )
     return (
         <span className="dr-popover-anchor">
             {child}
-            {open && anchor && !disabled && content ? (
-                <TooltipBox anchor={anchor} placement={placement}>
-                    {content}
-                </TooltipBox>
-            ) : null}
+            {open && anchor && !disabled && content
+                ? (
+                    <TooltipBox anchor={anchor} placement={placement}>
+                        {content}
+                    </TooltipBox>
+                )
+                : null}
         </span>
     )
 }
@@ -755,9 +764,9 @@ export function Sidebar({
                 <div className="dr-sidebar__body dr-scroll">
                     {sections?.map((section, index) => (
                         <section key={section.key ?? index} className="dr-sidebar__section">
-                            {section.title ? (
-                                <div className="dr-sidebar__section-title dr-label">{section.title}</div>
-                            ) : null}
+                            {section.title
+                                ? <div className="dr-sidebar__section-title dr-label">{section.title}</div>
+                                : null}
                             {section.content}
                         </section>
                     ))}
@@ -813,9 +822,9 @@ export function NavRail<T extends Key = string>({
                         >
                             <Icon name={item.icon} size={20} />
                             {showLabels ? <span className="dr-navrail__label">{item.label}</span> : null}
-                            {item.badge !== undefined && item.badge !== null ? (
-                                <span className="dr-navrail__badge">{item.badge}</span>
-                            ) : null}
+                            {item.badge !== undefined && item.badge !== null
+                                ? <span className="dr-navrail__badge">{item.badge}</span>
+                                : null}
                         </button>
                     )
                 })}
@@ -870,13 +879,13 @@ export function Stepper({ steps = [], current = 0, onStep, vertical = false, cla
                                 type={clickable ? "button" : undefined}
                                 onClick={clickable ? () => onStep?.(index) : undefined}
                             >
-                                {state === "done" ? (
-                                    <Icon name="check" size={12} />
-                                ) : state === "failed" ? (
-                                    "!"
-                                ) : (
-                                    index + 1
-                                )}
+                                {state === "done" ? <Icon name="check" size={12} /> : state === "failed"
+                                    ? (
+                                        "!"
+                                    )
+                                    : (
+                                        index + 1
+                                    )}
                             </Mark>
                         }
                         <span className="dr-stepper__text">
@@ -909,28 +918,28 @@ export function Breadcrumbs({ items = [], className, ...rest }: BreadcrumbsProps
         <nav className={cx("dr-breadcrumbs", className)} aria-label="Breadcrumb" {...rest}>
             {items.map((item, index) => {
                 const last = index === items.length - 1
-                const label = last ? (
-                    <span className="dr-breadcrumbs__current" aria-current="page">
-                        {item.label}
-                    </span>
-                ) : item.href || item.onClick ? (
-                    <a
-                        className="dr-breadcrumbs__link"
-                        href={item.href ?? "#"}
-                        onClick={
-                            item.onClick
+                const label = last
+                    ? (
+                        <span className="dr-breadcrumbs__current" aria-current="page">
+                            {item.label}
+                        </span>
+                    )
+                    : item.href || item.onClick
+                    ? (
+                        <a
+                            className="dr-breadcrumbs__link"
+                            href={item.href ?? "#"}
+                            onClick={item.onClick
                                 ? (event) => {
-                                      event.preventDefault()
-                                      item.onClick?.()
-                                  }
-                                : undefined
-                        }
-                    >
-                        {item.label}
-                    </a>
-                ) : (
-                    <span>{item.label}</span>
-                )
+                                    event.preventDefault()
+                                    item.onClick?.()
+                                }
+                                : undefined}
+                        >
+                            {item.label}
+                        </a>
+                    )
+                    : <span>{item.label}</span>
                 return (
                     <span key={index} className="dr-breadcrumbs__item">
                         {label}
@@ -1058,12 +1067,13 @@ export function CommandPalette({ open, onClose, commands = [], placeholder = "Ty
                     <div className="dr-palette__list dr-scroll" role="listbox">
                         {matches.length === 0 ? <div className="dr-palette__empty">No matching commands</div> : null}
                         {matches.map((command, index) => {
-                            const heading =
-                                !query && command.group && command.group !== lastGroup ? (
+                            const heading = !query && command.group && command.group !== lastGroup
+                                ? (
                                     <div key={`g-${command.group}`} className="dr-palette__group">
                                         {command.group}
                                     </div>
-                                ) : null
+                                )
+                                : null
                             lastGroup = command.group
                             return [
                                 heading,
@@ -1076,15 +1086,13 @@ export function CommandPalette({ open, onClose, commands = [], placeholder = "Ty
                                     onPointerMove={() => setActive(index)}
                                     onClick={() => run(command)}
                                 >
-                                    {command.icon ? (
-                                        <Icon name={command.icon} size={15} />
-                                    ) : (
-                                        <span className="dr-palette__noicon" />
-                                    )}
+                                    {command.icon
+                                        ? <Icon name={command.icon} size={15} />
+                                        : <span className="dr-palette__noicon" />}
                                     <span className="dr-palette__label">{command.label}</span>
-                                    {command.shortcut ? (
-                                        <span className="dr-palette__shortcut">{command.shortcut}</span>
-                                    ) : null}
+                                    {command.shortcut
+                                        ? <span className="dr-palette__shortcut">{command.shortcut}</span>
+                                        : null}
                                 </div>,
                             ]
                         })}

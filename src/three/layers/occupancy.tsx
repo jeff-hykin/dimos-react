@@ -3,15 +3,15 @@
 // around a dimmer body; unknown is clear. A map is gray. Colors come from the theme (--scene-floor, --scene-wall,
 // --scene-wall-rim, falling back to --surface / --primary). The texture is rebuilt in place for a same-size grid.
 import * as THREE from "three"
-import { useStore, type Store } from "../store.ts"
+import { type Store, useStore } from "../store.ts"
 import { themeColors } from "../../theme/theme.ts"
 import { cssColor } from "../robot_model.ts"
 import {
+    type LayerContext,
+    type LayerSettingsProps,
     placeLayer,
     registerLayer,
     subscribeDecoded,
-    type LayerContext,
-    type LayerSettingsProps,
     type Topic,
 } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"
@@ -152,8 +152,7 @@ export class GridLayer {
             if (costmap && bytes[index] === LETHAL) {
                 const column = index % width,
                     row = (index - column) / width
-                const inside =
-                    lethal(column - 1, row) &&
+                const inside = lethal(column - 1, row) &&
                     lethal(column + 1, row) &&
                     lethal(column, row - 1) &&
                     lethal(column, row + 1)

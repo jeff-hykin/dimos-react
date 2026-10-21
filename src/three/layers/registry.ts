@@ -159,8 +159,9 @@ export function placeLayer(
     fixedFrame: string,
     stamp?: number,
 ): boolean {
-    const matrix =
-        stamp === undefined ? context.tf.lookup(frame, fixedFrame) : context.tf.lookupAt(frame, fixedFrame, stamp)
+    const matrix = stamp === undefined
+        ? context.tf.lookup(frame, fixedFrame)
+        : context.tf.lookupAt(frame, fixedFrame, stamp)
     if (!matrix) {
         if (object.visible) {
             object.visible = false

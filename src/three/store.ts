@@ -19,7 +19,7 @@ export class Store<T> {
     update(patch: Partial<T>) {
         this.set({ ...this.#value, ...patch })
     }
-    subscribe = (listener: () => void): (() => void) => {
+    subscribe = (listener: () => void): () => void => {
         this.#listeners.add(listener)
         return () => this.#listeners.delete(listener)
     }

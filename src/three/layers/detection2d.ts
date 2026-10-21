@@ -44,10 +44,9 @@ registerOverlay({
             context.strokeStyle = color
             context.strokeRect(left, top, box.size_x ?? 0, box.size_y ?? 0)
             if (name) {
-                const text =
-                    best?.hypothesis?.score !== undefined
-                        ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%`
-                        : name
+                const text = best?.hypothesis?.score !== undefined
+                    ? `${name} ${(best.hypothesis.score * 100).toFixed(0)}%`
+                    : name
                 const width = context.measureText(text).width + 8
                 const height = parseFloat(context.font) + 4
                 context.fillStyle = color

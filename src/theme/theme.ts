@@ -232,7 +232,7 @@ export function signalReady(): void {
             } catch {
                 // not Desktop's origin
             }
-        }),
+        })
     )
 }
 

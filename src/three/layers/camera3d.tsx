@@ -3,20 +3,20 @@
 // the shared camera stream (CameraStreams): a live H.264 track as a video texture, a replay's frames (an ImageBitmap /
 // ImageData) drawn into a canvas texture, depth as a GPU heat map.
 import * as THREE from "three"
-import { useStore, type Store } from "../store.ts"
+import { type Store, useStore } from "../store.ts"
 import { headerFrameId } from "../../lcm.ts"
 import { themeColors } from "../../theme/theme.ts"
-import { cameraInfoFor, isDepthTopic, type CameraStreams } from "../../components/camera.tsx"
+import { cameraInfoFor, type CameraStreams, isDepthTopic } from "../../components/camera.tsx"
 import { DEPTH_COLORMAPS } from "../../components/media.tsx"
 import { FatLines } from "../lines.ts"
 import { cssColor } from "../robot_model.ts"
-import { DepthMaterial, type DepthLook } from "../../camera/depth.ts"
+import { type DepthLook, DepthMaterial } from "../../camera/depth.ts"
 import {
+    type LayerContext,
+    type LayerSettingsProps,
     placeLayer,
     registerLayer,
     subscribeDecoded,
-    type LayerContext,
-    type LayerSettingsProps,
     type Topic,
 } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"
@@ -212,8 +212,10 @@ export class Camera3dLayer {
                 (message) => {
                     let frame: string | null
                     // a source that already decoded it: any shape, maybe a frame_id
-                    const value = (message.value ?? message.decoded) as
-                        { frame?: string; header?: { frame_id?: string } } | undefined
+                    const value = (message.value ?? message.decoded) as {
+                        frame?: string
+                        header?: { frame_id?: string }
+                    } | undefined
                     if (value) {
                         frame = value.frame ?? value.header?.frame_id ?? null
                     } else {
@@ -265,7 +267,7 @@ export class Camera3dLayer {
                 this.#stopInfo?.()
                 this.#stopInfo = null
                 this.#reshape(false)
-            }),
+            })
         )
         this.#stopInfo = () => stops.forEach((stop) => stop())
     }
@@ -315,19 +317,20 @@ export class Camera3dLayer {
         for (const point of corners) {
             this.#frustum.push(0, 0, 0, point.x, point.y, point.z)
         }
-        for (const [a, b] of [
-            [topLeft, topRight],
-            [topRight, bottomRight],
-            [bottomRight, bottomLeft],
-            [bottomLeft, topLeft],
-        ]) {
+        for (
+            const [a, b] of [
+                [topLeft, topRight],
+                [topRight, bottomRight],
+                [bottomRight, bottomLeft],
+                [bottomLeft, topLeft],
+            ]
+        ) {
             this.#frustum.push(a.x, a.y, a.z, b.x, b.y, b.z)
         }
         this.#frustum.commit()
         this.#frustum.object.visible = settings.frustum
         // an image's frame_id is optical by ROS convention, so auto means optical unless the frame says it's a body frame
-        const optical =
-            settings.convention === "optical" ||
+        const optical = settings.convention === "optical" ||
             (settings.convention === "auto" && !/(^|_)body(_|$)/i.test(this.#frame ?? ""))
         this.#content.matrix.copy(optical ? new THREE.Matrix4() : OPTICAL_TO_BODY)
         this.#content.matrixWorldNeedsUpdate = true
@@ -407,26 +410,26 @@ export function Camera3dSettingsEditor({ settings, topic }: Camera3dSettingsEdit
             {slider("Opacity", "opacity", 0.1, 1, 0.05, (opacity: number) => `${Math.round(opacity * 100)}%`)}
             {topic && isDepthTopic(topic)
                 ? [
-                      <Field label="Colormap" key="colormap">
-                          <Select
-                              value={depth.colormap}
-                              options={DEPTH_COLORMAPS}
-                              onChange={(colormap: string) => settings.update({ depth: { ...depth, colormap } })}
-                          />
-                      </Field>,
-                      <Field label="Range" hint="meters; empty = automatic (2nd–98th percentile)" key="range">
-                          <span className="dr-range-inputs">
-                              <RangeInput
-                                  value={depth.near}
-                                  onChange={(near: number | null) => settings.update({ depth: { ...depth, near } })}
-                              />
-                              <RangeInput
-                                  value={depth.far}
-                                  onChange={(far: number | null) => settings.update({ depth: { ...depth, far } })}
-                              />
-                          </span>
-                      </Field>,
-                  ]
+                    <Field label="Colormap" key="colormap">
+                        <Select
+                            value={depth.colormap}
+                            options={DEPTH_COLORMAPS}
+                            onChange={(colormap: string) => settings.update({ depth: { ...depth, colormap } })}
+                        />
+                    </Field>,
+                    <Field label="Range" hint="meters; empty = automatic (2nd–98th percentile)" key="range">
+                        <span className="dr-range-inputs">
+                            <RangeInput
+                                value={depth.near}
+                                onChange={(near: number | null) => settings.update({ depth: { ...depth, near } })}
+                            />
+                            <RangeInput
+                                value={depth.far}
+                                onChange={(far: number | null) => settings.update({ depth: { ...depth, far } })}
+                            />
+                        </span>
+                    </Field>,
+                ]
                 : null}
             <Field label="Frame">
                 <Select

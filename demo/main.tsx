@@ -280,7 +280,9 @@ function ControlsSection() {
                             key={name}
                             selected={on}
                             onChange={(value) => setChips({ ...chips, [name]: value })}
-                        >{`/${name}`}</Chip>
+                        >
+                            {`/${name}`}
+                        </Chip>
                     ))}
                     <Chip icon="robot" onRemove={() => {}}>
                         go2
@@ -360,8 +362,7 @@ function FeedbackSection() {
                                         confirmLabel: "Delete",
                                     }),
                                 ),
-                            )
-                        }
+                            )}
                     >
                         Confirm
                     </Button>
@@ -552,16 +553,18 @@ function LayoutSection() {
                 <Button onClick={() => setFloating(!floating)}>
                     {floating ? "Hide floating panel" : "Show floating panel"}
                 </Button>
-                {floating ? (
-                    <FloatingPanel
-                        title="Floating"
-                        icon="panels"
-                        onClose={() => setFloating(false)}
-                        defaultPosition={{ x: -24, y: 80 }}
-                    >
-                        <Text muted={true}>Drag me by the header.</Text>
-                    </FloatingPanel>
-                ) : null}
+                {floating
+                    ? (
+                        <FloatingPanel
+                            title="Floating"
+                            icon="panels"
+                            onClose={() => setFloating(false)}
+                            defaultPosition={{ x: -24, y: 80 }}
+                        >
+                            <Text muted={true}>Drag me by the header.</Text>
+                        </FloatingPanel>
+                    )
+                    : null}
             </Card>
         </Column>
     )
@@ -620,7 +623,9 @@ function Demo() {
                 <Text
                     muted={true}
                     small={true}
-                >{`skin ${theme.skin} · ${theme.dark ? "dark" : "light"} · ${params.section ?? "all"}`}</Text>
+                >
+                    {`skin ${theme.skin} · ${theme.dark ? "dark" : "light"} · ${params.section ?? "all"}`}
+                </Text>
             </TopBar>
             <main className="demo-main">
                 {shown.map(([id, label, Section]) => (

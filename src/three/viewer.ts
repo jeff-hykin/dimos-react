@@ -250,8 +250,8 @@ export class Viewer {
 
     /** Re-reads the theme: grid, fog and splat background (the background itself is CSS behind the canvas). */
     setTheme() {
-        const dark =
-            typeof document === "undefined" || getComputedStyle(document.documentElement).colorScheme.trim() !== "light"
+        const dark = typeof document === "undefined" ||
+            getComputedStyle(document.documentElement).colorScheme.trim() !== "light"
         if (this.#grid) {
             this.scene.remove(this.#grid)
             this.#grid.geometry.dispose()
@@ -516,10 +516,9 @@ export class Viewer {
             return
         }
         // the shortest turn; straight through the other side turns about +z, so the view stays upright
-        const turn =
-            from.dot(to) < -0.9999
-                ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI)
-                : new THREE.Quaternion().setFromUnitVectors(from, to)
+        const turn = from.dot(to) < -0.9999
+            ? new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI)
+            : new THREE.Quaternion().setFromUnitVectors(from, to)
         this.#glide = { from, turn, start: performance.now(), ms, distance }
         this.requestRender()
     }
@@ -661,8 +660,7 @@ export class Viewer {
         this.camera.aspect = width / height
         this.camera.updateProjectionMatrix()
         this.resolution.set(width, height)
-        this.pixelsPerMeter.value =
-            (height * (this.renderer?.getPixelRatio() ?? 1)) /
+        this.pixelsPerMeter.value = (height * (this.renderer?.getPixelRatio() ?? 1)) /
             (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2))
         this.requestRender()
     }

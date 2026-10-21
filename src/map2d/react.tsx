@@ -74,7 +74,7 @@ export function Map2D({
     const map = useMemo((): Map2DContext => {
         let retained = retainedBySource.get(source)
         if (!retained) {
-            retainedBySource.set(source, (retained = new Map()))
+            retainedBySource.set(source, retained = new Map())
         }
         return {
             source,

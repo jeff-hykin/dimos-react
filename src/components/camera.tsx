@@ -44,7 +44,8 @@ export const VIDEO_PRESETS: VideoPreset[] = [
     {
         id: "latency",
         label: "Low latency",
-        about: "fits 640×360 at the gateway's default bits per pixel; small frames arrive and decode soonest, the rate kept when the link is squeezed",
+        about:
+            "fits 640×360 at the gateway's default bits per pixel; small frames arrive and decode soonest, the rate kept when the link is squeezed",
         options: { maxResolution: [640, 360], qualityToHzTradeoff: 1 },
     },
     {
@@ -56,7 +57,8 @@ export const VIDEO_PRESETS: VideoPreset[] = [
     {
         id: "quality",
         label: "High quality",
-        about: "full size, never shrunk, up to 6 Mbit/s (at least 30% of it); drops frames before detail when the link is squeezed, and the browser buffers 100-400 ms to play frames out evenly",
+        about:
+            "full size, never shrunk, up to 6 Mbit/s (at least 30% of it); drops frames before detail when the link is squeezed, and the browser buffers 100-400 ms to play frames out evenly",
         options: {
             minResolutionScale: 1,
             maxBitrate: 6_000_000,
@@ -344,8 +346,8 @@ export class CameraStreams {
             async (received) => {
                 const message = received as CameraMessage
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a source's frame: any of the forms above
-                let decoded: any =
-                    message.decoded ?? message.value ?? (message.mediaStream ? null : lcmValue(message, topic.type))
+                let decoded: any = message.decoded ?? message.value ??
+                    (message.mediaStream ? null : lcmValue(message, topic.type))
                 if (!message.mediaStream && decoded && !decoded.bitmap && !decoded.image) {
                     // a replay's frame: decoded here, and a slower older one must not replace a newer one
                     const mine = ++handle.ticket
@@ -593,11 +595,9 @@ export function CameraView({
                 far={depthLook.far ?? null}
                 fit={fill ? "cover" : "contain"}
                 overlayTopic={overlay && IMAGE_OVERLAY_TYPES.includes(overlay.type) ? overlay.key : null}
-                onInfo={
-                    onInfo
-                        ? (info) => onInfo({ width: info.width, height: info.height, fps: info.fps, range: info.range })
-                        : undefined
-                }
+                onInfo={onInfo
+                    ? (info) => onInfo({ width: info.width, height: info.height, fps: info.fps, range: info.range })
+                    : undefined}
                 className={cx("dr-camera", className)}
             >
                 {children}
@@ -728,11 +728,13 @@ export function CameraTabs<T extends Topic>({ topics, value, onChange, gone, cla
             aria-label="Cameras"
             onWheel={(event) => (event.currentTarget.scrollLeft += event.deltaY)}
         >
-            {gone ? (
-                <span className="dr-camera-tab dr-camera-tab--gone" title={gone}>
-                    {gone}
-                </span>
-            ) : null}
+            {gone
+                ? (
+                    <span className="dr-camera-tab dr-camera-tab--gone" title={gone}>
+                        {gone}
+                    </span>
+                )
+                : null}
             {tabs.map((tab) => (
                 <button
                     key={tab.topic.key}
@@ -746,9 +748,9 @@ export function CameraTabs<T extends Topic>({ topics, value, onChange, gone, cla
                     {tab.label}
                 </button>
             ))}
-            {!tabs.length && !gone ? (
-                <span className="dr-camera-tab dr-camera-tab--gone">no camera on the bus</span>
-            ) : null}
+            {!tabs.length && !gone
+                ? <span className="dr-camera-tab dr-camera-tab--gone">no camera on the bus</span>
+                : null}
         </div>
     )
 }

@@ -175,19 +175,23 @@ export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
 export function Field({ label, hint, error, inline = false, htmlFor, className, children, ...rest }: FieldProps) {
     return (
         <div className={cx("dr-field", inline && "dr-field--inline", error && "dr-field--error", className)} {...rest}>
-            {label ? (
-                <label className="dr-field-label" htmlFor={htmlFor}>
-                    {label}
-                </label>
-            ) : null}
+            {label
+                ? (
+                    <label className="dr-field-label" htmlFor={htmlFor}>
+                        {label}
+                    </label>
+                )
+                : null}
             <div className="dr-field-control">{children}</div>
-            {error ? (
-                <div className="dr-field-error" role="alert">
-                    {error}
-                </div>
-            ) : hint ? (
-                <div className="dr-field-hint">{hint}</div>
-            ) : null}
+            {error
+                ? (
+                    <div className="dr-field-error" role="alert">
+                        {error}
+                    </div>
+                )
+                : hint
+                ? <div className="dr-field-hint">{hint}</div>
+                : null}
         </div>
     )
 }
@@ -309,11 +313,13 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
                 }}
                 {...rest}
             />
-            {value ? (
-                <button type="button" className="dr-input-clear" aria-label="Clear" onClick={() => onChange?.("")}>
-                    <Icon name="close" size={13} />
-                </button>
-            ) : null}
+            {value
+                ? (
+                    <button type="button" className="dr-input-clear" aria-label="Clear" onClick={() => onChange?.("")}>
+                        <Icon name="close" size={13} />
+                    </button>
+                )
+                : null}
         </span>
     )
 }
@@ -340,10 +346,11 @@ export function TextArea({ value, onChange, mono = false, rows = 4, className, .
 const clamp = (value: number, min?: number | null, max?: number | null) =>
     Math.min(max ?? Infinity, Math.max(min ?? -Infinity, value))
 
-interface NumberInputBaseProps extends Omit<
-    InputHTMLAttributes<HTMLInputElement>,
-    "value" | "onChange" | "min" | "max" | "step" | "size"
-> {
+interface NumberInputBaseProps extends
+    Omit<
+        InputHTMLAttributes<HTMLInputElement>,
+        "value" | "onChange" | "min" | "max" | "step" | "size"
+    > {
     value?: number | null
     min?: number
     max?: number
@@ -355,8 +362,9 @@ interface NumberInputBaseProps extends Omit<
 }
 
 /** `onChange` gets the committed number; with `nullable`, null once the box is cleared. */
-export type NumberInputProps = NumberInputBaseProps &
-    (
+export type NumberInputProps =
+    & NumberInputBaseProps
+    & (
         | { nullable?: false; onChange?: (value: number) => void }
         | { nullable: boolean; onChange?: (value: number | null) => void }
     )
@@ -384,8 +392,8 @@ export function NumberInput(props: NumberInputProps) {
         number === null || number === undefined || !Number.isFinite(number)
             ? ""
             : precision === undefined
-              ? String(number)
-              : number.toFixed(precision)
+            ? String(number)
+            : number.toFixed(precision)
     const [text, setText] = useState(shown(value))
     const focused = useRef(false)
     useEffect(() => {
@@ -474,10 +482,11 @@ export function normalizeOptions<T>(options: readonly OptionInput<T>[] = []): Se
     })
 }
 
-export interface SelectProps<T = string> extends Omit<
-    SelectHTMLAttributes<HTMLSelectElement>,
-    "value" | "onChange" | "size"
-> {
+export interface SelectProps<T = string> extends
+    Omit<
+        SelectHTMLAttributes<HTMLSelectElement>,
+        "value" | "onChange" | "size"
+    > {
     value?: T
     onChange?: (value: T) => void
     options?: readonly OptionInput<T>[]
@@ -522,19 +531,23 @@ export function Select<T>({ value, onChange, options, placeholder, size = "md", 
             }}
             {...rest}
         >
-            {index < 0 ? (
-                <option value="" disabled={true}>
-                    {placeholder ?? "Choose…"}
-                </option>
-            ) : null}
+            {index < 0
+                ? (
+                    <option value="" disabled={true}>
+                        {placeholder ?? "Choose…"}
+                    </option>
+                )
+                : null}
             {groups.map((group) =>
-                group.name ? (
-                    <optgroup key={group.name} label={group.name}>
-                        {group.items.map(option)}
-                    </optgroup>
-                ) : (
-                    group.items.map(option)
-                ),
+                group.name
+                    ? (
+                        <optgroup key={group.name} label={group.name}>
+                            {group.items.map(option)}
+                        </optgroup>
+                    )
+                    : (
+                        group.items.map(option)
+                    )
             )}
         </select>
     )
@@ -674,10 +687,11 @@ export function RadioGroup<T>({
     )
 }
 
-export interface SliderProps extends Omit<
-    InputHTMLAttributes<HTMLInputElement>,
-    "value" | "onChange" | "min" | "max" | "step"
-> {
+export interface SliderProps extends
+    Omit<
+        InputHTMLAttributes<HTMLInputElement>,
+        "value" | "onChange" | "min" | "max" | "step"
+    > {
     value?: number
     onChange?: (value: number) => void
     /** once the drag (or key press) ends */
@@ -720,9 +734,9 @@ export function Slider({
                 onKeyUp={(event) => onCommit?.(Number(event.currentTarget.value))}
                 {...rest}
             />
-            {showValue ? (
-                <output className="dr-slider-value">{format ? format(value ?? min) : String(value ?? min)}</output>
-            ) : null}
+            {showValue
+                ? <output className="dr-slider-value">{format ? format(value ?? min) : String(value ?? min)}</output>
+                : null}
         </div>
     )
 }
@@ -821,33 +835,33 @@ export function Chip({ selected, onChange, onRemove, icon, tone, className, chil
             tabIndex={onChange ? 0 : undefined}
             aria-pressed={onChange ? !!selected : undefined}
             onClick={onChange ? () => onChange(!selected) : undefined}
-            onKeyDown={
-                onChange
-                    ? (event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault()
-                              onChange(!selected)
-                          }
-                      }
-                    : undefined
-            }
+            onKeyDown={onChange
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        onChange(!selected)
+                    }
+                }
+                : undefined}
             {...rest}
         >
             {icon ? <Icon name={icon} size={13} /> : null}
             {children}
-            {onRemove ? (
-                <button
-                    type="button"
-                    className="dr-chip-remove"
-                    aria-label="Remove"
-                    onClick={(event) => {
-                        event.stopPropagation()
-                        onRemove()
-                    }}
-                >
-                    <Icon name="close" size={11} />
-                </button>
-            ) : null}
+            {onRemove
+                ? (
+                    <button
+                        type="button"
+                        className="dr-chip-remove"
+                        aria-label="Remove"
+                        onClick={(event) => {
+                            event.stopPropagation()
+                            onRemove()
+                        }}
+                    >
+                        <Icon name="close" size={11} />
+                    </button>
+                )
+                : null}
         </span>
     )
 }
@@ -915,12 +929,16 @@ export function TagList({ items = [], oneLine = false, extra, className, ...rest
                     {tag.label}
                 </Badge>
             ))}
-            {hidden.length ? (
-                <Badge
-                    className="dr-tag-more"
-                    title={hidden.map((tag) => (typeof tag.label === "string" ? tag.label : "")).join(", ")}
-                >{`+${hidden.length}`}</Badge>
-            ) : null}
+            {hidden.length
+                ? (
+                    <Badge
+                        className="dr-tag-more"
+                        title={hidden.map((tag) => (typeof tag.label === "string" ? tag.label : "")).join(", ")}
+                    >
+                        {`+${hidden.length}`}
+                    </Badge>
+                )
+                : null}
             {extra}
         </span>
     )
@@ -1157,8 +1175,7 @@ export function CopyButton({ text, label = "Copy", size = "sm", children, ...res
                 globalThis.navigator?.clipboard?.writeText(text).then(
                     () => setCopied(true),
                     () => {},
-                )
-            }
+                )}
             {...rest}
         >
             {copied ? "Copied" : (children ?? "Copy")}

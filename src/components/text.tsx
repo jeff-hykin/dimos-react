@@ -149,9 +149,7 @@ export function Markdown({ text, inline = false, className, ...rest }: MarkdownP
     }
     return (
         <div className={cx("dr-md", inline && "dr-md--inline", className)} {...rest}>
-            {blocks.map((block, index) => (
-                <Fragment key={index}>{block}</Fragment>
-            ))}
+            {blocks.map((block, index) => <Fragment key={index}>{block}</Fragment>)}
         </div>
     )
 }

@@ -139,7 +139,7 @@ test("DimThemeProvider takes Desktop's saved skin and follows a live change (sto
     document.body.append(host)
     const root = createRoot(host)
     await React.act(async () =>
-        root.render(React.createElement(DimThemeProvider, { bundled: true }, React.createElement(Show))),
+        root.render(React.createElement(DimThemeProvider, { bundled: true }, React.createElement(Show)))
     )
     const html = document.documentElement
     assertEquals(html.dataset.skin, "research")

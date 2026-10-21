@@ -185,12 +185,12 @@ export const formatCount = (count: number) =>
     count >= 1e6
         ? `${(count / 1e6).toFixed(1)}M`
         : count >= 1000
-          ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`
-          : String(Math.round(count))
+        ? `${(count / 1000).toFixed(count >= 10000 ? 0 : 1)}k`
+        : String(Math.round(count))
 
 export const formatBytes = (bytes: number) =>
     bytes >= 1e6
         ? `${(bytes / 1e6).toFixed(1)} MB`
         : bytes >= 1000
-          ? `${Math.round(bytes / 1000)} kB`
-          : `${Math.round(bytes)} B`
+        ? `${Math.round(bytes / 1000)} kB`
+        : `${Math.round(bytes)} B`

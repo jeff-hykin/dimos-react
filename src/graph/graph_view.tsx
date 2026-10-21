@@ -98,8 +98,7 @@ function GraphViewInner<N extends Box, E extends Link>(
     const viewRef = useRef(view)
     viewRef.current = view
     const arrow = `graph-arrow-${useId().replace(/:/g, "")}`
-    const shape =
-        nodes.map((node) => `${node.id}\u0000${node.w}\u0000${node.h}`).join("\u0001") +
+    const shape = nodes.map((node) => `${node.id}\u0000${node.w}\u0000${node.h}`).join("\u0001") +
         "\u0002" +
         edges.map((edge) => `${edge.from}\u0000${edge.to}`).join("\u0001")
     // the layout depends only on the graph's shape, not on new arrays of the same nodes

@@ -310,8 +310,9 @@ export function applyLook(material: THREE.ShaderMaterial, partial: PointLook, ra
     uniforms.uSolid.value.setStyle(look.solid, THREE.NoColorSpace)
     uniforms.uOpacity.value = look.opacity
     uniforms.uGradient.value = gradientTexture(look.gradient)
-    uniforms.uPeriod.value =
-        look.colorMode === "height" && isPalette(look.gradient) ? Math.max(0.05, look.period ?? DEFAULT_PERIOD) : 0
+    uniforms.uPeriod.value = look.colorMode === "height" && isPalette(look.gradient)
+        ? Math.max(0.05, look.period ?? DEFAULT_PERIOD)
+        : 0
     const splat = look.style === "splat"
     material.transparent = splat || look.opacity < 1
     material.depthWrite = !splat && look.opacity >= 1

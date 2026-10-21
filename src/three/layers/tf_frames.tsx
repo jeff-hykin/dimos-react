@@ -2,12 +2,12 @@
 // arm, a humanoid) names only the robot's frame, the fixed frame and `named` past `maxNames`. Reading tf into the tree
 // is TfFeed's job (whether or not this layer is on).
 import * as THREE from "three"
-import { useStore, type Store } from "../store.ts"
+import { type Store, useStore } from "../store.ts"
 import { themeColors } from "../../theme/theme.ts"
 import { FatLines } from "../lines.ts"
 import { LabelPool } from "../labels.ts"
 import { cssColor } from "../robot_model.ts"
-import { registerLayer, type LayerContext, type LayerSettingsProps } from "./registry.ts"
+import { type LayerContext, type LayerSettingsProps, registerLayer } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"
 import { Field, Slider, Toggle } from "../../components/controls.tsx"
 
@@ -96,8 +96,7 @@ export class TfFramesLayer {
                 tip.copy(unit[axis]).multiplyScalar(settings.axesSize).applyMatrix4(matrix)
                 this.#axes.push(origin.x, origin.y, origin.z, tip.x, tip.y, tip.z, this.#colors[axis])
             }
-            const nameIt =
-                snapshot.frames.length <= settings.maxNames ||
+            const nameIt = snapshot.frames.length <= settings.maxNames ||
                 name === frame.fixedFrame ||
                 name === baseFrame ||
                 settings.named.includes(name)

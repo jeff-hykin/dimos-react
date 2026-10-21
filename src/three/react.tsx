@@ -478,8 +478,8 @@ export function Scene3D({
             const followMatrix = !followFrame
                 ? null
                 : followFrame === robot
-                  ? robotMatrix
-                  : tf.lookup(followFrame, frame.fixedFrame)
+                ? robotMatrix
+                : tf.lookup(followFrame, frame.fixedFrame)
             if (followMatrix) {
                 followed = followAt.setFromMatrixPosition(followMatrix)
             }
@@ -648,7 +648,7 @@ export function TfFeed({ topics, transforms, staticTransforms, tf: given }: TfFe
                 }
                 tf.setMessage(decoded, /static/i.test(key), message.timestamp)
                 viewer?.noteData(message.timestamp)
-            }),
+            })
         )
         return () => stops.forEach((stop) => stop())
     }, [source, tf, viewer, keysSignature])
@@ -717,8 +717,9 @@ export function Layer({ type, topic, settings, data, onStatus, onPose }: LayerPr
     if (!layerType) {
         throw new Error(`[dimos-react] no layer type "${type}"`)
     }
-    const topicObject =
-        typeof topic === "string" ? (parseKey(topic) ?? { key: topic, name: topic, type: "" }) : (topic ?? null)
+    const topicObject = typeof topic === "string"
+        ? (parseKey(topic) ?? { key: topic, name: topic, type: "" })
+        : (topic ?? null)
     const store = useMemo(
         () => new Store({ ...defaultSettings(layerType, topicObject), ...settings }),
         [layerType, topicObject?.key],
@@ -952,18 +953,20 @@ export function PointCloud({
     onStatus,
 }: PointCloudProps) {
     const look: Record<string, unknown> = { ...CLOUD_DEFAULTS.look, style: "voxel", size: 0.05 }
-    for (const [name, value] of Object.entries({
-        style,
-        size,
-        colorMode,
-        gradient,
-        period,
-        axis,
-        rangeMin,
-        rangeMax,
-        opacity,
-        cubeShade,
-    })) {
+    for (
+        const [name, value] of Object.entries({
+            style,
+            size,
+            colorMode,
+            gradient,
+            period,
+            axis,
+            rangeMin,
+            rangeMax,
+            opacity,
+            cubeShade,
+        })
+    ) {
         if (value !== undefined) {
             look[name] = value
         }
@@ -1337,17 +1340,18 @@ export function SceneStats({ className, detailed = false, rttMs }: SceneStatsPro
             <div className={cx("dr-scene-stats dr-scene-stats--detailed", className)} data-testid="stats">
                 <div>{`${stats.fps} fps · ${stats.frameMs.toFixed(2)} ms/frame CPU`}</div>
                 <div>{`latency p50 ${ms(stats.latencyP50)} · p95 ${ms(stats.latencyP95)}`}</div>
-                <div>{`arrival→frame ${ms(stats.arrivalToFrameMs)}${rttMs !== undefined ? ` · rtt ${ms(rttMs)}` : ""}`}</div>
+                <div>
+                    {`arrival→frame ${ms(stats.arrivalToFrameMs)}${rttMs !== undefined ? ` · rtt ${ms(rttMs)}` : ""}`}
+                </div>
                 <div>{`${stats.points.toLocaleString()} points · ${stats.drawCalls} draws`}</div>
             </div>
         )
     }
-    const points =
-        stats.points > 1e6
-            ? `${(stats.points / 1e6).toFixed(1)}M`
-            : stats.points > 1e3
-              ? `${(stats.points / 1e3).toFixed(0)}k`
-              : String(stats.points)
+    const points = stats.points > 1e6
+        ? `${(stats.points / 1e6).toFixed(1)}M`
+        : stats.points > 1e3
+        ? `${(stats.points / 1e3).toFixed(0)}k`
+        : String(stats.points)
     return (
         <div className={cx("dr-scene-stats", className)}>
             {`${stats.fps} fps · ${points} pts · ${stats.frameMs.toFixed(1)} ms`}
@@ -1393,8 +1397,8 @@ export function SceneControls({
     )
     const followTitle = info.following
         ? `Following${
-              info.followFound ? "" : " (waiting for the frame in TF)"
-          }: orbit and zoom keep following, a pan looks around. Click to reframe`
+            info.followFound ? "" : " (waiting for the frame in TF)"
+        }: orbit and zoom keep following, a pan looks around. Click to reframe`
         : "Follow again"
     return (
         <div

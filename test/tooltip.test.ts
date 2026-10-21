@@ -16,7 +16,7 @@ test("Tooltip places itself next to its anchor once its portal has mounted", asy
     document.body.append(host)
     const root = createRoot(host)
     await act(async () =>
-        root.render(h(Tooltip, { content: "tip", delay: 0, children: h("button", { id: "anchor" }, "a") })),
+        root.render(h(Tooltip, { content: "tip", delay: 0, children: h("button", { id: "anchor" }, "a") }))
     )
     await act(async () => {
         document.getElementById("anchor")!.focus()

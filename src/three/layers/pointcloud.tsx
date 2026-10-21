@@ -120,10 +120,9 @@ export function pointCloud2ToPositions(cloud: PointCloud2): CloudPoints & { fram
         positions[kept * 3 + 1] = y
         positions[kept * 3 + 2] = z
         if (raw && intensityField) {
-            raw[kept] =
-                intensityField.datatype === 7
-                    ? view.getFloat32(at + intensityField.offset, little)
-                    : view.getUint8(at + intensityField.offset)
+            raw[kept] = intensityField.datatype === 7
+                ? view.getFloat32(at + intensityField.offset, little)
+                : view.getUint8(at + intensityField.offset)
         }
         kept++
     }
@@ -264,8 +263,9 @@ export class CloudLayer {
             this.#mode = settings.mode
             this.#clear()
         }
-        this.#material.uniforms.uWindow.value =
-            settings.mode === "accumulate" && settings.windowSeconds > 0 ? settings.windowSeconds : -1
+        this.#material.uniforms.uWindow.value = settings.mode === "accumulate" && settings.windowSeconds > 0
+            ? settings.windowSeconds
+            : -1
         applyLook(this.#material, resolveLook(settings.look), this.#range)
         this.#syncSplatBudget()
         this.context.viewer.requestRender()
@@ -501,8 +501,7 @@ export class CloudLayer {
         }
         if (this.#frame !== null) {
             // the latest scan sits where the sensor was when it was taken, not where tf says it is now
-            const placed =
-                settings.mode === "accumulate" ||
+            const placed = settings.mode === "accumulate" ||
                 placeLayer(this.context, this.#points, this.#frame, frame.fixedFrame, this.#stamp)
             if (placed) {
                 const sensor = this.context.tf.lookupAt(this.#frame, frame.fixedFrame, this.#stamp)
@@ -525,12 +524,11 @@ export class CloudLayer {
             const kept = settings.mode === "accumulate" ? `${formatCount(this.#filled)} kept · ` : ""
             const bytes = rate.bytesPerSecond ? ` · ${formatBytes(rate.bytesPerSecond)}/s` : ""
             this.context.setStatus({
-                info:
-                    this.#frame === null
-                        ? "waiting for frame_id…"
-                        : `${kept}${formatCount(this.#lastCount)} pts · ${rate.hz.toFixed(1)} Hz${bytes} · ${
-                              this.#frame || "no frame"
-                          }`,
+                info: this.#frame === null
+                    ? "waiting for frame_id…"
+                    : `${kept}${formatCount(this.#lastCount)} pts · ${rate.hz.toFixed(1)} Hz${bytes} · ${
+                        this.#frame || "no frame"
+                    }`,
                 frame: this.#frame ?? undefined,
             })
         }
@@ -582,31 +580,37 @@ export function CloudSettingsEditor({ settings, topic }: LayerSettingsProps<Clou
                     onChange={(mode) => settings.update({ mode })}
                 />
             </Field>
-            {value.mode === "accumulate" ? (
-                <Field label="Window">
-                    <Select
-                        value={value.windowSeconds}
-                        options={[
-                            [5, "5 s"],
-                            [10, "10 s"],
-                            [30, "30 s"],
-                            [120, "2 min"],
-                            [0, "forever"],
-                        ]}
-                        onChange={(windowSeconds) => settings.update({ windowSeconds })}
-                    />
-                </Field>
-            ) : null}
-            {topic ? (
-                <Field
-                    label="Bandwidth"
-                    hint={`this viewer's: ${CLOUD_PRESETS.map((preset) => `${preset.label}: ${preset.about}`).join(
-                        "; ",
-                    )}`}
-                >
-                    <CloudQualitySelect topicKey={topic.key} />
-                </Field>
-            ) : null}
+            {value.mode === "accumulate"
+                ? (
+                    <Field label="Window">
+                        <Select
+                            value={value.windowSeconds}
+                            options={[
+                                [5, "5 s"],
+                                [10, "10 s"],
+                                [30, "30 s"],
+                                [120, "2 min"],
+                                [0, "forever"],
+                            ]}
+                            onChange={(windowSeconds) => settings.update({ windowSeconds })}
+                        />
+                    </Field>
+                )
+                : null}
+            {topic
+                ? (
+                    <Field
+                        label="Bandwidth"
+                        hint={`this viewer's: ${
+                            CLOUD_PRESETS.map((preset) => `${preset.label}: ${preset.about}`).join(
+                                "; ",
+                            )
+                        }`}
+                    >
+                        <CloudQualitySelect topicKey={topic.key} />
+                    </Field>
+                )
+                : null}
         </div>
     )
 }

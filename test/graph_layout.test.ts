@@ -29,13 +29,15 @@ function crowded(modules: number, extras: number): { nodes: Box[]; edges: Link[]
 }
 
 test("no layout overlaps nodes, even crowded, with cycles and loose nodes", () => {
-    for (const [modules, extras] of [
-        [4, 0],
-        [4, 20],
-        [24, 0],
-        [24, 20],
-        [60, 20],
-    ]) {
+    for (
+        const [modules, extras] of [
+            [4, 0],
+            [4, 20],
+            [24, 0],
+            [24, 20],
+            [60, 20],
+        ]
+    ) {
         const { nodes, edges } = crowded(modules, extras)
         for (const { id } of LAYOUTS) {
             const { positions, vertical } = layout(id, nodes, edges)

@@ -1,15 +1,15 @@
 // vision_msgs.Detection3DArray / Detection3D / BoundingBox3DArray: wireframe boxes with a "class score" label, colored
 // per class so the same kind of object keeps its color.
 import * as THREE from "three"
-import { useStore, type Store } from "../store.ts"
+import { type Store, useStore } from "../store.ts"
 import { FatLines, pushBox } from "../lines.ts"
 import { LabelPool } from "../labels.ts"
 import {
+    type LayerContext,
+    type LayerSettingsProps,
     placeLayer,
     registerLayer,
     subscribeDecoded,
-    type LayerContext,
-    type LayerSettingsProps,
     type Topic,
 } from "./registry.ts"
 import type { FrameInfo } from "../viewer.ts"

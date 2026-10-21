@@ -71,6 +71,7 @@ export { TfFramesLayer } from "./three/layers/tf_frames.tsx"
 export { Camera3dLayer } from "./three/layers/camera3d.tsx"
 export { checkTf, confirmedIssues, TF_STALE_MS } from "./three/tf_check.ts"
 export { FrameHighlighter } from "./three/frame_highlight.ts"
+export { ChaseHeading, headingOf, isOpticalFrame, turnAbout, wrapAngle } from "./three/follow_heading.ts"
 export {
     appRendering,
     FRAME_BUDGET_MS,

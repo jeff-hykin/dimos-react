@@ -19,6 +19,7 @@ import { cameraStreamsFor } from "../components/camera.tsx"
 import { Viewer } from "./viewer.ts"
 import { ViewCube } from "./view_cube.ts"
 import type { ViewCubeCorner } from "./view_cube.ts"
+import { ChaseHeading, headingOf, turnAbout } from "./follow_heading.ts"
 import { TfTree } from "./tf.ts"
 import { cssColor, disposeTree, robotModel } from "./robot_model.ts"
 import { Store, useStore } from "./store.ts"
@@ -270,6 +271,8 @@ export interface Scene3DProps extends HTMLAttributes<HTMLDivElement> {
     followFrame?: string | null
     follow?: boolean
     onFollowChange?: (follow: boolean) => void
+    /** while following, the camera also turns with the followed frame's heading (yaw only): a chase camera */
+    followTurns?: boolean
     robotFrame?: string | null
     viewDistance?: number
     grid?: boolean
@@ -295,7 +298,8 @@ export interface Scene3DProps extends HTMLAttributes<HTMLDivElement> {
  * The 3D view. Give it a size (style/className); layers go in `children`, and any DOM children (buttons, stats) are
  * laid over it.
  *   `fixedFrame`: the frame everything is drawn in (default: the TF tree's world-ish root). `followFrame`: a TF frame
- *   the camera follows while `follow` (orbit and zoom keep following; a pan pauses it until resumed). `robotFrame`:
+ *   the camera follows while `follow` (orbit and zoom keep following; a pan pauses it until resumed); `followTurns`
+ *   turns it with that frame's heading too, ignoring sway and brief wobbles (default off). `robotFrame`:
  *   the robot's frame (default `followFrame`): the camera frames it once when it first shows up, and without it in
  *   TF the newest pose from a Pose layer stands in for it. A replay source (memorySource({ clock })) drives the data
  *   clock (fading, staleness, lifetimes) and its seek() resets the layers. `near`, `far`, `fov`, `gridSize`,
@@ -307,6 +311,7 @@ export function Scene3D({
     followFrame = null,
     follow = true,
     onFollowChange,
+    followTurns = false,
     robotFrame,
     viewDistance = 7,
     grid = true,
@@ -343,7 +348,7 @@ export function Scene3D({
     const [autoFixed, setAutoFixed] = useState("world")
     const fixed = fixedFrame || autoFixed
     const robot = robotFrame === undefined ? followFrame : robotFrame
-    const current = { follow, followFrame, robot, viewDistance, onFollowChange }
+    const current = { follow, followFrame, followTurns, robot, viewDistance, onFollowChange }
     const props = useRef(current)
     props.current = current
 
@@ -457,8 +462,12 @@ export function Scene3D({
         positions.current.framed = false
         const robotAt = new THREE.Vector3()
         const followAt = new THREE.Vector3()
+        const chase = new ChaseHeading()
+        let lastFrameAt = 0
         const off = viewer.onFrame((frame) => {
-            const { follow, followFrame, robot, viewDistance } = props.current
+            const { follow, followFrame, followTurns, robot, viewDistance } = props.current
+            const dt = lastFrameAt ? (frame.now - lastFrameAt) / 1000 : 0
+            lastFrameAt = frame.now
             const robotMatrix = robot ? (tf.lookup(robot, frame.fixedFrame) ?? robotPose.matrix) : robotPose.matrix
             const robotPosition = robotMatrix ? robotAt.setFromMatrixPosition(robotMatrix) : null
             if (robotPosition && !positions.current.framed) {
@@ -466,17 +475,27 @@ export function Scene3D({
                 viewer.frame(robotPosition.clone(), viewDistance)
             }
             let followed: THREE.Vector3 | null = null
-            if (followFrame) {
-                followed = followFrame === robot ? robotPosition : null
-                if (!followed) {
-                    const matrix = tf.lookup(followFrame, frame.fixedFrame)
-                    followed = matrix ? followAt.setFromMatrixPosition(matrix) : null
-                }
+            const followMatrix = !followFrame
+                ? null
+                : followFrame === robot
+                  ? robotMatrix
+                  : tf.lookup(followFrame, frame.fixedFrame)
+            if (followMatrix) {
+                followed = followAt.setFromMatrixPosition(followMatrix)
             }
             positions.current.robot = robotPosition
             positions.current.follow = followed
             viewer.followTarget = follow ? followed : null
             const following = !!(follow && followFrame) && !viewer.followPaused.get().paused
+            if (following && followTurns && followMatrix && followFrame) {
+                const turn = chase.step(headingOf(followMatrix, followFrame), dt)
+                if (Math.abs(turn) > 1e-6) {
+                    turnAbout(viewer.camera, viewer.controls.target, turn)
+                    viewer.requestRender()
+                }
+            } else {
+                chase.reset()
+            }
             const info = frameInfo.get()
             if (
                 info.fixedFrame !== frame.fixedFrame ||

@@ -150,10 +150,17 @@ export function allOverlayTypes(): readonly OverlayType[] {
 
 /**
  * Sets `object.matrix` to T_fixed_frame and shows it; with no TF path it hides it and reports why. Returns whether
- * it could be placed.
+ * it could be placed. `stamp` (ms): with the tf as it was then (TfTree.lookupAt), not the latest.
  */
-export function placeLayer(context: LayerContext, object: THREE.Object3D, frame: string, fixedFrame: string): boolean {
-    const matrix = context.tf.lookup(frame, fixedFrame)
+export function placeLayer(
+    context: LayerContext,
+    object: THREE.Object3D,
+    frame: string,
+    fixedFrame: string,
+    stamp?: number,
+): boolean {
+    const matrix =
+        stamp === undefined ? context.tf.lookup(frame, fixedFrame) : context.tf.lookupAt(frame, fixedFrame, stamp)
     if (!matrix) {
         if (object.visible) {
             object.visible = false

@@ -164,6 +164,8 @@ export class CloudLayer {
     #filled = 0
     /** null until known: a cloud placed without its frame would ride the wrong pose */
     #frame: string | null = null
+    /** the latest scan's timestamp (ms): what it is placed with */
+    #stamp: number | undefined = undefined
     /** a frame given by the app (props), which wins over the data's */
     #fixedFrameOverride: string | undefined = undefined
     #range: [number, number] = [0, 2]
@@ -358,8 +360,10 @@ export class CloudLayer {
         this.#scans++
         const accumulate = settings.mode === "accumulate"
         let transform: THREE.Matrix4 | null = null
+        this.#stamp = timestamp
         if (accumulate) {
-            transform = this.context.tf.lookup(this.#frame, this.context.viewer.fixedFrame)
+            // placed once, with the tf from when it was seen: points already kept don't move when the robot does
+            transform = this.context.tf.lookupAt(this.#frame, this.context.viewer.fixedFrame, timestamp)
             if (!transform) {
                 this.context.setStatus({
                     problem: `no TF path from "${this.#frame}" to "${this.context.viewer.fixedFrame}"`,
@@ -422,7 +426,7 @@ export class CloudLayer {
         this.#updateRange(
             positions,
             intensity,
-            transform ?? this.context.tf.lookup(this.#frame, this.context.viewer.fixedFrame),
+            transform ?? this.context.tf.lookupAt(this.#frame, this.context.viewer.fixedFrame, timestamp),
         )
         this.context.viewer.noteData(timestamp)
     }
@@ -496,10 +500,12 @@ export class CloudLayer {
             this.context.viewer.requestRender() // old points fade out by time even with no new scans
         }
         if (this.#frame !== null) {
+            // the latest scan sits where the sensor was when it was taken, not where tf says it is now
             const placed =
-                settings.mode === "accumulate" || placeLayer(this.context, this.#points, this.#frame, frame.fixedFrame)
+                settings.mode === "accumulate" ||
+                placeLayer(this.context, this.#points, this.#frame, frame.fixedFrame, this.#stamp)
             if (placed) {
-                const sensor = this.context.tf.lookup(this.#frame, frame.fixedFrame)
+                const sensor = this.context.tf.lookupAt(this.#frame, frame.fixedFrame, this.#stamp)
                 if (sensor) {
                     this.#material.uniforms.uSensor.value.setFromMatrixPosition(sensor)
                 }

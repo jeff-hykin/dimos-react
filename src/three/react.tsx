@@ -627,7 +627,7 @@ export function TfFeed({ topics, transforms, staticTransforms, tf: given }: TfFe
                 } catch {
                     return
                 }
-                tf.setMessage(decoded, /static/i.test(key))
+                tf.setMessage(decoded, /static/i.test(key), message.timestamp)
                 viewer?.noteData(message.timestamp)
             }),
         )

@@ -147,3 +147,28 @@ test("PanGate undoes small pans and pauses following on a deliberate one", () =>
     assert(verdict.action === "pause")
     assertEquals(verdict.restore, [0.05, 0, 0])
 })
+
+test("lookupAt places data with the tf from its own timestamp", () => {
+    const tf = new TfTree({ historyMs: 1000 })
+    tf.set("base_link", "lidar", [0, 0, 1], [0, 0, 0, 1], true)
+    tf.set("odom", "base_link", [0, 0, 0], [0, 0, 0, 1], false, 1000)
+    tf.set("odom", "base_link", [2, 0, 0], yaw(Math.PI / 2), false, 1100)
+    // halfway: halfway along and halfway turned; the static lidar edge has no samples and uses its matrix
+    near(position(tf.lookupAt("lidar", "odom", 1050)), [1, 0, 1], "midway")
+    near(position(tf.lookupAt("lidar", "odom", 900)), [0, 0, 1], "before the history: the oldest")
+    near(position(tf.lookupAt("lidar", "odom", 5000)), [2, 0, 1], "after: the newest")
+    near(position(tf.lookupAt("lidar", "odom", undefined)), [2, 0, 1], "no stamp: the latest")
+    // out of order delivery is sorted, and the window drops samples older than historyMs behind the newest
+    tf.set("odom", "base_link", [4, 0, 0], [0, 0, 0, 1], false, 2200)
+    near(position(tf.lookupAt("lidar", "odom", 1000)), [4, 0, 1], "1000 and 1100 fell out of the window")
+    tf.set("odom", "base_link", [3, 0, 0], [0, 0, 0, 1], false, 2150)
+    near(position(tf.lookupAt("lidar", "odom", 2175)), [3.5, 0, 1], "late sample slotted in")
+})
+
+test("lookupAt: a new parent drops the old parent's samples", () => {
+    const tf = new TfTree()
+    tf.set("odom", "base_link", [1, 0, 0], [0, 0, 0, 1], false, 0)
+    tf.set("map", "base_link", [5, 0, 0], [0, 0, 0, 1], false, 10)
+    near(position(tf.lookupAt("base_link", "map", 0)), [5, 0, 0], "only the map edge's sample")
+    assertEquals(tf.lookupAt("base_link", "odom", 0), null)
+})

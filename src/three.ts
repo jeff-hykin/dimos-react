@@ -135,3 +135,33 @@ export {
     worldToScreen as mapWorldToScreen,
     zoomAt as mapZoomAt,
 } from "./map2d/math.ts"
+export {
+    basePose,
+    Kinematics,
+    meshGeometries,
+    ROBOT_DESCRIPTION_FORMAT,
+    urdfPositions,
+} from "./three/urdf/description.ts"
+export type {
+    DescriptionGeometry,
+    DescriptionJoint,
+    DescriptionLink,
+    JointPositions,
+    Origin,
+    RobotDescription,
+} from "./three/urdf/description.ts"
+export { decodeMeshFile, meshGeometry, meshUris, parseUrdf } from "./three/urdf/parse.ts"
+export { solveIk } from "./three/urdf/ik.ts"
+export type { IkResult } from "./three/urdf/ik.ts"
+export {
+    addCameraColor,
+    CameraDepthPass,
+    cameraModel,
+    cameraUniforms,
+    curvedPicture,
+    distortRay,
+    pixelRay,
+    setCameraModel,
+    undistortPixel,
+} from "./three/camera_lens.ts"
+export type { CameraModel, CameraUniforms } from "./three/camera_lens.ts"

@@ -52,5 +52,6 @@ export {
 export type { Palette, RampStop, Rgb } from "./colormaps.ts"
 export * from "./components/view_panel.tsx"
 export * from "./components/thumbstick.tsx"
+export * from "./input/gamepad.ts"
 export * from "./components/camera.tsx"
 export { Store, useStore } from "./three/store.ts"

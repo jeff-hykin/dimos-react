@@ -16,3 +16,12 @@ export function assertAlmostEquals(actual: number, expected: number, tolerance =
         true,
     )
 }
+
+export function assertThrows(run: () => unknown, message?: string): void {
+    try {
+        run()
+    } catch {
+        return
+    }
+    throw new Error(message ?? "expected it to throw")
+}

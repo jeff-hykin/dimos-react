@@ -158,6 +158,16 @@ export const MEDIA_CSS = /* css */ `
 @media (max-width: 700px) {
     .dr-playback__bar { flex-wrap: wrap; }
     .dr-playback__track { flex-basis: 100%; }
-    .dr-playback__name { width: 45%; }
+    /* the name gets its own line beside the switch; type (cut short if it must), count and menu go under it */
+    .dr-playback__name {
+        display: grid;
+        grid-template-columns: 28px minmax(0, 1fr) auto auto;
+        column-gap: 6px;
+        width: 50%;
+        padding-block: 2px;
+    }
+    .dr-playback__name > :first-child { grid-row: 1 / 3; }
+    .dr-playback__label { grid-column: 2 / 5; }
+    .dr-playback__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 }
 `

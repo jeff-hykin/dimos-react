@@ -1,6 +1,6 @@
 {
     "name": "dimos-react",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "description": "React UI toolkit for dimOS Desktop apps: themed components, Desktop theme inheritance, URL state, zenoh hooks and a three.js 3D view",
     "type": "module",
     "license": "MIT",

@@ -2,10 +2,11 @@
 // extension included, and nothing leans on a bundler (no path aliases, import.meta.glob, ?raw or CSS imports).
 import fs from "node:fs"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { test } from "vitest"
 import { assertEquals } from "./assert.ts"
 
-const SRC = path.join(import.meta.dirname, "../src")
+const SRC = fileURLToPath(new URL("../src", import.meta.url))
 // an import/export statement's specifier, or a dynamic import()'s; not prose or template strings that say "from"
 const SPECIFIER = /(?:^\s*(?:import|export)\b[^;"'`=(]*?[\s}*]from\s*|^\s*import\s*|\bimport\(\s*)["']([^"'$]+)["']/gm
 

@@ -1,4 +1,4 @@
-// The demo / storybook: `npm run dev` serves it; `npm run build:demo` writes one self-contained dist-demo/index.html
+// The demo / storybook: `deno task dev` serves it; `deno task build:demo` writes one self-contained dist-demo/index.html
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 import { viteSingleFile } from "vite-plugin-singlefile"

@@ -1,8 +1,0 @@
-dist/
-dist-demo/
-node_modules/
-src/vendor/
-src/theme/tokens.ts
-src/icons_data.ts
-package-lock.json
-*.md

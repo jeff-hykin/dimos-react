@@ -2,7 +2,7 @@
     "name": "@robotics/dimos-react",
     "version": "0.2.3",
     "license": "MIT",
-    "nodeModulesDir": "manual",
+    "nodeModulesDir": "auto",
     "exports": {
         ".": "./src/index.ts",
         "./three": "./src/three.ts",
@@ -13,19 +13,48 @@
         "./dim-app/topic.js": "./src/vendor/dim-app/topic.js",
         "./dim-app/zenoh.js": "./src/vendor/dim-app/zenoh.js"
     },
+    "tasks": {
+        "dev": "deno run -A npm:vite --config vite.demo.config.ts",
+        "build:demo": "deno run -A npm:vite build --config vite.demo.config.ts",
+        "test": "deno run -A npm:vitest run",
+        "check": "deno check src/index.ts src/three.ts src/graph.ts test/ demo/ tools/ vite.demo.config.ts vitest.config.ts",
+        "lint": "deno lint && deno fmt --check",
+        "fmt": "deno fmt && deno lint --fix",
+        "sync-tokens": "deno run --allow-net --allow-read --allow-write=src/theme/tokens.ts tools/sync_tokens.ts",
+        "vendor": "deno run -A tools/vendor.ts"
+    },
     "imports": {
         "react": "npm:react@^19.2.0",
         "react-dom": "npm:react-dom@^19.2.0",
         "three": "npm:three@^0.180.0",
-        "@types/react": "npm:@types/react@^19.2.0",
-        "@types/react-dom": "npm:@types/react-dom@^19.2.0",
-        "@types/three": "npm:@types/three@^0.180.0"
+        "@types/react": "npm:@types/react@^19.3.0",
+        "@types/react-dom": "npm:@types/react-dom@^19.3.0",
+        "@types/three": "npm:@types/three@^0.180.0",
+        "@vitejs/plugin-react": "npm:@vitejs/plugin-react@^6.1.2",
+        "happy-dom": "npm:happy-dom@^20.14.6",
+        "typescript": "npm:typescript@^6.0.3",
+        "vite": "npm:vite@^8.3.4",
+        "vite-plugin-singlefile": "npm:vite-plugin-singlefile@^2.3.3",
+        "vitest": "npm:vitest@^5.0.3"
     },
     "compilerOptions": {
         "jsx": "react-jsx",
         "jsxImportSource": "react",
-        "lib": ["ES2023", "DOM", "DOM.Iterable"],
-        "jsxImportSourceTypes": "@types/react"
+        "lib": ["ES2023", "DOM", "DOM.Iterable", "deno.ns"],
+        "jsxImportSourceTypes": "@types/react",
+        "noImplicitOverride": true
+    },
+    "fmt": {
+        "indentWidth": 4,
+        "lineWidth": 120,
+        "semiColons": false,
+        "exclude": ["dist-demo/", "src/vendor/", "src/theme/tokens.ts", "src/icons_data.ts", "**/*.md"]
+    },
+    "lint": {
+        "exclude": ["dist-demo/", "src/vendor/"],
+        "rules": {
+            "tags": ["recommended", "react"]
+        }
     },
     "publish": {
         "include": ["src", "README.md", "LICENSE"]

@@ -70,8 +70,8 @@ createRoot(document.getElementById("root")!).render(
 `AppProvider` = `DimThemeProvider` (Desktop's skin, live) + the data source (Desktop's zenoh-gateway) +
 `UrlStateProvider` (backend url events) + toasts + confirm/prompt dialogs. Each also works on its own.
 
-The demo / storybook renders every component: `npm run dev`, then open the printed URL (`?skin=research`,
-`?skin=vibeslop`, … picks a skin; `?section=scene` one section). `npm run build:demo` writes it as one self-contained
+The demo / storybook renders every component: `deno task dev`, then open the printed URL (`?skin=research`,
+`?skin=vibeslop`, … picks a skin; `?section=scene` one section). `deno task build:demo` writes it as one self-contained
 file, `dist-demo/index.html`.
 
 ## Theme
@@ -80,7 +80,7 @@ Desktop serves every skin's tokens at `/theme.css` and saves the user's choice i
 `portal.corners`). `<DimThemeProvider>` links that stylesheet when the page is a Desktop app (`/apps/<name>/`), sets
 `html[data-skin]` / `html[data-corners]`, and follows every change live (Settings → Appearance in Desktop reaches every
 open app through the `storage` event). Off Desktop it uses a bundled copy of the tokens (`src/theme/tokens.ts`,
-regenerated with `npm run sync-tokens`).
+regenerated with `deno task sync-tokens`).
 
 ```tsx
 <DimThemeProvider><App /></DimThemeProvider> // Desktop's skin, followed live
@@ -428,38 +428,29 @@ topic) shows live topics flowing; `spot`, `onModule`, `onTopic` and `onHover` le
   (`test/imports.test.ts` checks both).
 - **Deno / vendored source**: Deno runs and type-checks the `.ts`/`.tsx` source as-is (copy `src/` in, map `react`,
   `react-dom` and `three` in your import map; `deno check` wants `@types/react` and `@types/three` for the types).
-- **Vite / npm**: a git dependency on a tag. The package exports the TypeScript source (`src/index.ts`,
-  `src/three.ts`, types included) and your bundler compiles it with your app: nothing is built at install, so no dev
-  dependencies come along (`import { AppProvider } from "dimos-react"`, `import { Scene3D } from "dimos-react/three"`).
-  Your tsconfig needs `"allowImportingTsExtensions": true` (Vite's react-ts template already sets it, with `noEmit`):
-  the source's relative imports name their `.ts` / `.tsx` files, and `skipLibCheck` doesn't skip `.ts` sources. Also
-  have `@types/react` (and `@types/three` for the 3D entry). react, react-dom and three are peer dependencies.
-
-    ```json
-    "dependencies": { "dimos-react": "github:jeff-hykin/dimos-react#vX.Y.Z" }
-    ```
+- **JSR (Deno, or Vite / npm through JSR's npm mirror)**: `deno add jsr:@robotics/dimos-react`, or
+  `npx jsr add @robotics/dimos-react` (`import { AppProvider } from "@robotics/dimos-react"`,
+  `import { Scene3D } from "@robotics/dimos-react/three"`). JSR ships the TypeScript source with its types; react,
+  react-dom and three come from your app. Have `@types/react` (and `@types/three` for the 3D entry).
 
 ## Development
 
 ```sh
-npm install
-npm run dev         # the demo / storybook, live
-npm test            # vitest: theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock, the export list
-npm run typecheck   # tsc, strict
-npm run lint        # eslint + prettier --check (npm run format fixes)
-npm run build       # dist/ (not committed, not exported): index.js, three.js, chunks, .d.ts, for a future npm publish
-npm run build:demo  # dist-demo/index.html, the demo as one self-contained file
+deno task dev         # the demo / storybook, live
+deno task test        # vitest: theme tokens, URL-state round trip (happy-dom), TF math, TF check, layer list, replay clock, the export list
+deno task check       # deno check, strict
+deno task lint        # deno lint + deno fmt --check (deno task fmt fixes)
+deno task build:demo  # dist-demo/index.html, the demo as one self-contained file
 ```
 
-**Releasing**: bump `version` in package.json, commit, `git tag vX.Y.Z`, push the tag. Nothing is built into git:
-esm.sh compiles the tagged source, and npm/git installs hand the source to the app's bundler. (Publishing to the npm
-registry would point `exports` back at `dist/` and add it to `files`.)
+**Releasing**: bump `version` in deno.json, commit, `git tag vX.Y.Z`, push the tag, `deno publish --allow-slow-types`.
+esm.sh compiles the tagged source; nothing is built into git.
 
 ## Layout
 
 `src/index.ts` (everything but 3D) · `src/three.ts` (3D) · `src/theme` (provider, tokens, CSS assembly) · `src/styles`
 (component CSS as strings the theme provider puts in the page, tokens only) · `src/components` · `src/three` ·
 `src/data.ts` · `src/url_state.tsx` · `src/vendor` (dim-app's zenoh client, the dimos LCM schemas; plain JS,
-`npm run vendor`) · `demo/` (a Vite app) · `tools/` (vendor, sync-tokens).
+`deno task vendor`) · `demo/` (a Vite app) · `tools/` (vendor, sync-tokens).
 
 The 3D code is ported from dim-controller's view; the icons are the shared dimOS set.

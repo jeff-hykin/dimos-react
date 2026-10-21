@@ -25,7 +25,7 @@ export const HIDDEN_SECRET = "•••"
 export const sameValue = (a: unknown, b: unknown): boolean => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 
 // a JSON schema, as loose as they come
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// deno-lint-ignore no-explicit-any -- JSON Schema values are any JSON
 export type JsonSchema = Record<string, any>
 
 /** A schema with its $ref followed and an optional (anyOf [T, null]) unwrapped to T. */

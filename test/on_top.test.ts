@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any -- stand-in viewers and layers for the test
 // "Draw on top", every layer's common setting: OnTopPass's two passes, followOnTop flipping a running layer in place
 // (same instance, same objects, data kept), and the components' `onTop` prop (default off) reaching their Layer.
 import { test } from "vitest"

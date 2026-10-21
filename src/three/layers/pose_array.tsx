@@ -47,6 +47,7 @@ export class PoseArrayLayer {
     }
 
     /** Props data: `{ poses, frame?, timestamp? }` or the poses themselves (any shape). */
+    // deno-lint-ignore no-explicit-any -- decoded PoseArray messages of any shape
     setData(data: any) {
         this.#set(data?.poses ?? data, data?.frame ?? "", data?.timestamp ?? Date.now())
     }

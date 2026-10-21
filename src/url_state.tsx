@@ -307,6 +307,7 @@ export function UrlStateProvider({
 
 /** The URL store in effect (the provider's, else one over the real window). */
 export function useUrlStore(): UrlStore {
+    // deno-lint-ignore react-rules-of-hooks -- useContext always runs; the ?? only picks a fallback
     return useContext(UrlStateContext) ?? getDefaultStore()
 }
 
@@ -319,6 +320,7 @@ export function useUrlParams(): [UrlParams, (changes: UrlChanges, options?: UrlS
 }
 
 /** How one param's value is read from and written to its text (`format` → null removes the param). */
+// deno-lint-ignore no-explicit-any -- a codec defaults to any value type
 export interface UrlCodec<T = any> {
     parse(text: string): T | undefined
     format(value: T): string | null

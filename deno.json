@@ -53,7 +53,11 @@
     "lint": {
         "exclude": ["dist-demo/", "src/vendor/"],
         "rules": {
-            "tags": ["recommended", "react"]
+            "tags": ["recommended"],
+            "include": ["react-rules-of-hooks"],
+            // browser code: window.parent and friends are real here, the Deno-runtime rules don't apply
+            // the house style spells boolean props out (muted={true})
+            "exclude": ["no-window", "no-window-prefix", "jsx-boolean-value"]
         }
     },
     "publish": {

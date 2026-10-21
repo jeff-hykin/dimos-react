@@ -1,3 +1,4 @@
+// deno-lint-ignore-file jsx-curly-braces -- {"muted, "} keeps the trailing space deno fmt would trim from bare text
 // dimos-react's demo / storybook: every component, in any Desktop skin (?skin=research, ?skin=vibeslop, …). The skin,
 // the open section and the corners live in the URL (useUrlState), so each view has a link.
 import { createRoot } from "react-dom/client"
@@ -472,7 +473,7 @@ function LayoutSection() {
                 <div style={{ position: "relative", height: 90 }}>
                     <Embed
                         title="embedded page"
-                        srcDoc={"<p style='font:13px sans-serif;padding:8px'>an embedded page (iframe)</p>"}
+                        srcDoc="<p style='font:13px sans-serif;padding:8px'>an embedded page (iframe)</p>"
                     />
                 </div>
             </Card>

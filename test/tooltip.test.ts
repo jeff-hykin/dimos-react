@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await -- act(async () => ...) waits for effects even when the callback doesn't await
 // The tooltip mounts in a portal a render after it opens; it must still move from its off-screen start to its anchor.
 import { test } from "vitest"
 import { testGlobals } from "./fake_globals.ts"

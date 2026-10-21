@@ -977,6 +977,7 @@ const CONNECTION_TONES: Record<string, DotTone | undefined> = {
 
 export interface ConnectionStatusProps extends HTMLAttributes<HTMLSpanElement> {
     /** a ConnectionState; other strings show as "off" */
+    // deno-lint-ignore ban-types -- string & {} keeps the literals' autocomplete
     state?: ConnectionState | (string & {})
     /** replaces the state's name */
     label?: ReactNode

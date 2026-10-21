@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await -- act(async () => ...) waits for effects even when the callback doesn't await
 // URL state: pure helpers, and the round trip backend event → URL → rendered UI (with back/forward and deep links).
 import { test } from "vitest"
 import { testGlobals } from "./fake_globals.ts"

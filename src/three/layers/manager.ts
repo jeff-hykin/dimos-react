@@ -14,6 +14,7 @@ export interface LayerEntry {
     type: LayerType
     enabled: boolean
     status: LayerStatus
+    // deno-lint-ignore no-explicit-any -- a layer's settings, whatever its type declares
     settings: Store<any>
 }
 

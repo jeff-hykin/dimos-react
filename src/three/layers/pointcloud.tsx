@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any -- decoded point clouds in any of their forms
 // sensor_msgs.PointCloud2: lidar scans and maps. Live, the gateway's dimos_lcm_pointcloud2 encoding sends quantized
 // xyz (+ u8 intensity) at this viewer's bandwidth preset; a replay or props may give decoded clouds instead. The points
 // go straight into preallocated GPU buffers (a ring when accumulating) and are colored in the shader, so a new scan

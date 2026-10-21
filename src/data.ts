@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any -- payloads decoded from any topic have any shape
 // Where live data comes from. Every hook and 3D layer reads through a *data source*, so the same components show a
 // live robot (Desktop's zenoh-gateway), a replay (a recording app pushing its own messages) or test data.
 //

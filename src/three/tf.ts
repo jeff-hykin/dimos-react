@@ -116,6 +116,7 @@ export class TfTree {
     /**
      * Feeds a decoded tf2_msgs.TFMessage (or an array of geometry_msgs.TransformStamped); `stamp` (ms) as in set().
      */
+    // deno-lint-ignore no-explicit-any -- decoded TFMessage of any shape
     setMessage(message: any, isStatic: boolean = false, stamp?: number) {
         const transforms = Array.isArray(message) ? message : (message?.transforms ?? [])
         for (const stamped of transforms) {

@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any -- layers take decoded messages of any shape
 // How a message type becomes something in the 3D view. A layer type registers the dimos message types it draws; a
 // LayerManager (or a single <Layer>) makes one instance per topic. Apps add their own types with registerLayer (a
 // later registration for the same id wins, so an app can override a built-in one).

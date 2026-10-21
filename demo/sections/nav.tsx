@@ -149,16 +149,13 @@ export function NavSection() {
                             { label: "Export (soon)", icon: "export", disabled: true },
                         ]}
                     />
-                    <Popover
-                        trigger={<Button icon="settings">Cloud look</Button>}
-                        children={
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: 220 }}>
-                                <div className="dr-h3">/lidar</div>
-                                <Toggle value={grid} onChange={setGrid} label="Show grid" />
-                                <div className="dr-muted dr-small">A popover holds any content.</div>
-                            </div>
-                        }
-                    />
+                    <Popover trigger={<Button icon="settings">Cloud look</Button>}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: 220 }}>
+                            <div className="dr-h3">/lidar</div>
+                            <Toggle value={grid} onChange={setGrid} label="Show grid" />
+                            <div className="dr-muted dr-small">A popover holds any content.</div>
+                        </div>
+                    </Popover>
                     <Tooltip content="Re-center on base_link (F)">
                         <Button icon="target">Hover me</Button>
                     </Tooltip>

@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await -- act(async () => ...) waits for effects even when the callback doesn't await
 // Theme tokens: every skin in the bundled copy of Desktop's /theme.css defines the theme contract, the components use
 // only tokens (no color literals), and every token the components use exists.
 import { test } from "vitest"

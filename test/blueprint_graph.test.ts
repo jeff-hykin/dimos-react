@@ -1,3 +1,4 @@
+// deno-lint-ignore-file require-await -- act(async () => ...) waits for effects even when the callback doesn't await
 // BlueprintGraph: a blueprint's modules and topics become nodes and edges, and the fullscreen button falls back to a
 // full-window overlay (Esc leaves it) where the Fullscreen API can't be used.
 import { test } from "vitest"

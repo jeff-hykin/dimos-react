@@ -87,6 +87,7 @@ export function poseMatrix(
 }
 
 /** The pose inside a decoded message (any shape): Odometry / PoseWithCovarianceStamped (.pose.pose), PoseStamped (.pose), Pose. */
+// deno-lint-ignore no-explicit-any -- decoded pose messages of any shape
 export function poseOf(message: any): PoseLike | THREE.Matrix4 | null | undefined {
     return message?.pose?.pose ?? message?.pose ?? message
 }

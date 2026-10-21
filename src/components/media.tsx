@@ -65,7 +65,7 @@ const RAW_BYTES: Record<string, number> = { mono8: 1, "8uc1": 1, rgb8: 3, bgr8: 
  * `{ kind: "encoded", format, data }` for jpeg/png/webp. Takes a pre-decoded frame (a replay's), a decoded
  * sensor_msgs.Image or sensor_msgs.CompressedImage.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a decoded message or a source's frame: any shape
+// deno-lint-ignore no-explicit-any -- a decoded message or a source's frame: any shape
 export function normalizeFrame(value: any): NormalizedFrame | null {
     if (!value) {
         return null
@@ -209,7 +209,7 @@ function nameColor(name: unknown) {
 }
 
 /** vision_msgs.Detection2DArray / Detection2D / BoundingBox2DArray drawn over an image (pixel coordinates). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a decoded vision_msgs message
+// deno-lint-ignore no-explicit-any -- a decoded vision_msgs message
 export function drawDetections2D(context: CanvasRenderingContext2D, message: any): void {
     const boxes = message?.detections ?? message?.boxes?.map((bbox: unknown) => ({ bbox })) ?? [message]
     const theme = themeColors()
@@ -222,7 +222,7 @@ export function drawDetections2D(context: CanvasRenderingContext2D, message: any
         const left = center.x - (box.size_x ?? 0) / 2
         const top = center.y - (box.size_y ?? 0) / 2
         const best = [...(detection?.results ?? [])].sort(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- decoded ObjectHypothesisWithPose
+            // deno-lint-ignore no-explicit-any -- decoded ObjectHypothesisWithPose
             (a: any, b: any) => (b.hypothesis?.score ?? 0) - (a.hypothesis?.score ?? 0),
         )[0]
         const name = best?.hypothesis?.class_id || detection?.id || ""

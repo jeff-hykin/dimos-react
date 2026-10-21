@@ -345,7 +345,7 @@ export class CameraStreams {
             { delivery: "latest", ...videoPreset(handle.quality.get().quality).options, encoding: `${prefix}image` },
             async (received) => {
                 const message = received as CameraMessage
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a source's frame: any of the forms above
+                // deno-lint-ignore no-explicit-any -- a source's frame: any of the forms above
                 let decoded: any = message.decoded ?? message.value ??
                     (message.mediaStream ? null : lcmValue(message, topic.type))
                 if (!message.mediaStream && decoded && !decoded.bitmap && !decoded.image) {

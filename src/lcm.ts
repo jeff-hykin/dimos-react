@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-explicit-any -- LCM structs hold whatever the schema says
 // LCM wire format (ported from dim-controller core/lcm/lcm.ts), driven by the dimos_lcm schemas (vendor/lcm_schemas.js): big-endian, an
 // 8-byte fingerprint before the top-level struct only, strings as int32 length (with the NUL) + bytes + NUL.
 // @deno-types="./vendor/lcm_schemas.d.ts"

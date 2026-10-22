@@ -135,13 +135,7 @@ export {
     worldToScreen as mapWorldToScreen,
     zoomAt as mapZoomAt,
 } from "./map2d/math.ts"
-export {
-    basePose,
-    Kinematics,
-    meshGeometries,
-    ROBOT_DESCRIPTION_FORMAT,
-    urdfPositions,
-} from "./three/urdf/description.ts"
+export { basePose, Kinematics, urdfPositions } from "./three/urdf/description.ts"
 export type {
     DescriptionGeometry,
     DescriptionJoint,

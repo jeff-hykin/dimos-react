@@ -1,19 +1,13 @@
 // A URDF read into a RobotDescription (description.ts): parseUrdf turns the XML into links, joints and geometry, with
 // meshes named by their URI and loaded apart (meshGeometry: STL, OBJ, DAE, PLY). decodeMeshFile reads a
-// shape_msgs.MeshFile, the way dimos's URDF publisher sends a mesh file's own bytes.
+// files.MeshFile, the way dimos's UrdfManager answers a /file_request with a file's own bytes.
 import * as THREE from "three"
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js"
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js"
 import { ColladaLoader } from "three/examples/jsm/loaders/ColladaLoader.js"
 import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
-import {
-    type DescriptionGeometry,
-    type DescriptionJoint,
-    type Origin,
-    ROBOT_DESCRIPTION_FORMAT,
-    type RobotDescription,
-} from "./description.ts"
+import { type DescriptionGeometry, type DescriptionJoint, type Origin, type RobotDescription } from "./description.ts"
 
 type V3 = [number, number, number]
 
@@ -142,7 +136,6 @@ export function parseUrdf(xml: string): RobotDescription {
     const childLinks = new Set(joints.map((joint) => joint.child))
     const root = links.find((link) => !childLinks.has(link.name))?.name ?? links[0]?.name ?? ""
     return {
-        format: ROBOT_DESCRIPTION_FORMAT,
         name: robot.getAttribute("name") ?? "robot",
         base_link: root,
         base_frame: root,
@@ -150,7 +143,6 @@ export function parseUrdf(xml: string): RobotDescription {
         joint_names: joints.filter((joint) => joint.type !== "fixed" && !joint.mimic).map((joint) => joint.name),
         links,
         joints,
-        meshes: {},
     }
 }
 
@@ -161,7 +153,7 @@ export function meshUris(description: RobotDescription): string[] {
     return [...new Set(uris)]
 }
 
-/** shape_msgs.MeshFile's wire form (dimos/msgs/shape_msgs/MeshFile.py): `<f64 ts><u32 uri length><uri><file bytes>`, little endian. */
+/** files.MeshFile's wire form (dimos/msgs/files/MeshFile.py): `<f64 ts><u32 uri length><uri><file bytes>`, little endian. */
 export function decodeMeshFile(bytes: Uint8Array): { ts: number; uri: string; data: Uint8Array } {
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     if (bytes.byteLength < 12) {

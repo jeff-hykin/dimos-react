@@ -1,13 +1,10 @@
-// A robot's description (dimos.robot_description.v1: a URDF as dimos's RobotDescriptionModule publishes it, or as
-// parseUrdf reads one): links with their visual and collision geometry (meshes as base64 float32 vertices and uint32
-// faces), joints (origin, axis, limits, mimic), the base link and the base's pose in the world. Kinematics does the
+// A robot's description (a URDF as parseUrdf reads it): links with their visual and collision geometry (meshes named
+// by their URI, loaded apart), joints (origin, axis, limits, mimic), the base link and the base's pose in the world. Kinematics does the
 // forward kinematics from joint positions.
 import * as THREE from "three"
 
 type V3 = [number, number, number]
 type Q = [number, number, number, number]
-
-export const ROBOT_DESCRIPTION_FORMAT = "dimos.robot_description.v1"
 
 export interface Origin {
     xyz: V3
@@ -45,7 +42,6 @@ export interface DescriptionJoint {
 }
 
 export interface RobotDescription {
-    format: string
     name: string
     base_link: string
     base_frame: string
@@ -53,7 +49,6 @@ export interface RobotDescription {
     joint_names: string[]
     links: DescriptionLink[]
     joints: DescriptionJoint[]
-    meshes: Record<string, { vertices: string; faces: string }>
 }
 
 const originMatrix = (origin: Origin) =>
@@ -188,29 +183,6 @@ export function urdfPositions(
         }
     }
     return positions
-}
-
-function decodeArray<T extends Float32Array | Uint32Array>(base64: string, Kind: { new (buffer: ArrayBuffer): T }): T {
-    const text = atob(base64)
-    const bytes = new Uint8Array(text.length)
-    for (let index = 0; index < text.length; index++) {
-        bytes[index] = text.charCodeAt(index)
-    }
-    return new Kind(bytes.buffer)
-}
-
-/** Every mesh in the description as a BufferGeometry, shared by every RobotModel built from it. */
-export function meshGeometries(description: RobotDescription): Map<string, THREE.BufferGeometry> {
-    const geometries = new Map<string, THREE.BufferGeometry>()
-    for (const [name, mesh] of Object.entries(description.meshes)) {
-        const geometry = new THREE.BufferGeometry()
-        geometry.setAttribute("position", new THREE.BufferAttribute(decodeArray(mesh.vertices, Float32Array), 3))
-        geometry.setIndex(new THREE.BufferAttribute(decodeArray(mesh.faces, Uint32Array), 1))
-        geometry.computeVertexNormals()
-        geometry.userData.shared = true
-        geometries.set(name, geometry)
-    }
-    return geometries
 }
 
 /** The base link's pose in the base frame (the world, usually). */

@@ -16,7 +16,7 @@ export interface ZenohMessage {
     decoded?: unknown
 }
 
-/** The discovery answer from `GET /api/desktop/zenoh`. */
+/** The discovery answer from `GET /gateways/desktop/management/gateways/zenoh`. */
 export interface ZenohInfo {
     namespace: string
     desktop?: string

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <BlueprintGraph>: a dimos blueprint's module graph (the gateway's GET blueprints/{name} modules: each module and the
 // topics it writes and reads), drawn by GraphView in the theme's tokens, with zoom/layout controls and a fullscreen toggle.
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react"

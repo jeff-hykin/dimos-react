@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // nav_msgs.LineSegments3D: a node/edge graph (pose graphs, roadmaps). dimos sends it as a Path whose poses come in
 // pairs (one edge each) with the edge weight in the first pose's orientation.w. Edges are colored by weight on a log
 // scale, nodes (each distinct endpoint) drawn as points.

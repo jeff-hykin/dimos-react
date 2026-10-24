@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // nav_msgs.Odometry, geometry_msgs.PoseStamped / PoseWithCovarianceStamped: the pose as axes, and the path it has
 // driven, kept in the fixed frame (bounded, configurable length; a jump leaves a gap instead of a streak). When the
 // data source knows a topic's whole route up front (a recording: `source.route(key)`), it's drawn faintly ahead of

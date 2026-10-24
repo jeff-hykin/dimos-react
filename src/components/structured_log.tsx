@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // A structured log (structlog-style records: time, level, logger, event, extra fields), followed live, with its
 // filters: lowest level, a search and follow. Tracebacks in a record's fields are drawn by <Traceback>.
 import { useEffect, useLayoutEffect, useRef } from "react"

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Touch and pointer input: a virtual joystick, a stick readout, a D-pad, a file drop zone, a color swatch and HUD key
 // hints.
 import { useEffect, useRef, useState } from "react"

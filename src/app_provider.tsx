@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <AppProvider>: everything an app needs once, at its root: Desktop's theme (live), the data source (zenoh-gateway
 // unless `source` is given), URL state driven by the backend's url events, toasts and confirm/prompt dialogs.
 //

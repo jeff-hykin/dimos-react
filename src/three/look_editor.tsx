@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Editors for how points look: the point-style picker (a card per style) and the full look editor (style, size, color
 // mode, gradient, range, opacity) every point layer's settings use. Settings → Rendering pages use StylePicker and
 // CubeShadePicker for the page-wide defaults (the `rendering` store).

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // URL state: the URL is the UI's state, so back/forward, reloads and shared links all reproduce the same screen, and
 // the app's backend can drive the UI by changing the URL.
 //

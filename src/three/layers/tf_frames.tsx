@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // The TF tree drawn: an axes gizmo per frame (theme --axis-x/y/z), its name, and a line to its parent. A big tree (an
 // arm, a humanoid) names only the robot's frame, the fixed frame and `named` past `maxNames`. Reading tf into the tree
 // is TfFeed's job (whether or not this layer is on).

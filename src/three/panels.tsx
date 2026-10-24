@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // The 3D view's side panels, outside the scene: the layer list (every drawable topic, a switch each, live info or
 // the problem, the layer's own settings), the TF tree (fixed frame, issues, an indented frame list whose hover picks a
 // frame out in the view) and the one-line TF footnote over the view. They share state with the scene through a

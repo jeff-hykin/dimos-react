@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // geometry_msgs.PoseArray (candidate poses, particle clouds, waypoints): an arrow per pose along its +x.
 import * as THREE from "three"
 import { useStore } from "../store.ts"

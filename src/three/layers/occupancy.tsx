@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // nav_msgs.OccupancyGrid (costmaps, 2D maps): one textured plane at the grid's origin. A costmap is drawn like a floor
 // plan: the floor where it's free, costs from the floor color toward the wall color, lethal cells as a bright rim
 // around a dimmer body; unknown is clear. A map is gray. Colors come from the theme (--scene-floor, --scene-wall,

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // A picker for the point-cloud color gradients: a swatch per gradient (GRADIENTS), the chosen one outlined.
 import { cx } from "../cx.ts"
 import { gradientCss, GRADIENTS } from "./gradients.ts"

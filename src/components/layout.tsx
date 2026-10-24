@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Surfaces and layout: cards, panels (collapsible / floating), split panes, bars, stacks, HUD overlays, type.
 import { useRef, useState } from "react"
 import type {

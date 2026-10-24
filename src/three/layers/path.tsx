@@ -1,4 +1,6 @@
 // deno-lint-ignore-file no-explicit-any -- decoded nav_msgs/Path messages of any shape
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // nav_msgs.Path (planned paths): a thick line through the poses, placed by its header's frame. Or `poses` as props.
 import * as THREE from "three"
 import { useStore } from "../store.ts"

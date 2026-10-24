@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Driving input for phones and HUDs: a thumb stick whose whole zone takes the thumb (the stick centers where it lands,
 // so it never needs aiming), with a dead zone, an expo curve and easing toward the thumb while held; and a KeyPad that
 // shows keyboard keys lit while held. Safety: anything that could mean "the thumb is gone" (a lift, a cancel, a lost

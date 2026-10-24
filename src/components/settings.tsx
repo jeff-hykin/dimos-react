@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // A settings form's parts: a typed input per setting (toggle, choice, number, JSON, path, secret), its row (name,
 // "saved", reset, a docs link), groups of rows and titled sections.
 import { useState } from "react"

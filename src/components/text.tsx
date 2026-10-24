@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Text display: a safe Markdown renderer (docs from manifests / OpenAPI) and a live number that flashes on change.
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import type { HTMLAttributes, ReactNode } from "react"

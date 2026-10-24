@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Alerts, toasts, modals (+ confirm / prompt), spinners, progress, empty states and an error boundary.
 import {
     Component,

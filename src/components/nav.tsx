@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Navigation and overlays: tabs, segmented controls, menus, context menus, popovers, tooltips, sidebars, a nav
 // rail, a stepper, breadcrumbs and a command palette.
 import { cloneElement, isValidElement, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"

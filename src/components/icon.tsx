@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <Icon name="close" />: the shared dimOS line icons (24-unit grid, stroke = currentColor).
 import type { SVGAttributes } from "react"
 import { cx } from "../cx.ts"

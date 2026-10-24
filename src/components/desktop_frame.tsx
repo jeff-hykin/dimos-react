@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // A page framed by Desktop (its Details modal, a panel): Desktop answers dimos:* messages from the frame. It says
 // whether the page should draw its own top bar (dimos:chrome → dimos:chrome-ok), closes it (dimos:close) and opens
 // files in the user's editor (dimos:open-in-editor → dimos:open-in-editor-result) and hides or shows a preloaded page

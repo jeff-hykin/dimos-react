@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Media: a camera / image view (any image topic, or frames you pass) and a playback bar for recordings (play, speed,
 // loop, a zoomable scrubber, and a lane per stream with a tick per message).
 import { useEffect, useRef, useState } from "react"

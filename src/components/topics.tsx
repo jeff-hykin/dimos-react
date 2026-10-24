@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // dimOS topics at a glance: a color per message type, and a table of the bus's rates (Hz and bandwidth), hot cells
 // tinted.
 import type { CSSProperties, HTMLAttributes } from "react"

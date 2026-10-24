@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // vision_msgs.Detection3DArray / Detection3D / BoundingBox3DArray: wireframe boxes with a "class score" label, colored
 // per class so the same kind of object keeps its color.
 import * as THREE from "three"

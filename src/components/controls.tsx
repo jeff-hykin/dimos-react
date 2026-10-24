@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Buttons, form controls, badges and status dots. Every control takes `value` + `onChange(value)` (the value, not the
 // event), plus `className`, `style` and any other DOM props for its root.
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react"

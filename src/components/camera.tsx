@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Camera streams and views. A color image topic arrives as zenoh-gateway's H.264 video track (sized and paced by a
 // latency ↔ quality preset: gateway subscription options), a depth topic losslessly as fields (16UC1 mm / 32FC1 m)
 // drawn as a colormap; a panel and a 3D projection of the same topic share one subscription. 2D detections can be drawn

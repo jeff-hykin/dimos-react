@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <Map2D>: the top-down 2D map as a React component, filling its positioned parent. It reads topics through the data
 // source and places everything through a TfTree (pass `tf`, e.g. the one a Scene3D and its TfFeed share).
 //

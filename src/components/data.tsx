@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Data display: tables, trees, key/value readouts, stats, lists, logs, code, sparklines, an attitude indicator and a
 // timeline scrubber.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"

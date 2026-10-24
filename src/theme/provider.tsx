@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <DimThemeProvider>: the app takes Desktop's current skin, light/dark mode and corners, and follows every change.
 //
 //     h(DimThemeProvider, null, h(App))                        // Desktop's choice, live

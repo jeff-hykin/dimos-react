@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <GraphControls>: a GraphView's zoom buttons (bottom left) and layout picker (bottom right), laid over it.
 import type { RefObject } from "react"
 import { Button, ButtonGroup } from "../components/controls.tsx"

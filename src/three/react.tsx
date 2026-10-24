@@ -1,4 +1,6 @@
 // deno-lint-ignore-file no-explicit-any -- transforms and poses as apps hand them in, any shape
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // The 3D view as React components. <Scene3D> owns a Viewer (three.js renderer, orbit/pan/zoom, follow camera) and a
 // TfTree; layers inside it add themselves to its scene and take data from a topic (through the data source: live
 // zenoh-gateway, a replay, a test source) or from props. <TopicLayers> draws every discovered topic with its layer

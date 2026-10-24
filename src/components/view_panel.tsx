@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // A view's panel chrome (a camera, a map, a 3D view, a dashboard tile): a header with its title and buttons, a body,
 // and how it's placed:
 //  - "float": floats over the page, moved by its header and resized from a bottom corner (optionally keeping the

@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // sensor_msgs.Image / CompressedImage in 3D: the camera's frustum, with the picture on its far plane, placed at the
 // camera's TF frame. Intrinsics come from the matching CameraInfo topic (or a 70° guess without one). The picture is
 // the shared camera stream (CameraStreams): a live H.264 track as a video texture, a replay's frames (an ImageBitmap /

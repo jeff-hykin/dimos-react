@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // Python tracebacks (plain, chained and exception groups) split into frames, code, markers and exceptions, and drawn
 // frame by frame: your own frames open in an editor, runs of library frames fold, what was raised sums it up.
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react"

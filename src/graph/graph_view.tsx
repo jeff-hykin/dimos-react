@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
 // <GraphView>: lays out a directed graph of boxes and draws it as SVG you can pan (drag, one finger, sideways scroll),
 // zoom (wheel, pinch) and click. You draw each node's contents; it draws the edges, with an arrow head.
 import {

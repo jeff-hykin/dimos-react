@@ -3,7 +3,7 @@ import { parse as parseJsonc } from "jsr:@std/jsonc@1"
 // Copies dim-app's zenoh client (and its gateway client) and the Controller's LCM schemas into src/vendor.
 const home = Deno.env.get("HOME")
 const dimApp = Deno.env.get("DIM_APP") ?? `${home}/repos/dim-app`
-const tag = Deno.args[0] ?? "v0.23.1"
+const tag = Deno.args[0] ?? "v0.23.2"
 
 function run(command: string, args: string[], cwd?: string): Uint8Array {
     const { success, stdout, stderr } = new Deno.Command(command, { args, cwd, stderr: "piped" }).outputSync()
@@ -45,7 +45,7 @@ for (const file of files) {
 Deno.writeTextFileSync("src/vendor/dim-app/VERSION", `jeff-hykin/dim-app ${tag}\n`)
 // the gateway client's types: declarations emitted from its TypeScript source at the vendored commit (zenoh-gateway's
 // client/zenoh_gateway.ts), so apps type-check against the same client they run
-const gateway = Deno.env.get("ZENOH_GATEWAY") ?? `${home}/repos/zenoh-web`
+const gateway = Deno.env.get("ZENOH_GATEWAY") ?? `${home}/repos/zenoh-gateway`
 const upstream = Deno.readTextFileSync("src/vendor/dim-app/vendor/zenoh-gateway/UPSTREAM").trim().split(/\s+/).pop()
 const scratch = Deno.makeTempDirSync({ prefix: "dimos-react-gateway-" })
 Deno.mkdirSync(`${scratch}/vendor`)

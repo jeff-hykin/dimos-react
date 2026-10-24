@@ -157,6 +157,9 @@ export interface ConnectOptions {
     iceTransportPolicy?: RTCIceTransportPolicy;
     /** sent as `Authorization: Bearer <token>`; the gateway's authorize hook turns it into a grant */
     token?: string;
+    /** the link's known bandwidth (bytes/s), used by the gateway in place of its estimate (no probing; video sized for it
+     *  from the first frame), e.g. for a page on the gateway's own machine; the host's cap still applies. Default: estimated */
+    linkBandwidthBytesPerSec?: number;
     reconnect?: boolean;
     /** ms the page may be hidden or frozen, or the connection "disconnected", before the client starts a fresh
      *  connection at once instead of catching up or waiting for the browser to declare the old one failed (default 2000;
@@ -391,7 +394,7 @@ export declare class Lease {
     release(): Promise<void>;
     _lose(reason: string): void;
 }
-type ResolvedConnectOptions = Required<Omit<ConnectOptions, "clock" | "iceServers" | "iceTransportPolicy" | "token">> & Pick<ConnectOptions, "clock" | "iceServers" | "iceTransportPolicy" | "token">;
+type ResolvedConnectOptions = Required<Omit<ConnectOptions, "clock" | "iceServers" | "iceTransportPolicy" | "token" | "linkBandwidthBytesPerSec">> & Pick<ConnectOptions, "clock" | "iceServers" | "iceTransportPolicy" | "token" | "linkBandwidthBytesPerSec">;
 export declare class ZenohGateway {
     #private;
     state: ConnectionState;
@@ -472,6 +475,9 @@ export declare class ZenohGateway {
     matchingStatus(key: string, target?: MatchingTarget): Promise<boolean>;
     /** Called each time `matchingStatus(key, target)` changes. */
     matchingListener(key: string, target: MatchingTarget, callback: (matching: boolean) => void): Promise<MatchingListener>;
+    /** Tells the gateway the link's known bandwidth (bytes/s), used in place of its estimate (`undefined`: back to the
+     *  estimate); kept across reconnects. */
+    setLinkBandwidth(bytesPerSec: number | undefined): Promise<void>;
     /** The gateway's zenoh session: its id, and the routers and peers it is connected to. */
     info(): Promise<SessionInfo>;
     _route(event: string, id: number, handler: (event: ControlResponse) => void): void;

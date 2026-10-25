@@ -74,6 +74,7 @@ import { InputDevicesSection } from "./sections/input_devices.tsx"
 import { SceneSection } from "./sections/scene.tsx"
 import { MediaSection } from "./sections/media.tsx"
 import { ViewsSection } from "./sections/views.tsx"
+import { GraphSection } from "./sections/graph.tsx"
 
 const source = memorySource({
     topics: ["dimos/odom/nav_msgs.Odometry", "dimos/lidar/sensor_msgs.PointCloud2", "dimos/tf/tf2_msgs.TFMessage"],
@@ -582,6 +583,7 @@ const SECTIONS: [id: string, label: string, Section: ComponentType][] = [
     ["media", "Media", MediaSection],
     ["views", "View panels & driving", ViewsSection],
     ["scene", "3D view", SceneSection],
+    ["graph", "Module graph & comments", GraphSection],
 ]
 
 function Demo() {

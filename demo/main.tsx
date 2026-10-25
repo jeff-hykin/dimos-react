@@ -242,6 +242,7 @@ function ControlsSection() {
                             label="Frame labels"
                         />
                         <Checkbox value={false} indeterminate={true} label="Some layers" />
+                        <Checkbox value={true} disabled={true} label="Locked" />
                     </Column>
                     <Column>
                         <Toggle value={follow} onChange={setFollow} label="Follow robot" />

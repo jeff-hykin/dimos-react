@@ -423,7 +423,7 @@ Uncontrolled, it starts on the layout the user picked last (`useGraphLayoutSetti
 and finds modules and topics. A ref adds `highlight(kind, id, times = 2)`, a soft flash; with `app="<desktop app>"` it
 also flashes what Desktop's `view-highlight` events name, and nodes and edges take comments (right click / long press →
 Comment, a badge where some are open, a thread with replies and Resolve; `commentSource(target)` attaches source code for
-the agent). `onViewChange({ visible: { modules, connections }, selected, layout })` reports what's on screen (debounced);
+the agent; `blueprintCommentSource(modules, read)` makes one that sends the module's Python class). `onViewChange({ visible: { modules, connections }, selected, layout })` reports what's on screen (debounced);
 `putView(app, state)` sends it to Desktop for agents.
 
 `dimos-react/comments` is that comment kit for any app: `commentsClient()` (list / create / reply / resolve / subscribe

@@ -86,16 +86,15 @@ function faceTexture(label: string, colors: ReturnType<typeof faceColors>, aniso
     canvas.width = canvas.height = size
     const context = canvas.getContext("2d")
     if (context) {
+        // the face a step lighter than the surface (so the cube stands off a dark scene), inside a dark border: two faces'
+        // borders meet in one thick dark line along each edge, flat (no lighter stroke to read as a gradient)
+        const border = 28
         context.fillStyle = colors.face
         context.fillRect(0, 0, size, size)
-        // a step lighter than the surface, so the cube stands off a dark scene (Portal's surface is near black)
         context.globalAlpha = 0.16
         context.fillStyle = colors.text
-        context.fillRect(0, 0, size, size)
+        context.fillRect(border, border, size - 2 * border, size - 2 * border)
         context.globalAlpha = 1
-        context.strokeStyle = colors.border
-        context.lineWidth = 20
-        context.strokeRect(10, 10, size - 20, size - 20)
         context.fillStyle = colors.text
         context.textAlign = "center"
         context.textBaseline = "middle"
@@ -174,6 +173,8 @@ export class ViewCube {
         }
         this.#highlight.visible = false
         this.#highlight.renderOrder = 2
+        // the faces draw their own thick borders: the 1 px GL edges would only blur them
+        this.#edges.visible = false
         this.#cube.add(this.#pickBox, this.#edges, this.#highlight)
         this.#scene.add(this.#cube)
         this.setTheme()

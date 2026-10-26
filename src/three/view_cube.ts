@@ -144,7 +144,11 @@ export class ViewCube {
     #offFrame: () => void
     #onTheme = () => this.setTheme()
 
-    constructor(viewer: Viewer, parent: HTMLElement, { corner = "top-right", size = 96, supersample = 2 }: ViewCubeOptions = {}) {
+    constructor(
+        viewer: Viewer,
+        parent: HTMLElement,
+        { corner = "top-right", size = 96, supersample = 2 }: ViewCubeOptions = {},
+    ) {
         this.#viewer = viewer
         this.#size = size
         this.#supersample = supersample

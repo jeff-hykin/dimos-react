@@ -68,7 +68,9 @@ export const CONTROLS_CSS = /* css */ `
 .dr-field-control > .dr-input-wrap, .dr-field-control > .dr-select, .dr-field-control > .dr-textarea, .dr-field-control > .dr-slider { flex: 1; }
 .dr-field-hint { font-size: 12px; color: var(--muted-fg); }
 .dr-field-error { font-size: 12px; color: var(--danger); }
-.dr-field--inline { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.dr-field--inline { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: 12px; }
+/* inline: a hint or error takes its own line under the label and control */
+.dr-field--inline > .dr-field-hint, .dr-field--inline > .dr-field-error { flex-basis: 100%; }
 .dr-field--inline > .dr-field-label { flex: 0 0 auto; min-width: 84px; }
 .dr-field--inline > .dr-field-control { flex: 1; justify-content: flex-end; }
 .dr-field--error .dr-input, .dr-field--error .dr-select { border-color: var(--danger); }
